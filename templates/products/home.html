@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<section class="premium-hero">
+    <div class="premium-hero-content">
+        <span class="premium-badge">👟 Jaunpur Trusted Footwear Store</span>
+
+        <h1>
+            Step Into Comfort With
+            <span>Best Shoes & Slippers</span>
+        </h1>
+
+        <p>
+            Buy Aqualite, Campus, Sparx, sandals, slippers, sports shoes,
+            school shoes and daily wear footwear at local Jaunpur prices.
+        </p>
+
+        <div class="premium-actions">
+            <a href="{% url 'product_list' %}" class="premium-btn primary">
+                Shop Collection
+            </a>
+            <a href="{% url 'size_finder' %}" class="premium-btn outline">
+                Find Perfect Size
+            </a>
+        </div>
+
+        <div class="premium-stats">
+            <div>
+                <strong>100+</strong>
+                <span>Footwear Items</span>
+            </div>
+            <div>
+                <strong>5+</strong>
+                <span>Popular Brands</span>
+            </div>
+            <div>
+                <strong>COD</strong>
+                <span>Available</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="premium-hero-visual">
+        <div class="hero-glow"></div>
+        <div class="hero-shoe">👟</div>
+
+        <div class="floating-card card-one">
+            <strong>₹ Affordable</strong>
+            <span>Best local price</span>
+        </div>
+
+        <div class="floating-card card-two">
+            <strong>Perfect Size</strong>
+            <span>Foot measure guide</span>
+        </div>
+    </div>
+</section>
+
+<section class="brand-strip">
+    <span>Aqualite</span>
+    <span>Campus</span>
+    <span>Sparx</span>
+    <span>Bata</span>
+    <span>Paragon</span>
+    <span>Relaxo</span>
+</section>
+
+<section class="category-section">
+    <div class="section-header">
+        <span class="mini-title">Categories</span>
+        <h2>Shop by Footwear Type</h2>
+        <p>Select products based on your daily use</p>
+    </div>
+
+    <div class="category-grid">
+        <a href="{% url 'product_list' %}" class="category-card premium-category">
+            <span>👟</span>
+            <h3>Sports Shoes</h3>
+            <p>Running, walking and daily wear</p>
+        </a>
+
+        <a href="{% url 'product_list' %}" class="category-card premium-category">
+            <span>🩴</span>
+            <h3>Slippers</h3>
+            <p>Comfortable home and outdoor use</p>
+        </a>
+
+        <a href="{% url 'product_list' %}" class="category-card premium-category">
+            <span>👞</span>
+            <h3>Formal Shoes</h3>
+            <p>Office, function and smart look</p>
+        </a>
+
+        <a href="{% url 'product_list' %}" class="category-card premium-category">
+            <span>🎒</span>
+            <h3>School Shoes</h3>
+            <p>Durable shoes for students</p>
+        </a>
+    </div>
+</section>
+
+<section class="featured-section premium-featured">
+    <div class="section-header">
+        <span class="mini-title">Featured</span>
+        <h2>Popular Products</h2>
+        <p>Selected footwear from your shop</p>
+    </div>
+
+    <div class="product-grid">
+        {% for product in featured_products %}
+        <div class="product-card premium-product">
+            <div class="product-img-wrap">
+                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+
+                {% if product.discount_price %}
+                <span class="discount-badge">Sale</span>
+                {% endif %}
+
+                {% if product.stock <= 5 %}
+                <span class="stock-badge">Low Stock</span>
+                {% endif %}
+            </div>
+
+            <div class="product-info">
+                <p class="brand-name">{{ product.brand.name }}</p>
+                <h3>{{ product.name }}</h3>
+                <p class="sizes">Available Sizes: {{ product.available_sizes }}</p>
+
+                {% if product.discount_price %}
+                <p class="price">
+                    <del>₹{{ product.price }}</del>
+                    <strong>₹{{ product.discount_price }}</strong>
+                </p>
+                {% else %}
+                <p class="price">
+                    <strong>₹{{ product.price }}</strong>
+                </p>
+                {% endif %}
+
+                <a href="{% url 'product_detail' product.id %}" class="card-btn">
+                    View Product
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-box">
+            <h3>No featured products available</h3>
+            <p>Go to dashboard and mark products as featured.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="offer-banner">
+    <div>
+        <span>Special Local Service</span>
+        <h2>Order Online, Pick From Shop or Get Local Delivery</h2>
+        <p>Perfect for Jaunpur city and nearby customers.</p>
+    </div>
+
+    <a href="{% url 'product_list' %}" class="premium-btn light">
+        Explore Products
+    </a>
+</section>
+
+<section class="why-section">
+    <div class="section-header">
+        <span class="mini-title">Why Us</span>
+        <h2>Why Customers Choose Us?</h2>
+    </div>
+
+    <div class="why-grid">
+        <div class="why-card">
+            <span>📏</span>
+            <h3>Perfect Size Finder</h3>
+            <p>Customer can measure foot and get suggested size.</p>
+        </div>
+
+        <div class="why-card">
+            <span>💸</span>
+            <h3>Budget Friendly</h3>
+            <p>Affordable footwear suitable for local customers.</p>
+        </div>
+
+        <div class="why-card">
+            <span>📦</span>
+            <h3>Easy Order</h3>
+            <p>Order from website or directly through WhatsApp.</p>
+        </div>
+
+        <div class="why-card">
+            <span>✅</span>
+            <h3>Trusted Brands</h3>
+            <p>Aqualite, Campus, Sparx, Bata, Relaxo and more.</p>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
