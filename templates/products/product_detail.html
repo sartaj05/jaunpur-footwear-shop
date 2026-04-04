@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="product-detail-section">
+    <div class="detail-image-box">
+        <img src="{{ product.image.url }}" alt="{{ product.name }}" id="mainProductImage">
+    </div>
+
+    <div class="detail-content">
+        <p class="brand-name">{{ product.brand.name }}</p>
+        <h1>{{ product.name }}</h1>
+
+        <p class="detail-category">
+            {{ product.category.name }} • {{ product.get_gender_display }}
+        </p>
+
+        <div class="detail-price">
+            {% if product.discount_price %}
+                <del>₹{{ product.price }}</del>
+                <strong>₹{{ product.discount_price }}</strong>
+            {% else %}
+                <strong>₹{{ product.price }}</strong>
+            {% endif %}
+        </div>
+
+        <p class="detail-description">{{ product.description }}</p>
+
+        <form method="post" action="{% url 'add_to_cart' product.id %}" class="cart-form">
+            {% csrf_token %}
+
+            <label>Select Size</label>
+            <div class="size-options">
+                {% for size in sizes %}
+                <label class="size-box">
+                    <input type="radio" name="size" value="{{ size }}" required>
+                    <span>{{ size }}</span>
+                </label>
+                {% endfor %}
+            </div>
+
+            <label>Quantity</label>
+            <div class="qty-box">
+                <button type="button" id="qtyMinus">-</button>
+                <input type="number" name="quantity" id="quantityInput" value="1" min="1">
+                <button type="button" id="qtyPlus">+</button>
+            </div>
+
+            <button class="primary-btn full-btn">Add to Cart</button>
+        </form>
+
+        <a class="whatsapp-order"
+           target="_blank"
+           href="https://wa.me/91YOURNUMBER?text=I want to order {{ product.name }}">
+            Order on WhatsApp
+        </a>
+
+        <div class="detail-note">
+            <p>✅ Cash on Delivery available</p>
+            <p>✅ Local Jaunpur delivery</p>
+            <p>✅ Size exchange support as per shop policy</p>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

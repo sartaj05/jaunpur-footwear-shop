@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="page-banner">
+    <h1>All Footwear Products</h1>
+    <p>Search and filter shoes, slippers, sandals and more</p>
+</section>
+
+<section class="shop-layout">
+    <aside class="filter-panel">
+        <h3>Filter Products</h3>
+
+        <form method="get" id="filterForm">
+            <label>Search</label>
+            <input type="text" name="search" placeholder="Search products..." value="{{ request.GET.search }}">
+
+            <label>Brand</label>
+            <select name="brand">
+                <option value="">All Brands</option>
+                {% for brand in brands %}
+                <option value="{{ brand.id }}">{{ brand.name }}</option>
+                {% endfor %}
+            </select>
+
+            <label>Category</label>
+            <select name="category">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}">{{ category.name }}</option>
+                {% endfor %}
+            </select>
+
+            <label>Size</label>
+            <select name="size">
+                <option value="">Any Size</option>
+                <option value="5">Size 5</option>
+                <option value="6">Size 6</option>
+                <option value="7">Size 7</option>
+                <option value="8">Size 8</option>
+                <option value="9">Size 9</option>
+                <option value="10">Size 10</option>
+                <option value="11">Size 11</option>
+            </select>
+
+            <button class="primary-btn full-btn">Apply Filter</button>
+            <a href="{% url 'product_list' %}" class="clear-btn">Clear Filter</a>
+        </form>
+    </aside>
+
+    <div class="products-area">
+        <div class="products-top">
+            <h2>Products</h2>
+            <p>{{ products|length }} item found</p>
+        </div>
+
+        <div class="product-grid">
+            {% for product in products %}
+            <div class="product-card">
+                <div class="product-img-wrap">
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                    {% if product.stock <= 5 %}
+                    <span class="stock-badge">Low Stock</span>
+                    {% endif %}
+                </div>
+
+                <div class="product-info">
+                    <p class="brand-name">{{ product.brand.name }}</p>
+                    <h3>{{ product.name }}</h3>
+                    <p class="sizes">Sizes: {{ product.available_sizes }}</p>
+
+                    <p class="price">
+                        {% if product.discount_price %}
+                            <del>₹{{ product.price }}</del>
+                            <strong>₹{{ product.discount_price }}</strong>
+                        {% else %}
+                            <strong>₹{{ product.price }}</strong>
+                        {% endif %}
+                    </p>
+
+                    <a href="{% url 'product_detail' product.id %}" class="card-btn">View Details</a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-box">
+                <h3>No product found</h3>
+                <p>Try another brand, size or category.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{% endblock %}
