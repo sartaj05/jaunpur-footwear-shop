@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="page-banner">
+    <h1>Find Your Perfect Shoe Size</h1>
+    <p>Enter your foot measurement and get suggested Indian/UK size</p>
+</section>
+
+<section class="size-wrapper">
+    <div class="size-guide-card">
+        <h2>How to Measure?</h2>
+        <ol>
+            <li>Place your foot on white paper.</li>
+            <li>Mark heel and longest toe point.</li>
+            <li>Measure length in centimeter.</li>
+            <li>Enter value in form.</li>
+        </ol>
+
+        <div class="measure-visual">
+            🦶
+            <span>Heel to Toe Length</span>
+        </div>
+    </div>
+
+    <div class="size-form-card">
+        <h2>Size Finder</h2>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <label>Foot Length in CM</label>
+            <input type="number" step="0.1" name="foot_length" placeholder="Example: 26" required>
+
+            <label>Foot Width in CM</label>
+            <input type="number" step="0.1" name="foot_width" placeholder="Example: 9.5">
+
+            <label>Footwear Type</label>
+            <select name="type">
+                <option value="shoe">Shoe</option>
+                <option value="slipper">Slipper</option>
+                <option value="sandal">Sandal</option>
+            </select>
+
+            <button class="primary-btn full-btn">Find My Size</button>
+        </form>
+
+        {% if suggested_size %}
+        <div class="size-result">
+            <h3>Your Suggested Size</h3>
+            <p>{{ suggested_size }}</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}
