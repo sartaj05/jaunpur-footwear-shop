@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="page-banner">
+    <h1>My Orders</h1>
+    <p>Track your footwear orders</p>
+</section>
+
+<section class="orders-page">
+
+    {% for order in orders %}
+    <div class="order-card">
+        <div class="order-header">
+            <div>
+                <h3>Order #{{ order.id }}</h3>
+                <p>{{ order.created_at }}</p>
+            </div>
+
+            <span class="order-status status-{{ order.status }}">
+                {{ order.status|title }}
+            </span>
+        </div>
+
+        <div class="order-body">
+            <p><strong>Name:</strong> {{ order.full_name }}</p>
+            <p><strong>Mobile:</strong> {{ order.mobile }}</p>
+            <p><strong>Address:</strong> {{ order.address }}</p>
+            <p><strong>Total:</strong> ₹{{ order.total_amount }}</p>
+            <p><strong>Payment:</strong> {{ order.payment_method }}</p>
+        </div>
+
+        <div class="order-items">
+            <h4>Items</h4>
+
+            {% for item in order.items.all %}
+            <div class="order-item-row">
+                <span>{{ item.product_name }} | Size {{ item.size }} | Qty {{ item.quantity }}</span>
+                <strong>₹{{ item.price }}</strong>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-cart">
+        <div class="empty-icon">📦</div>
+        <h2>No orders yet</h2>
+        <p>Your placed orders will appear here.</p>
+        <a href="{% url 'product_list' %}" class="primary-btn">
+            Start Shopping
+        </a>
+    </div>
+    {% endfor %}
+
+</section>
+
+{% endblock %}
