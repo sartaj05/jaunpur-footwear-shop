@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="page-banner">
+    <h1>My Cart</h1>
+    <p>Review your selected footwear before checkout</p>
+</section>
+
+<section class="cart-page">
+
+    {% if items %}
+    <div class="cart-table-wrap">
+        <table class="cart-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Size</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                    <th>Remove</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td class="cart-product">
+                        {% if item.product.image %}
+                        <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+                        {% endif %}
+                        <div>
+                            <strong>{{ item.product.name }}</strong>
+                            <span>{{ item.product.brand.name }}</span>
+                        </div>
+                    </td>
+
+                    <td>{{ item.size }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>₹{{ item.product.final_price }}</td>
+                    <td><strong>₹{{ item.total_price }}</strong></td>
+                    <td>
+                        <a href="{% url 'remove_cart_item' item.id %}" class="remove-btn">
+                            Remove
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="cart-summary">
+        <h2>Order Summary</h2>
+
+        <div class="summary-row">
+            <span>Total Items</span>
+            <strong>{{ items|length }}</strong>
+        </div>
+
+        <div class="summary-row total">
+            <span>Total Amount</span>
+            <strong>₹{{ total }}</strong>
+        </div>
+
+        <a href="{% url 'checkout' %}" class="primary-btn full-btn">
+            Proceed to Checkout
+        </a>
+
+        <a href="{% url 'product_list' %}" class="secondary-btn full-btn">
+            Continue Shopping
+        </a>
+    </div>
+
+    {% else %}
+    <div class="empty-cart">
+        <div class="empty-icon">🛒</div>
+        <h2>Your cart is empty</h2>
+        <p>Add shoes, slippers or sandals to your cart.</p>
+        <a href="{% url 'product_list' %}" class="primary-btn">
+            Shop Products
+        </a>
+    </div>
+    {% endif %}
+
+</section>
+
+{% endblock %}

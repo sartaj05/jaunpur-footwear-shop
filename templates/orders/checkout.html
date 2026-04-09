@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="page-banner">
+    <h1>Checkout</h1>
+    <p>Confirm your delivery details</p>
+</section>
+
+<section class="checkout-page">
+
+    <div class="checkout-form-card">
+        <h2>Delivery Details</h2>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="full_name" placeholder="Enter full name" required>
+            </div>
+
+            <div class="form-group">
+                <label>Mobile Number</label>
+                <input type="text" name="mobile" placeholder="Enter mobile number" required>
+            </div>
+
+            <div class="form-group">
+                <label>Full Address</label>
+                <textarea name="address" placeholder="House no, area, landmark, Jaunpur" required></textarea>
+            </div>
+
+            <button class="auth-btn">
+                Place Order - Cash on Delivery
+            </button>
+        </form>
+    </div>
+
+    <div class="checkout-summary">
+        <h2>Your Order</h2>
+
+        {% for item in items %}
+        <div class="checkout-item">
+            <span>{{ item.product.name }} × {{ item.quantity }}</span>
+            <strong>₹{{ item.total_price }}</strong>
+        </div>
+        {% endfor %}
+
+        <div class="summary-row total">
+            <span>Total</span>
+            <strong>₹{{ total }}</strong>
+        </div>
+    </div>
+
+</section>
+
+{% endblock %}
