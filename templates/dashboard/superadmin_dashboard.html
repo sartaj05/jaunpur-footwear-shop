@@ -1,0 +1,72 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block content %}
+<h1>Superadmin Dashboard</h1>
+
+<div class="cards">
+    <div class="card">
+        <h3>Total Products</h3>
+        <h2>{{ total_products }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>Total Brands</h3>
+        <h2>{{ total_brands }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>Total Categories</h3>
+        <h2>{{ total_categories }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>Total Orders</h3>
+        <h2>{{ total_orders }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>Total Customers</h3>
+        <h2>{{ total_customers }}</h2>
+    </div>
+
+    <div class="card danger">
+        <h3>Low Stock</h3>
+        <h2>{{ low_stock_products }}</h2>
+    </div>
+</div>
+
+<div class="topbar">
+    <h2>Recent Orders</h2>
+    <a href="{% url 'dashboard_orders' %}" class="btn">View All Orders</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Order ID</th>
+            <th>Customer</th>
+            <th>Mobile</th>
+            <th>Total</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for order in recent_orders %}
+        <tr>
+            <td>#{{ order.id }}</td>
+            <td>{{ order.full_name }}</td>
+            <td>{{ order.mobile }}</td>
+            <td>₹{{ order.total_amount }}</td>
+            <td>
+                <span class="badge badge-primary">{{ order.status|title }}</span>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No orders found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

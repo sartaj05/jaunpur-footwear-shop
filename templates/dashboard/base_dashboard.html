@@ -1,0 +1,33 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Superadmin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+</head>
+<body>
+
+<div class="layout">
+    <aside class="sidebar">
+        <h2>👟 Footwear Admin</h2>
+
+        <a href="{% url 'superadmin_dashboard' %}">📊 Dashboard</a>
+        <a href="{% url 'dashboard_brands' %}">🏷️ Brands</a>
+        <a href="{% url 'dashboard_categories' %}">📂 Categories</a>
+        <a href="{% url 'dashboard_products' %}">👟 Products</a>
+        <a href="{% url 'add_product' %}">➕ Add Product</a>
+        <a href="{% url 'dashboard_orders' %}">📦 Orders</a>
+        <a href="{% url 'dashboard_customers' %}">👥 Customers</a>
+        <a href="{% url 'home' %}">🌐 Visit Website</a>
+        <a href="{% url 'logout' %}">🚪 Logout</a>
+    </aside>
+
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+</body>
+</html>
