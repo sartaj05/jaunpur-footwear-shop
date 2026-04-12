@@ -1,0 +1,42 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block content %}
+<div class="topbar">
+    <h1>Manage Categories</h1>
+    <a href="{% url 'add_category' %}" class="btn">Add Category</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Image</th>
+            <th>Category Name</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for category in categories %}
+        <tr>
+            <td>
+                {% if category.image %}
+                <img src="{{ category.image.url }}" class="table-img">
+                {% else %}
+                -
+                {% endif %}
+            </td>
+            <td>{{ category.name }}</td>
+            <td>
+                <a href="{% url 'edit_category' category.id %}" class="small-btn">Edit</a>
+                <a href="{% url 'delete_category' category.id %}" class="small-btn delete"
+                   onclick="return confirm('Delete this category?')">Delete</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="3">No categories found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
