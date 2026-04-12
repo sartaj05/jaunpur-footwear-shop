@@ -1,0 +1,42 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block content %}
+<div class="topbar">
+    <h1>Manage Brands</h1>
+    <a href="{% url 'add_brand' %}" class="btn">Add Brand</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Logo</th>
+            <th>Brand Name</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for brand in brands %}
+        <tr>
+            <td>
+                {% if brand.logo %}
+                <img src="{{ brand.logo.url }}" class="table-img">
+                {% else %}
+                -
+                {% endif %}
+            </td>
+            <td>{{ brand.name }}</td>
+            <td>
+                <a href="{% url 'edit_brand' brand.id %}" class="small-btn">Edit</a>
+                <a href="{% url 'delete_brand' brand.id %}" class="small-btn delete"
+                   onclick="return confirm('Delete this brand?')">Delete</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="3">No brands found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

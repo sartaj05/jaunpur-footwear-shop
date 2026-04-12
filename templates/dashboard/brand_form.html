@@ -1,0 +1,22 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block content %}
+<h1>{% if brand %}Edit Brand{% else %}Add Brand{% endif %}</h1>
+
+<form method="post" enctype="multipart/form-data" class="form-card">
+    {% csrf_token %}
+
+    <label>Brand Name</label>
+    <input type="text" name="name" value="{{ brand.name|default:'' }}" required>
+
+    <label>Brand Logo</label>
+    <input type="file" name="logo">
+
+    {% if brand.logo %}
+    <p>Current Logo:</p>
+    <img src="{{ brand.logo.url }}" class="table-img">
+    {% endif %}
+
+    <button class="btn">Save Brand</button>
+</form>
+{% endblock %}
