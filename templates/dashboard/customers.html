@@ -1,0 +1,37 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block content %}
+<h1>Customers</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Staff</th>
+            <th>Date Joined</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for customer in customers %}
+        <tr>
+            <td>{{ customer.username }}</td>
+            <td>{{ customer.email|default:"-" }}</td>
+            <td>
+                {% if customer.is_staff %}
+                    <span class="badge badge-primary">Yes</span>
+                {% else %}
+                    <span class="badge badge-success">No</span>
+                {% endif %}
+            </td>
+            <td>{{ customer.date_joined }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No customers found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
