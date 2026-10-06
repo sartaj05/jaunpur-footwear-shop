@@ -12,6 +12,12 @@ class Shop(models.Model):
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
+    VERIFICATION_CHOICES = [
+        ('not_submitted', 'Not submitted'),
+        ('pending', 'Verification pending'),
+        ('verified', 'Verified Jaunpur shop'),
+        ('needs_changes', 'More information required'),
+    ]
 
     owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='footwear_shop')
     name = models.CharField(max_length=140)
@@ -29,6 +35,11 @@ class Shop(models.Model):
     banner = models.ImageField(upload_to='shops/banners/', blank=True, null=True)
     is_featured = models.BooleanField(default=False)
     commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'))
+    verification_status = models.CharField(max_length=16, choices=VERIFICATION_CHOICES, default='not_submitted')
+    verification_requested_at = models.DateTimeField(blank=True, null=True)
+    verified_at = models.DateTimeField(blank=True, null=True)
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='verified_jaunpur_shops')
+    verification_note = models.TextField(blank=True)
 
     class Meta:
         constraints = [

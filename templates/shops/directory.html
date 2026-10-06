@@ -6,7 +6,7 @@
     {% for shop in shops %}
     <article class="product-card"><div class="product-info">
         {% if shop.logo %}<img src="{{ shop.logo.url }}" alt="{{ shop.name }}" width="100">{% endif %}
-        <h2><a href="{% url 'shop_page' shop.slug %}">{{ shop.name }}</a></h2>
+        <h2><a href="{% url 'shop_page' shop.slug %}">{{ shop.name }}</a>{% if shop.verification_status == 'verified' %} <span class="verified-badge">Verified Jaunpur Shop</span>{% endif %}</h2>
         <p>{{ shop.city }}, Jaunpur · {{ shop.pincode }}</p>
         {% if shop.opening_hours %}<p>Hours: {{ shop.opening_hours }}</p>{% endif %}
         {% if shop.description %}<p>{{ shop.description|truncatewords:24 }}</p>{% endif %}

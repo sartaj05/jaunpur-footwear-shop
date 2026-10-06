@@ -7,6 +7,7 @@ urlpatterns = [
     path('language/<str:language>/', views.set_site_language, name='set_site_language'),
     path('apply/', views.apply_for_shop, name='shop_application'),
     path('seller/', views.seller_dashboard, name='seller_dashboard'),
+    path('seller/verification/request/', views.request_shop_verification, name='request_shop_verification'),
     path('seller/profile/', views.seller_shop_profile, name='seller_shop_profile'),
     path('seller/promotions/', views.manage_promotions, name='manage_promotions'),
     path('seller/promotions/<int:promotion_id>/close/', views.deactivate_promotion, name='deactivate_promotion'),

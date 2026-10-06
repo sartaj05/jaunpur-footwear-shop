@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
-{% if shop.banner %}<div class="page-banner" style="background-image:linear-gradient(#10231dcc,#10231dcc),url('{{ shop.banner.url }}');background-size:cover"><h1>{{ shop.name }}</h1></div>
-{% else %}<section class="page-banner"><h1>{{ shop.name }}</h1><p>{{ shop.city }}, Jaunpur · {{ shop.pincode }}</p></section>{% endif %}
+{% if shop.banner %}<div class="page-banner" style="background-image:linear-gradient(#10231dcc,#10231dcc),url('{{ shop.banner.url }}');background-size:cover"><h1>{{ shop.name }}{% if shop.verification_status == 'verified' %} <span class="verified-badge">Verified Jaunpur Shop</span>{% endif %}</h1></div>
+{% else %}<section class="page-banner"><h1>{{ shop.name }}{% if shop.verification_status == 'verified' %} <span class="verified-badge">Verified Jaunpur Shop</span>{% endif %}</h1><p>{{ shop.city }}, Jaunpur · {{ shop.pincode }}</p></section>{% endif %}
 <section class="featured-section">
     {% if shop.logo %}<img src="{{ shop.logo.url }}" alt="{{ shop.name }}" width="120">{% endif %}
     <p>{% if is_hindi and shop.description_hi %}{{ shop.description_hi }}{% else %}{{ shop.description|default:'A local Jaunpur footwear shop.' }}{% endif %}</p>

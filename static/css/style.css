@@ -1564,3 +1564,14 @@ textarea {
         grid-template-columns: 1fr;
     }
 }
+.verified-badge {
+    display: inline-block;
+    margin-left: 0.45rem;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    background: #e5f7eb;
+    color: #176b36;
+    font-size: 0.72em;
+    font-weight: 700;
+    vertical-align: middle;
+}

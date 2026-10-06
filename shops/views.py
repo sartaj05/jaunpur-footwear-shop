@@ -184,6 +184,21 @@ def seller_dashboard(request):
 
 
 @login_required
+def request_shop_verification(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    if request.method == 'POST' and shop.verification_status != 'verified':
+        if not shop.name or not shop.phone or not shop.address or not shop.pincode:
+            messages.error(request, 'Complete your shop name, phone, address, and Jaunpur PIN code first.')
+        else:
+            shop.verification_status = 'pending'
+            shop.verification_requested_at = timezone.now()
+            shop.verification_note = ''
+            shop.save(update_fields=['verification_status', 'verification_requested_at', 'verification_note', 'updated_at'])
+            messages.success(request, 'Verification requested. Staff will review your shop details and contact you.')
+    return redirect('seller_dashboard')
+
+
+@login_required
 def seller_orders(request):
     shop = get_object_or_404(Shop, owner=request.user, status='approved')
     orders = shop.seller_orders.select_related('order', 'order__user').prefetch_related('items').order_by('-created_at')
