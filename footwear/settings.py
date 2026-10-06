@@ -230,6 +230,7 @@ AMAZON_OAUTH_VERSION = os.environ.get('AMAZON_OAUTH_VERSION', '')
 AMAZON_LWA_TOKEN_URL = os.environ.get('AMAZON_LWA_TOKEN_URL', 'https://api.amazon.com/auth/o2/token')
 AMAZON_SP_API_ENDPOINT = os.environ.get('AMAZON_SP_API_ENDPOINT', 'https://sellingpartnerapi-eu.amazon.com')
 MARKETPLACE_API_USER_AGENT = os.environ.get('MARKETPLACE_API_USER_AGENT', 'JaunpurFootwear/1.0 (Language=Python)')
+ONDC_PARTICIPANT_ADAPTER = os.environ.get('ONDC_PARTICIPANT_ADAPTER', '').strip()
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', '')
 if IS_PRODUCTION and not CELERY_BROKER_URL:
     raise ImproperlyConfigured("CELERY_BROKER_URL is required in production.")

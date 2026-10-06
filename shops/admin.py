@@ -74,7 +74,7 @@ class ONDCEnrollmentAdmin(admin.ModelAdmin):
     list_display = ['shop', 'participant_name', 'seller_network_id', 'participant_supports_retail', 'status', 'submitted_at']
     list_filter = ['status', 'submitted_at']
     search_fields = ['shop__name', 'participant_name', 'seller_network_id', 'participant_seller_id', 'network_subscriber_id', 'application_reference']
-    readonly_fields = ['submitted_at', 'catalog_exported_at', 'production_activated_at', 'updated_at']
+    readonly_fields = ['submitted_at', 'catalog_exported_at', 'production_activated_at', 'participant_connection_status', 'participant_connection_checked_at', 'participant_connection_note', 'updated_at']
 
     def save_model(self, request, obj, form, change):
         from django.utils import timezone

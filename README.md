@@ -26,7 +26,7 @@ The feature list below describes the current repository scope. Some workflows re
 - Shared stock reservations across the Jaunpur shop and authorized marketplace channels
 - Unified Jaunpur, Amazon, and Flipkart seller order inbox
 - Marketplace settlement CSV imports with seller-scoped order matching and row-level review history
-- ONDC Seller Network Participant onboarding tracker for Jaunpur shops
+- ONDC Seller Network Participant onboarding, catalog handoff, and configurable connection-check adapter hook
 - Per-shop commission statements and staff-recorded payout ledger
 - PIN-code-targeted shop promotions
 - Jaunpur loyalty points and personal ₹50 reward coupons
@@ -106,7 +106,7 @@ The feature set is strong enough for a portfolio walkthrough and interview discu
 
 See Django's [deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/) before exposing the site publicly. Django specifically calls out production secrets, `DEBUG`, `ALLOWED_HOSTS`, HTTPS, backups, and using a production WSGI/ASGI server.
 
-The marketplace OAuth/API flows are gated on provider approval, app credentials, and each seller's authorization. WhatsApp requires Meta configuration and customer opt-in. ONDC currently stores participant onboarding details and exports a catalog snapshot; it does not sync live ONDC inventory or orders.
+The marketplace OAuth/API flows are gated on provider approval, app credentials, and each seller's authorization. WhatsApp requires Meta configuration and customer opt-in. ONDC stores participant onboarding details, exports a catalog snapshot, and can call a configured participant-specific connection-check adapter. No adapter is configured by default, and this app does not sync live ONDC inventory or orders.
 
 GitHub Actions runs Django checks, migration drift checks, and the automated test suite for pushes and pull requests to `main` and `sartaj`.
 
@@ -192,4 +192,6 @@ Get the API version and template approval from your Meta Business account. Never
 
 An approved Jaunpur seller can record its Seller Network Participant and application details from **ONDC seller onboarding**. The Jaunpur admin reviews the participant and confirms whether it supports retail; after the shop profile and catalog pass the readiness checklist, the seller can download a JSON catalog snapshot for manual handoff. Admins can track participant confirmation, catalog export, production approval, and the externally confirmed live status.
 
-This workflow prepares seller information and the catalog handoff. It does not connect to ONDC, submit data to a participant, synchronize inventory/orders, or activate production traffic. Complete participant onboarding, network credentials, and live order/inventory integration with an eligible [ONDC Seller Network Participant](https://www.ondc.org/pages/seller-network-participants.html) before launch. The exported stock is a timestamped snapshot; it must not be treated as live stock synchronization.
+This workflow records seller onboarding information and prepares a catalog handoff. Set `ONDC_PARTICIPANT_ADAPTER` to the dotted Python path of a participant-specific adapter class to enable the seller connection-check button. The class is initialized without arguments and implements `check_connection(enrollment)`, returning the boolean `True` only after its authenticated, participant-specific health check succeeds. Store provider credentials in the deployment secret manager and read them inside that adapter; never save secrets in the enrollment record or source control. See [the adapter contract](docs/ondc-participant-adapter.md).
+
+The connection check is not a complete ONDC integration: it does not submit catalog changes, synchronize inventory or orders, settle funds, or certify the application. Those workflows require the selected participant's protocol, credentials, onboarding, and production approval. The exported stock is a timestamped snapshot; it must not be treated as live stock synchronization. An eligible [ONDC Seller Network Participant](https://www.ondc.org/pages/seller-network-participants.html) must confirm its role and retail support before the app allows a connection check.

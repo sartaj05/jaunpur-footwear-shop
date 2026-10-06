@@ -184,6 +184,11 @@ class ONDCEnrollment(models.Model):
         ('live', 'Production connection confirmed'),
         ('needs_changes', 'More information required'),
     ]
+    CONNECTION_CHECK_CHOICES = [
+        ('not_configured', 'Participant adapter not configured'),
+        ('connected', 'Participant connection confirmed'),
+        ('failed', 'Participant connection check failed'),
+    ]
 
     shop = models.OneToOneField(Shop, on_delete=models.CASCADE, related_name='ondc_enrollment')
     participant_name = models.CharField(max_length=160, blank=True)
@@ -198,6 +203,9 @@ class ONDCEnrollment(models.Model):
     submitted_at = models.DateTimeField(blank=True, null=True)
     catalog_exported_at = models.DateTimeField(blank=True, null=True)
     production_activated_at = models.DateTimeField(blank=True, null=True)
+    participant_connection_status = models.CharField(max_length=20, choices=CONNECTION_CHECK_CHOICES, default='not_configured')
+    participant_connection_checked_at = models.DateTimeField(blank=True, null=True)
+    participant_connection_note = models.CharField(max_length=240, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

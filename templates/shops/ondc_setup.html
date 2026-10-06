@@ -11,6 +11,16 @@
         {% if enrollment.production_activated_at %}<p>Production confirmation recorded {{ enrollment.production_activated_at|date:'M j, Y g:i A' }}.</p>{% endif %}
         {% if enrollment.catalog_exported_at %}<p>Catalog handoff last exported {{ enrollment.catalog_exported_at|date:'M j, Y g:i A' }}.</p>{% endif %}
         {% if enrollment.staff_note %}<p>Admin note: {{ enrollment.staff_note }}</p>{% endif %}
+        <h3>Participant integration check</h3>
+        <p><strong>{{ enrollment.get_participant_connection_status_display }}</strong>{% if enrollment.participant_connection_checked_at %} · checked {{ enrollment.participant_connection_checked_at|date:'M j, Y g:i A' }}{% endif %}</p>
+        {% if enrollment.participant_connection_note %}<p>{{ enrollment.participant_connection_note }}</p>{% endif %}
+        {% if participant_confirmed %}
+            {% if ondc_adapter_configured %}
+                <form method="post" action="{% url 'check_ondc_participant_connection' %}">{% csrf_token %}<button class="secondary-btn">Check participant connection</button></form>
+            {% else %}
+                <p>Connection checks are disabled until deployment configures a participant-specific adapter. No ONDC network request is sent from this app yet.</p>
+            {% endif %}
+        {% endif %}
         <form method="post" class="checkout-form-card">{% csrf_token %}
             <h3>Seller Network Participant</h3>
             <div class="form-group"><label>Participant name</label><input name="participant_name" value="{{ enrollment.participant_name }}" maxlength="160" required></div>

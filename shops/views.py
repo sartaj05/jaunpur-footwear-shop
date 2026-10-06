@@ -30,6 +30,7 @@ from accounts.services import award_loyalty_for_order
 
 from .models import MarketplaceChannelOrder, MarketplaceConnection, MarketplaceProductMapping, MarketplaceSettlementImport, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion, ShopReview
 from .inventory import local_available_stock, update_mapping_allocation
+from .ondc_adapter import check_participant_connection
 from .settlements import import_settlement_statement
 from .marketplace_auth import (
     MarketplaceAuthorizationError,
@@ -1166,6 +1167,10 @@ def ondc_setup(request):
             )
             for field, value in participant_values.items():
                 setattr(enrollment, field, value)
+            if participant_changed:
+                enrollment.participant_connection_status = 'not_configured'
+                enrollment.participant_connection_checked_at = None
+                enrollment.participant_connection_note = ''
             if participant_changed or enrollment.status in ('draft', 'needs_changes'):
                 enrollment.status = 'submitted'
                 enrollment.submitted_at = timezone.now()
@@ -1176,6 +1181,7 @@ def ondc_setup(request):
                 'participant_name', 'participant_contact', 'seller_network_id', 'participant_seller_id',
                 'network_subscriber_id', 'application_reference', 'participant_supports_retail', 'status',
                 'submitted_at', 'catalog_exported_at', 'production_activated_at', 'updated_at',
+                'participant_connection_status', 'participant_connection_checked_at', 'participant_connection_note',
             ])
             messages.success(request, 'Seller Network Participant details were saved for Jaunpur admin review.')
             return redirect('ondc_setup')
@@ -1189,7 +1195,37 @@ def ondc_setup(request):
         'readiness': readiness,
         'participant_confirmed': participant_confirmed,
         'can_export_catalog': participant_confirmed and readiness['ready'],
+        'ondc_adapter_configured': bool(settings.ONDC_PARTICIPANT_ADAPTER),
     })
+
+
+@login_required
+@require_POST
+def check_ondc_participant_connection(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    enrollment = get_object_or_404(ONDCEnrollment, shop=shop)
+    participant_confirmed = enrollment.status in (
+        'partner_confirmed', 'catalog_exported', 'production_approval_pending', 'live',
+    ) and enrollment.participant_supports_retail
+    if not participant_confirmed:
+        messages.error(request, 'Wait for Jaunpur admin confirmation of your participant and its retail support before checking the integration.')
+        return redirect('ondc_setup')
+
+    status, note = check_participant_connection(enrollment)
+    enrollment.participant_connection_status = status
+    enrollment.participant_connection_note = note
+    enrollment.participant_connection_checked_at = timezone.now()
+    enrollment.save(update_fields=[
+        'participant_connection_status', 'participant_connection_note',
+        'participant_connection_checked_at', 'updated_at',
+    ])
+    if status == 'connected':
+        messages.success(request, 'The ONDC participant connection check succeeded.')
+    elif status == 'not_configured':
+        messages.warning(request, 'The integration adapter is not configured yet; no network request was made.')
+    else:
+        messages.error(request, 'The participant connection check failed. Review the adapter configuration and server logs.')
+    return redirect('ondc_setup')
 
 
 def _ondc_catalog_readiness(shop):
