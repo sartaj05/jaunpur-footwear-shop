@@ -11,6 +11,7 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 - Seller dashboard for shop-owned product and size/color stock management
 - One checkout split into shop-specific seller orders with separate progress
 - Shop pickup and local delivery appointments with weekly time slots
+- Amazon/Flipkart seller setup requests and catalog preparation CSV exports
 - Home page
 - Product listing
 - Product search

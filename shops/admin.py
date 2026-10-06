@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Shop, ShopCoverage, ShopFulfillmentSlot
+from .models import MarketplaceConnection, Shop, ShopCoverage, ShopFulfillmentSlot
 
 
 @admin.register(Shop)
@@ -32,3 +32,11 @@ class ShopFulfillmentSlotAdmin(admin.ModelAdmin):
     list_display = ['shop', 'mode', 'weekday', 'start_time', 'end_time', 'is_active']
     list_filter = ['mode', 'weekday', 'is_active']
     search_fields = ['shop__name']
+
+
+@admin.register(MarketplaceConnection)
+class MarketplaceConnectionAdmin(admin.ModelAdmin):
+    list_display = ['shop', 'channel', 'seller_account_id', 'status', 'requested_at', 'updated_at']
+    list_filter = ['channel', 'status', 'requested_at']
+    search_fields = ['shop__name', 'seller_account_id']
+    readonly_fields = ['requested_at', 'updated_at']

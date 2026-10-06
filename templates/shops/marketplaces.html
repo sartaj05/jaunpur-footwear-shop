@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Amazon and Flipkart setup</h1><p>Prepare {{ shop.name }}'s catalog for marketplace listings.</p></section>
+<section class="featured-section">
+    <p>Submit your marketplace seller account ID for review. Once the shop setup is approved, download a CSV listing-preparation sheet with current product and size/color stock. It is not a live marketplace API connection.</p>
+    <div class="product-grid">
+        {% for row in channel_rows %}
+        <article class="product-card"><div class="product-info"><h2>{{ row.label }}</h2>
+            {% if row.connection %}<p>Status: {{ row.connection.get_status_display }}</p>{% if row.connection.seller_account_id %}<p>Seller ID: {{ row.connection.seller_account_id }}</p>{% endif %}{% endif %}
+            <form method="post" action="{% url 'request_marketplace_setup' row.channel %}">{% csrf_token %}
+                <label>Marketplace seller account ID (optional)</label>
+                <input name="seller_account_id" value="{{ row.connection.seller_account_id|default:'' }}" maxlength="120">
+                <button class="secondary-btn">Request setup review</button>
+            </form>
+            {% if row.connection.status == 'approved' %}<a class="card-btn" href="{% url 'export_marketplace_feed' row.channel %}">Download catalog CSV</a>{% endif %}
+        </div></article>
+        {% endfor %}
+    </div>
+    <p>Amazon and Flipkart each require seller registration and authorized developer access. The live API sync for listings, inventory, and orders must be configured after those accounts approve the connection.</p>
+</section>
+{% endblock %}

@@ -85,3 +85,29 @@ class ShopFulfillmentSlot(models.Model):
 
     def __str__(self):
         return f'{self.shop.name} · {self.get_weekday_display()} {self.start_time}-{self.end_time}'
+
+
+class MarketplaceConnection(models.Model):
+    CHANNEL_CHOICES = [('amazon', 'Amazon'), ('flipkart', 'Flipkart')]
+    STATUS_CHOICES = [
+        ('not_requested', 'Not requested'),
+        ('pending', 'Request pending'),
+        ('approved', 'Seller setup approved'),
+    ]
+
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='marketplace_connections')
+    channel = models.CharField(max_length=12, choices=CHANNEL_CHOICES)
+    seller_account_id = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='not_requested')
+    staff_note = models.TextField(blank=True)
+    requested_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['channel']
+        constraints = [
+            models.UniqueConstraint(fields=['shop', 'channel'], name='unique_shop_marketplace_channel')
+        ]
+
+    def __str__(self):
+        return f'{self.shop.name} · {self.get_channel_display()}'

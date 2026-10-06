@@ -1,16 +1,19 @@
 import re
+import csv
 from decimal import Decimal, InvalidOperation
 from datetime import time
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from products.models import Brand, Category, Product, ProductVariant
 from orders.models import OrderTrackingEvent, SellerOrder
 from orders.notifications import send_order_status_update
 
-from .models import Shop, ShopCoverage, ShopFulfillmentSlot
+from .models import MarketplaceConnection, Shop, ShopCoverage, ShopFulfillmentSlot
 
 
 @login_required
@@ -306,3 +309,62 @@ def seller_manage_variants(request, product_id):
         'product': product,
         'variants': product.variants.order_by('size', 'color'),
     })
+
+
+@login_required
+def marketplace_hub(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    channel_rows = []
+    for channel, label in MarketplaceConnection.CHANNEL_CHOICES:
+        channel_rows.append({
+            'channel': channel,
+            'label': label,
+            'connection': shop.marketplace_connections.filter(channel=channel).first(),
+        })
+    return render(request, 'shops/marketplaces.html', {'shop': shop, 'channel_rows': channel_rows})
+
+
+@login_required
+def request_marketplace_setup(request, channel):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    if request.method == 'POST' and channel in dict(MarketplaceConnection.CHANNEL_CHOICES):
+        connection, _ = MarketplaceConnection.objects.get_or_create(shop=shop, channel=channel)
+        if connection.status != 'approved':
+            connection.seller_account_id = request.POST.get('seller_account_id', '').strip()
+            connection.status = 'pending'
+            connection.requested_at = timezone.now()
+            connection.save(update_fields=['seller_account_id', 'status', 'requested_at', 'updated_at'])
+            messages.success(request, 'Marketplace setup request sent to the Jaunpur Footwear admin.')
+        else:
+            messages.info(request, 'Your seller setup has already been reviewed.')
+    return redirect('marketplace_hub')
+
+
+@login_required
+def export_marketplace_feed(request, channel):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    if channel not in dict(MarketplaceConnection.CHANNEL_CHOICES):
+        return redirect('marketplace_hub')
+    get_object_or_404(MarketplaceConnection, shop=shop, channel=channel, status='approved')
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="jaunpur-{channel}-catalog.csv"'
+    response.write('\ufeff')
+    writer = csv.writer(response)
+    writer.writerow(['seller_sku', 'shop_name', 'product_name', 'brand', 'category', 'description', 'price_inr', 'quantity', 'size', 'color'])
+    products = shop.products.filter(is_active=True).select_related('brand', 'category').prefetch_related('variants')
+    for product in products:
+        variants = list(product.variants.filter(is_active=True))
+        if variants:
+            for variant in variants:
+                writer.writerow([
+                    f'JFW-S{shop.pk}-P{product.pk}-V{variant.pk}', shop.name, product.name,
+                    product.brand.name, product.category.name, product.description,
+                    variant.final_price(), variant.stock, variant.size, variant.color,
+                ])
+        else:
+            writer.writerow([
+                f'JFW-S{shop.pk}-P{product.pk}-BASE', shop.name, product.name,
+                product.brand.name, product.category.name, product.description,
+                product.final_price(), product.stock, '', '',
+            ])
+    return response
