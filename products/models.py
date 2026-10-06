@@ -60,11 +60,11 @@ class Product(models.Model):
             self.seller_sku = f'JFW-S{self.shop_id}-P{self.pk}'
             type(self).objects.filter(pk=self.pk).update(seller_sku=self.seller_sku)
 
-    def final_price(self):
+    def final_price(self, pincode=''):
         base_price = self.discount_price if self.discount_price else self.price
-        return self.price_after_promotions(base_price)
+        return self.price_after_promotions(base_price, pincode=pincode)
 
-    def price_after_promotions(self, base_price):
+    def price_after_promotions(self, base_price, pincode=''):
         if not self.shop_id:
             return base_price
         now = timezone.now()
@@ -72,7 +72,7 @@ class Product(models.Model):
             models.Q(starts_at__isnull=True) | models.Q(starts_at__lte=now),
             models.Q(expires_at__isnull=True) | models.Q(expires_at__gte=now),
         )
-        promotional_prices = [promotion.discounted_price(base_price) for promotion in promotions]
+        promotional_prices = [promotion.discounted_price(base_price) for promotion in promotions if promotion.applies_to_pincode(pincode)]
         return min([base_price, *promotional_prices])
 
     def is_low_stock(self):
@@ -97,10 +97,10 @@ class ProductVariant(models.Model):
             models.UniqueConstraint(fields=['product', 'size', 'color'], name='unique_product_size_color')
         ]
 
-    def final_price(self):
+    def final_price(self, pincode=''):
         if self.price_override is not None:
-            return self.product.price_after_promotions(self.price_override)
-        return self.product.final_price()
+            return self.product.price_after_promotions(self.price_override, pincode=pincode)
+        return self.product.final_price(pincode=pincode)
 
     @classmethod
     def sync_product_stock(cls, product_id):

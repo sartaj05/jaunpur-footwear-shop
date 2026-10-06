@@ -73,11 +73,11 @@
                     <p class="sizes">{% if is_hindi %}साइज़{% else %}Sizes{% endif %}: {{ product.available_sizes }}</p>
 
                     <p class="price">
-                        {% if product.final_price < product.price %}
+                        {% if product.has_discount %}
                             <del>₹{{ product.price }}</del>
-                            <strong>₹{{ product.final_price }}</strong>
+                            <strong>₹{{ product.display_price }}</strong>
                         {% else %}
-                            <strong>₹{{ product.final_price }}</strong>
+                            <strong>₹{{ product.display_price }}</strong>
                         {% endif %}
                     </p>
 

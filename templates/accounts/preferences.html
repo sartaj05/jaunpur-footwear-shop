@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Jaunpur rewards and preferences</h1><p>Set your delivery area, message choices, and local loyalty rewards.</p></section>
+<section class="checkout-page">
+    <form method="post" class="checkout-form-card">{% csrf_token %}<input type="hidden" name="action" value="save_preferences">
+        <div class="form-group"><label>Phone number for delivery</label><input name="mobile" value="{{ profile.mobile }}" autocomplete="tel"></div>
+        <div class="form-group"><label>Jaunpur delivery PIN code</label><input name="pincode" value="{{ profile.pincode }}" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6"></div>
+        <div class="form-group"><label>Preferred language</label><select name="preferred_language"><option value="en" {% if profile.preferred_language == 'en' %}selected{% endif %}>English</option><option value="hi" {% if profile.preferred_language == 'hi' %}selected{% endif %}>हिन्दी</option></select></div>
+        <label class="form-group"><input type="checkbox" name="whatsapp_order_updates" {% if profile.whatsapp_order_updates %}checked{% endif %}> Send me WhatsApp order status updates. I can turn this off here.</label>
+        <button class="auth-btn">Save preferences</button>
+    </form>
+    <section class="checkout-form-card"><h2>Jaunpur points: {{ loyalty_account.points }}</h2><p>Earn 1 point for every ₹100 of a completed order. Redeem 100 points for a ₹50 coupon.</p><form method="post">{% csrf_token %}<input type="hidden" name="action" value="redeem_points"><button class="secondary-btn" {% if loyalty_account.points < 100 %}disabled{% endif %}>Redeem 100 points</button></form></section>
+    <section class="checkout-form-card"><h2>Your available coupons</h2>{% for coupon in personal_coupons %}<p><strong>{{ coupon.code }}</strong> · ₹{{ coupon.discount_value }} off · expires {{ coupon.expires_at|date:'M j, Y' }}</p>{% empty %}<p>No personal coupons yet.</p>{% endfor %}</section>
+    <section class="checkout-form-card"><h2>Points activity</h2>{% for item in loyalty_transactions %}<p>{{ item.created_at|date:'M j, Y' }} · {{ item.get_transaction_type_display }} · {{ item.points }} points{% if item.coupon_code %} · {{ item.coupon_code }}{% endif %} {% if item.note %}· {{ item.note }}{% endif %}</p>{% empty %}<p>Delivered Jaunpur orders will earn points here.</p>{% endfor %}</section>
+</section>
+{% endblock %}

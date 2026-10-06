@@ -114,7 +114,7 @@
             <div class="product-img-wrap">
                 <img src="{{ product.image.url }}" alt="{{ product.name }}">
 
-                {% if product.final_price < product.price %}
+                {% if product.has_discount %}
                 <span class="discount-badge">Sale</span>
                 {% endif %}
 
@@ -128,14 +128,14 @@
                 <h3>{% if is_hindi and product.name_hi %}{{ product.name_hi }}{% else %}{{ product.name }}{% endif %}</h3>
                 <p class="sizes">{% if is_hindi %}उपलब्ध साइज़{% else %}Available Sizes{% endif %}: {{ product.available_sizes }}</p>
 
-                {% if product.final_price < product.price %}
+                {% if product.has_discount %}
                 <p class="price">
                     <del>₹{{ product.price }}</del>
-                    <strong>₹{{ product.final_price }}</strong>
+                    <strong>₹{{ product.display_price }}</strong>
                 </p>
                 {% else %}
                 <p class="price">
-                    <strong>₹{{ product.final_price }}</strong>
+                    <strong>₹{{ product.display_price }}</strong>
                 </p>
                 {% endif %}
 

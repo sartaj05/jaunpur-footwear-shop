@@ -11,7 +11,7 @@ import re
 import uuid
 from products.models import Product, ProductVariant
 from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
-from .notifications import send_order_confirmation
+from .notifications import send_order_confirmation, send_order_status_update
 from .payments import (
     PaymentGatewayError,
     create_razorpay_order,
@@ -21,6 +21,7 @@ from .payments import (
 )
 from shops.models import ShopCoverage, ShopFulfillmentSlot
 from accounts.models import ReferralReward
+from accounts.services import award_loyalty_for_order
 
 
 def delivery_fee_for(pincode, subtotal):
@@ -41,7 +42,7 @@ def checkout_seller_groups(items, pincode=''):
         key = shop.pk if shop else None
         if key not in groups:
             groups[key] = {'key': str(key) if key else 'platform', 'shop': shop, 'subtotal': Decimal('0.00')}
-        unit_price = item.variant.final_price() if item.variant_id else item.product.final_price()
+        unit_price = item.variant.final_price(pincode=pincode) if item.variant_id else item.product.final_price(pincode=pincode)
         groups[key]['subtotal'] += unit_price * item.quantity
     result = []
     for group in groups.values():
@@ -81,7 +82,7 @@ def resolve_checkout_fulfillment(items, pincode, post_data):
         key = shop.pk if shop else None
         if key not in groups:
             groups[key] = {'shop': shop, 'subtotal': Decimal('0.00')}
-        unit_price = item.variant.final_price() if item.variant_id else item.product.final_price()
+        unit_price = item.variant.final_price(pincode=pincode) if item.variant_id else item.product.final_price(pincode=pincode)
         groups[key]['subtotal'] += unit_price * item.quantity
 
     for key, group in groups.items():
@@ -207,7 +208,11 @@ def add_to_cart(request, product_id):
 @login_required
 def cart_view(request):
     items = CartItem.objects.filter(user=request.user)
-    total = sum(item.total_price() for item in items)
+    pincode = request.session.get('delivery_pincode', '')
+    total = sum(item.total_price(pincode=pincode) for item in items)
+    for item in items:
+        item.current_unit_price = item.variant.final_price(pincode=pincode) if item.variant_id else item.product.final_price(pincode=pincode)
+        item.current_total = item.current_unit_price * item.quantity
 
     return render(request, 'orders/cart.html', {
         'items': items,
@@ -229,7 +234,8 @@ def checkout(request):
     if not items.exists():
         return redirect('cart')
 
-    total = sum(item.total_price() for item in items)
+    pincode = request.session.get('delivery_pincode', '')
+    total = sum(item.total_price(pincode=pincode) for item in items)
     coupon_code = request.session.get('coupon_code', '')
     coupon = Coupon.objects.filter(code__iexact=coupon_code).first() if coupon_code else None
     if coupon and coupon.is_valid_for(total, user=request.user):
@@ -241,7 +247,6 @@ def checkout(request):
             coupon_code = ''
             messages.warning(request, 'The applied coupon is no longer valid.')
 
-    pincode = request.session.get('delivery_pincode', '')
     checkout_sellers = checkout_seller_groups(items, pincode)
     shipping_amount = sum((seller['shipping_preview'] for seller in checkout_sellers), Decimal('0.00'))
 
@@ -284,7 +289,7 @@ def checkout(request):
                     return redirect('cart')
 
             locked_subtotal = sum(
-                (item.variant.final_price() if item.variant_id else item.product.final_price()) * item.quantity
+                (item.variant.final_price(pincode=pincode) if item.variant_id else item.product.final_price(pincode=pincode)) * item.quantity
                 for item in locked_items
             )
             locked_coupon = Coupon.objects.select_for_update().filter(code__iexact=coupon_code).first() if coupon_code else None
@@ -324,7 +329,7 @@ def checkout(request):
 
             seller_orders = {}
             for item in locked_items:
-                unit_price = item.variant.final_price() if item.variant_id else item.product.final_price()
+                unit_price = item.variant.final_price(pincode=pincode) if item.variant_id else item.product.final_price(pincode=pincode)
                 seller_order_key = item.product.shop_id
                 if seller_order_key not in seller_orders:
                     fulfillment = locked_fulfillment[seller_order_key]
@@ -450,7 +455,7 @@ def apply_coupon(request):
     if request.method == 'POST':
         code = request.POST.get('code', '').strip().upper()
         subtotal = sum(
-            item.total_price()
+            item.total_price(pincode=request.session.get('delivery_pincode', ''))
             for item in CartItem.objects.filter(user=request.user).select_related('product', 'variant')
         )
         coupon = Coupon.objects.filter(code__iexact=code).first()
@@ -694,12 +699,15 @@ def rider_deliveries(request):
                     remaining = order.seller_orders.exclude(status='delivered').exists()
                     order.status = 'out_for_delivery' if remaining else 'delivered'
                     order.save(update_fields=['status'])
+                    if not remaining:
+                        award_loyalty_for_order(order)
                     OrderTrackingEvent.objects.create(
                         order=order,
                         status=order.status,
                         note=f'{seller_order.shop.name if seller_order.shop_id else "Jaunpur Footwear"}: delivered to {delivered_to}.',
                         created_by=request.user,
                     )
+                    transaction.on_commit(lambda order_id=order.pk: send_order_status_update(order_id))
                     if not assignment.run.assignments.exclude(status='delivered').exists():
                         assignment.run.status = 'completed'
                         assignment.run.save(update_fields=['status'])

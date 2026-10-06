@@ -171,6 +171,7 @@ class ShopPromotion(models.Model):
     description_hi = models.TextField(blank=True)
     discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPES, default='percent')
     discount_value = models.DecimalField(max_digits=8, decimal_places=2)
+    target_pincodes = models.CharField(max_length=700, blank=True)
     starts_at = models.DateTimeField(blank=True, null=True)
     expires_at = models.DateTimeField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
@@ -193,6 +194,10 @@ class ShopPromotion(models.Model):
             and (self.starts_at is None or self.starts_at <= at)
             and (self.expires_at is None or self.expires_at >= at)
         )
+
+    def applies_to_pincode(self, pincode=''):
+        targets = {value.strip() for value in self.target_pincodes.split(',') if value.strip()}
+        return not targets or bool(pincode and pincode in targets)
 
     def __str__(self):
         return f'{self.title} · {self.shop.name}'

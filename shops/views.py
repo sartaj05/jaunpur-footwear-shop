@@ -19,8 +19,22 @@ from products.models import Brand, Category, Product, ProductVariant
 from orders.models import Coupon, OrderTrackingEvent, ReturnRequest, SellerOrder
 from orders.notifications import send_order_status_update
 from accounts.models import ReferralReward
+from accounts.services import award_loyalty_for_order
 
 from .models import MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
+
+
+def customer_delivery_pincode(request):
+    if 'pincode' in request.GET:
+        candidate = request.GET.get('pincode', '').strip()
+    else:
+        candidate = request.session.get('delivery_pincode', '')
+        if not candidate and request.user.is_authenticated:
+            candidate = getattr(getattr(request.user, 'customerprofile', None), 'pincode', '')
+    if re.fullmatch(r'[1-9][0-9]{5}', candidate or ''):
+        request.session['delivery_pincode'] = candidate
+        return candidate
+    return ''
 
 
 @login_required
@@ -73,16 +87,24 @@ def shop_directory(request):
 def shop_page(request, slug):
     shop = get_object_or_404(Shop, slug=slug, status='approved')
     products = Product.objects.filter(shop=shop, is_active=True).select_related('brand', 'category')
+    pincode = customer_delivery_pincode(request)
+    for product in products:
+        product.display_price = product.final_price(pincode=pincode)
+        product.has_discount = product.display_price < product.price
     now = timezone.now()
+    area_promotions = [
+        promotion for promotion in shop.promotions.filter(is_active=True).filter(
+            Q(starts_at__isnull=True) | Q(starts_at__lte=now),
+            Q(expires_at__isnull=True) | Q(expires_at__gte=now),
+        ).prefetch_related('products') if promotion.applies_to_pincode(pincode)
+    ]
     return render(request, 'shops/detail.html', {
         'shop': shop,
         'products': products,
         'coverage_areas': shop.coverage_areas.filter(is_active=True),
         'fulfillment_slots': shop.fulfillment_slots.filter(is_active=True),
-        'promotions': shop.promotions.filter(is_active=True).filter(
-            Q(starts_at__isnull=True) | Q(starts_at__lte=now),
-            Q(expires_at__isnull=True) | Q(expires_at__gte=now),
-        ).prefetch_related('products'),
+        'promotions': area_promotions,
+        'pincode': pincode,
     })
 
 
@@ -294,6 +316,7 @@ def update_seller_order_status(request, seller_order_id):
                 seller_order.order.status = overall_status
                 seller_order.order.save(update_fields=['status'])
                 if overall_status == 'delivered':
+                    award_loyalty_for_order(seller_order.order)
                     reward = ReferralReward.objects.filter(
                         referred_user_id=seller_order.order.user_id,
                         status='pending',
@@ -725,6 +748,8 @@ def manage_promotions(request):
         description = request.POST.get('description', '').strip()
         description_hi = request.POST.get('description_hi', '').strip()
         discount_type = request.POST.get('discount_type', '')
+        target_pincodes = sorted(set(request.POST.getlist('target_pincodes')))
+        covered_pincodes = set(shop.coverage_areas.filter(is_active=True).values_list('pincode', flat=True))
         try:
             product_ids = [int(value) for value in request.POST.getlist('products')]
         except (TypeError, ValueError):
@@ -740,7 +765,7 @@ def manage_promotions(request):
         else:
             valid_discount = discount_value > 0 and (discount_type != 'percent' or discount_value <= 100)
             valid_schedule = starts_at is None or expires_at is None or expires_at > starts_at
-            if not title or discount_type not in ('percent', 'fixed') or not valid_discount or not valid_schedule or not product_ids or products.count() != len(set(product_ids)):
+            if not title or discount_type not in ('percent', 'fixed') or not valid_discount or not valid_schedule or not product_ids or products.count() != len(set(product_ids)) or not set(target_pincodes).issubset(covered_pincodes):
                 messages.error(request, 'Choose your products, a title, a positive discount, and a valid date range.')
             else:
                 promotion = ShopPromotion.objects.create(
@@ -751,6 +776,7 @@ def manage_promotions(request):
                     description_hi=description_hi,
                     discount_type=discount_type,
                     discount_value=discount_value,
+                    target_pincodes=','.join(target_pincodes),
                     starts_at=starts_at,
                     expires_at=expires_at,
                 )
@@ -762,6 +788,7 @@ def manage_promotions(request):
         'products': shop.products.filter(is_active=True).order_by('name'),
         'promotions': shop.promotions.prefetch_related('products').all(),
         'discount_types': ShopPromotion.DISCOUNT_TYPES,
+        'coverage_areas': shop.coverage_areas.filter(is_active=True).order_by('pincode'),
     })
 
 

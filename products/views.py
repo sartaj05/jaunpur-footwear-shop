@@ -15,6 +15,12 @@ def home(request):
     )[:8]
     categories = Category.objects.all()
     brands = Brand.objects.all()
+    pincode = request.session.get('delivery_pincode', '')
+    if not pincode and request.user.is_authenticated:
+        pincode = getattr(getattr(request.user, 'customerprofile', None), 'pincode', '')
+    for product in featured_products:
+        product.display_price = product.final_price(pincode=pincode)
+        product.has_discount = product.display_price < product.price
 
     return render(request, 'products/home.html', {
         'featured_products': featured_products,
@@ -34,7 +40,9 @@ def product_list(request):
     brand = request.GET.get('brand')
     category = request.GET.get('category')
     size = request.GET.get('size')
-    pincode = request.GET.get('pincode', '').strip()
+    pincode = request.GET.get('pincode', '').strip() or request.session.get('delivery_pincode', '')
+    if not pincode and request.user.is_authenticated:
+        pincode = getattr(getattr(request.user, 'customerprofile', None), 'pincode', '')
 
     if search:
         products = products.filter(name__icontains=search)
@@ -49,12 +57,17 @@ def product_list(request):
         products = products.filter(available_sizes__icontains=size)
 
     if re.fullmatch(r'[1-9][0-9]{5}', pincode):
+        request.session['delivery_pincode'] = pincode
         products = products.filter(
             Q(shop__isnull=True)
             | Q(shop__coverage_areas__pincode=pincode, shop__coverage_areas__is_active=True)
         ).distinct()
     else:
         pincode = ''
+
+    for product in products:
+        product.display_price = product.final_price(pincode=pincode)
+        product.has_discount = product.display_price < product.price
 
     return render(request, 'products/product_list.html', {
         'products': products,
@@ -72,6 +85,17 @@ def product_detail(request, pk):
     )
     sizes = [s.strip() for s in product.available_sizes.split(',')]
     variants = product.variants.filter(is_active=True)
+    pincode = request.GET.get('pincode', '').strip() or request.session.get('delivery_pincode', '')
+    if not pincode and request.user.is_authenticated:
+        pincode = getattr(getattr(request.user, 'customerprofile', None), 'pincode', '')
+    if re.fullmatch(r'[1-9][0-9]{5}', pincode or ''):
+        request.session['delivery_pincode'] = pincode
+    else:
+        pincode = ''
+    product.display_price = product.final_price(pincode=pincode)
+    product.has_discount = product.display_price < product.price
+    for variant in variants:
+        variant.display_price = variant.final_price(pincode=pincode)
     reviews = product.reviews.select_related('user')
     average_rating = reviews.aggregate(Avg('rating'))['rating__avg']
 
@@ -81,6 +105,7 @@ def product_detail(request, pk):
         'variants': variants,
         'reviews': reviews,
         'average_rating': average_rating,
+        'pincode': pincode,
         'is_wishlisted': (
             request.user.is_authenticated
             and WishlistItem.objects.filter(user=request.user, product=product).exists()
@@ -93,6 +118,11 @@ def wishlist_view(request):
     items = WishlistItem.objects.filter(user=request.user).select_related(
         'product', 'product__brand', 'product__category'
     )
+    pincode = request.session.get('delivery_pincode', '')
+    if not pincode and request.user.is_authenticated:
+        pincode = getattr(getattr(request.user, 'customerprofile', None), 'pincode', '')
+    for item in items:
+        item.product.display_price = item.product.final_price(pincode=pincode)
     return render(request, 'products/wishlist.html', {'wishlist_items': items})
 
 

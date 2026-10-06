@@ -14,8 +14,8 @@ class CartItem(models.Model):
     variant = models.ForeignKey(ProductVariant, on_delete=models.SET_NULL, blank=True, null=True)
     quantity = models.PositiveIntegerField(default=1)
 
-    def total_price(self):
-        unit_price = self.variant.final_price() if self.variant_id else self.product.final_price()
+    def total_price(self, pincode=''):
+        unit_price = self.variant.final_price(pincode=pincode) if self.variant_id else self.product.final_price(pincode=pincode)
         return unit_price * self.quantity
 
     def __str__(self):

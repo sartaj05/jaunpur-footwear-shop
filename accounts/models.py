@@ -11,6 +11,8 @@ class CustomerProfile(models.Model):
     address = models.TextField(blank=True)
     city = models.CharField(max_length=100, default='Jaunpur')
     pincode = models.CharField(max_length=10, blank=True)
+    preferred_language = models.CharField(max_length=2, choices=[('en', 'English'), ('hi', 'Hindi')], default='en')
+    whatsapp_order_updates = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.username
@@ -42,3 +44,33 @@ class ReferralReward(models.Model):
 
     def __str__(self):
         return f'{self.referrer} referred {self.referred_user} · {self.get_status_display()}'
+
+
+class LoyaltyAccount(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='loyalty_account')
+    points = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.user} · {self.points} Jaunpur points'
+
+
+class LoyaltyTransaction(models.Model):
+    TYPE_CHOICES = [('earned', 'Points earned'), ('redeemed', 'Points redeemed')]
+
+    account = models.ForeignKey(LoyaltyAccount, on_delete=models.CASCADE, related_name='transactions')
+    order = models.ForeignKey('orders.Order', on_delete=models.SET_NULL, blank=True, null=True, related_name='loyalty_transactions')
+    transaction_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    points = models.PositiveIntegerField()
+    coupon_code = models.CharField(max_length=30, blank=True)
+    note = models.CharField(max_length=180, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['order', 'transaction_type'], condition=models.Q(order__isnull=False), name='unique_order_loyalty_transaction'),
+        ]
+
+    def __str__(self):
+        return f'{self.get_transaction_type_display()} · {self.points} points'

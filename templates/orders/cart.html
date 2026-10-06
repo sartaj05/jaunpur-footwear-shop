@@ -40,8 +40,8 @@
                     <td>{{ item.size }}</td>
                     <td>{{ item.color|default:'—' }}</td>
                     <td>{{ item.quantity }}</td>
-                    <td>₹{{ item.product.final_price }}</td>
-                    <td><strong>₹{{ item.total_price }}</strong></td>
+                    <td>₹{{ item.current_unit_price }}</td>
+                    <td><strong>₹{{ item.current_total }}</strong></td>
                     <td>
                         <a href="{% url 'remove_cart_item' item.id %}" class="remove-btn">
                             Remove

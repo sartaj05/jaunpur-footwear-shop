@@ -6,14 +6,20 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 
 ### Customer Side
 - Jaunpur footwear shop applications with staff approval
+- Staff-reviewed “Verified Jaunpur Shop” profiles
 - Public Jaunpur shop directory and individual storefront pages
 - Shop delivery coverage by Jaunpur PIN code
 - Seller dashboard for shop-owned product and size/color stock management
+- Seller bulk catalog CSV import with matching product-photo uploads
+- Stable seller SKUs and marketplace product/category mappings
 - One checkout split into shop-specific seller orders with separate progress
 - Shop pickup and local delivery appointments with weekly time slots
 - Amazon/Flipkart seller setup requests and catalog preparation CSV exports
 - ONDC Seller Network Participant onboarding tracker for Jaunpur shops
 - Per-shop commission statements and staff-recorded payout ledger
+- PIN-code-targeted shop promotions
+- Jaunpur loyalty points and personal ₹50 reward coupons
+- PIN-clustered local rider routes and proof-of-delivery records
 - Home page
 - Product listing
 - Product search
@@ -27,6 +33,7 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 - Customer product ratings and reviews
 - My orders
 - Order tracking timeline and email updates
+- Opt-in English or Hindi WhatsApp order updates (Meta Cloud API configuration required)
 - Return and exchange requests
 - Customer login/register
 - Shoe size finder
@@ -80,3 +87,19 @@ python manage.py runserver
 ```
 
 Without these keys, Cash on Delivery remains available and online checkout is disabled.
+
+## WhatsApp Order Updates
+
+WhatsApp messages are sent only when the customer opts in under **Jaunpur rewards & preferences** and the Cloud API settings below are configured. Use an approved WhatsApp message template with three body placeholders for order number, customer name, and order status. The same template must have the selected English and Hindi language variants.
+
+PowerShell:
+
+```powershell
+$env:WHATSAPP_GRAPH_API_VERSION = "vXX.X"
+$env:WHATSAPP_PHONE_NUMBER_ID = "your_phone_number_id"
+$env:WHATSAPP_ACCESS_TOKEN = "your_access_token"
+$env:WHATSAPP_ORDER_TEMPLATE = "your_approved_template_name"
+python manage.py runserver
+```
+
+Get the API version and template approval from your Meta Business account. Never commit the access token. For the official send-message request format, see the [Meta WhatsApp Cloud API documentation](https://developers.facebook.com/docs/whatsapp/cloud-api/overview).

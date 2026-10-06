@@ -1,4 +1,6 @@
 from datetime import timedelta
+import re
+import secrets
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -11,7 +13,7 @@ from django.utils import timezone
 
 from orders.models import Coupon
 
-from .models import CustomerProfile, ReferralCode, ReferralReward
+from .models import CustomerProfile, LoyaltyAccount, LoyaltyTransaction, ReferralCode, ReferralReward
 
 
 def register_view(request):
@@ -99,5 +101,67 @@ def referrals_view(request):
         'referral_code': referral_code,
         'referrals': referrals,
         'share_url': share_url,
+        'personal_coupons': request.user.reserved_coupons.filter(is_active=True).order_by('-id'),
+    })
+
+
+@login_required
+def customer_preferences(request):
+    profile, _ = CustomerProfile.objects.get_or_create(user=request.user, defaults={'mobile': ''})
+    loyalty_account, _ = LoyaltyAccount.objects.get_or_create(user=request.user)
+    if request.method == 'POST' and request.POST.get('action') == 'save_preferences':
+        pincode = request.POST.get('pincode', '').strip()
+        mobile = request.POST.get('mobile', '').strip()
+        if pincode and not re.fullmatch(r'[1-9][0-9]{5}', pincode):
+            messages.error(request, 'Enter a valid six-digit Jaunpur-area PIN code or leave it blank.')
+        elif mobile and not re.fullmatch(r'[+0-9 ()-]{10,18}', mobile):
+            messages.error(request, 'Enter a valid phone number.')
+        else:
+            profile.pincode = pincode
+            profile.mobile = mobile
+            profile.preferred_language = request.POST.get('preferred_language', 'en') if request.POST.get('preferred_language') in ('en', 'hi') else 'en'
+            profile.whatsapp_order_updates = request.POST.get('whatsapp_order_updates') == 'on'
+            profile.save(update_fields=[
+                'pincode', 'mobile', 'preferred_language', 'whatsapp_order_updates',
+            ])
+            if pincode:
+                request.session['delivery_pincode'] = pincode
+            else:
+                request.session.pop('delivery_pincode', None)
+            request.session['site_language'] = profile.preferred_language
+            messages.success(request, 'Your Jaunpur delivery and WhatsApp preferences were saved.')
+            return redirect('customer_preferences')
+    elif request.method == 'POST' and request.POST.get('action') == 'redeem_points':
+        with transaction.atomic():
+            loyalty_account = LoyaltyAccount.objects.select_for_update().get(pk=loyalty_account.pk)
+            redeem_points = 100
+            if loyalty_account.points < redeem_points:
+                messages.error(request, 'You need 100 Jaunpur points to claim a ₹50 coupon.')
+            else:
+                coupon_code = f'JP-LOY-{request.user.pk}-{secrets.token_hex(3).upper()}'
+                Coupon.objects.create(
+                    code=coupon_code,
+                    discount_type='fixed',
+                    discount_value='50.00',
+                    usage_limit=1,
+                    reserved_for=request.user,
+                    starts_at=timezone.now(),
+                    expires_at=timezone.now() + timedelta(days=90),
+                )
+                loyalty_account.points -= redeem_points
+                loyalty_account.save(update_fields=['points', 'updated_at'])
+                LoyaltyTransaction.objects.create(
+                    account=loyalty_account,
+                    transaction_type='redeemed',
+                    points=redeem_points,
+                    coupon_code=coupon_code,
+                    note='Redeemed for a ₹50 Jaunpur Footwear coupon',
+                )
+                messages.success(request, f'Coupon {coupon_code} is ready. It is reserved for your account for 90 days.')
+                return redirect('customer_preferences')
+    return render(request, 'accounts/preferences.html', {
+        'profile': profile,
+        'loyalty_account': loyalty_account,
+        'loyalty_transactions': loyalty_account.transactions.all()[:20],
         'personal_coupons': request.user.reserved_coupons.filter(is_active=True).order_by('-id'),
     })

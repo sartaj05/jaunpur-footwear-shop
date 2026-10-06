@@ -12,6 +12,7 @@ from products.models import Product, Brand, Category
 from orders.models import DeliveryAssignment, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, SellerOrder
 from orders.notifications import send_order_status_update
 from orders.payments import release_order_inventory
+from accounts.services import award_loyalty_for_order
 from django.db import transaction
 
 
@@ -207,6 +208,8 @@ def update_order_status(request, pk):
                 PaymentAttempt.objects.filter(order=order, status='created').update(status='failed')
             order.status = new_status
             order.save(update_fields=['status'])
+            if new_status == 'delivered':
+                award_loyalty_for_order(order)
             OrderTrackingEvent.objects.create(
                 order=order,
                 status=new_status,

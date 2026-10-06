@@ -16,11 +16,11 @@
         </p>
 
         <div class="detail-price">
-            {% if product.final_price < product.price %}
+            {% if product.has_discount %}
                 <del>₹{{ product.price }}</del>
-                <strong>₹{{ product.final_price }}</strong>
+                <strong>₹{{ product.display_price }}</strong>
             {% else %}
-                <strong>₹{{ product.final_price }}</strong>
+                <strong>₹{{ product.display_price }}</strong>
             {% endif %}
         </div>
 
@@ -53,7 +53,7 @@
                 <option value="">Choose a size and color</option>
                 {% for variant in variants %}
                 <option value="{{ variant.id }}" {% if variant.stock < 1 %}disabled{% endif %}>
-                    {{ variant.size }} / {{ variant.color }}{% if variant.stock < 1 %} — Out of stock{% endif %}
+                    {{ variant.size }} / {{ variant.color }} · ₹{{ variant.display_price }}{% if variant.stock < 1 %} — Out of stock{% endif %}
                 </option>
                 {% endfor %}
             </select>
