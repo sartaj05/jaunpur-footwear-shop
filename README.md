@@ -7,6 +7,7 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 ### Customer Side
 - Jaunpur footwear shop applications with staff approval
 - Public Jaunpur shop directory and individual storefront pages
+- Shop delivery coverage by Jaunpur PIN code
 - Home page
 - Product listing
 - Product search

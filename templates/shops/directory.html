@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <section class="page-banner"><h1>Jaunpur footwear shops</h1><p>Explore approved local shops and the footwear they stock.</p></section>
+<form method="get" class="checkout-form-card"><label for="shopPincode">Find shops delivering to your PIN code</label><input id="shopPincode" name="pincode" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" value="{{ pincode }}" placeholder="6-digit PIN code"><button class="primary-btn">Find local shops</button></form>
 <section class="featured-section"><div class="product-grid">
     {% for shop in shops %}
     <article class="product-card"><div class="product-info">

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>{{ shop.name }} delivery coverage</h1><p>Add the Jaunpur PIN codes and delivery fees your shop supports.</p></section>
+<section class="checkout-page">
+    <form class="checkout-form-card" method="post">{% csrf_token %}
+        <div class="form-group"><label>PIN code</label><input name="pincode" pattern="[1-9][0-9]{5}" maxlength="6" inputmode="numeric" required></div>
+        <div class="form-group"><label>Area name (optional)</label><input name="area_name" placeholder="Town, block, or locality"></div>
+        <div class="form-group"><label>Delivery fee (₹)</label><input type="number" name="delivery_fee" min="0" step="0.01" value="50.00" required></div>
+        <button class="auth-btn">Save coverage</button>
+    </form>
+    <div class="checkout-form-card"><h2>Covered PIN codes</h2>
+        {% for area in coverage_areas %}<p>{{ area.area_name|default:area.pincode }} · {{ area.pincode }} · ₹{{ area.delivery_fee }}
+            <form method="post" action="{% url 'remove_shop_coverage' area.id %}" style="display:inline">{% csrf_token %}<button class="secondary-btn">Remove</button></form>
+        </p>{% empty %}<p>No PIN codes added yet.</p>{% endfor %}
+    </div>
+</section>
+{% endblock %}

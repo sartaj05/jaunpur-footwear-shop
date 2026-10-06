@@ -4,6 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
 from django.db.models import Avg
+from django.db.models import Q
+import re
 from .models import Product, Brand, Category, ProductReview, WishlistItem
 
 
@@ -28,6 +30,7 @@ def product_list(request):
     brand = request.GET.get('brand')
     category = request.GET.get('category')
     size = request.GET.get('size')
+    pincode = request.GET.get('pincode', '').strip()
 
     if search:
         products = products.filter(name__icontains=search)
@@ -41,10 +44,19 @@ def product_list(request):
     if size:
         products = products.filter(available_sizes__icontains=size)
 
+    if re.fullmatch(r'[1-9][0-9]{5}', pincode):
+        products = products.filter(
+            Q(shop__isnull=True)
+            | Q(shop__coverage_areas__pincode=pincode, shop__coverage_areas__is_active=True)
+        ).distinct()
+    else:
+        pincode = ''
+
     return render(request, 'products/product_list.html', {
         'products': products,
         'brands': brands,
         'categories': categories,
+        'pincode': pincode,
     })
 
 

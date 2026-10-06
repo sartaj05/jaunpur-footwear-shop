@@ -41,3 +41,21 @@ class Shop(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ShopCoverage(models.Model):
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='coverage_areas')
+    pincode = models.CharField(max_length=6)
+    area_name = models.CharField(max_length=100, blank=True)
+    delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default='50.00')
+    free_delivery_minimum = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['pincode']
+        constraints = [
+            models.UniqueConstraint(fields=['shop', 'pincode'], name='unique_shop_coverage_pincode')
+        ]
+
+    def __str__(self):
+        return f'{self.shop.name} - {self.area_name or self.pincode}'

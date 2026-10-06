@@ -43,6 +43,9 @@
                 <option value="11">Size 11</option>
             </select>
 
+            <label>Jaunpur PIN code</label>
+            <input type="text" name="pincode" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" placeholder="Filter by local delivery" value="{{ pincode }}">
+
             <button class="primary-btn full-btn">Apply Filter</button>
             <a href="{% url 'product_list' %}" class="clear-btn">Clear Filter</a>
         </form>
