@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>{% if product %}Edit{% else %}Add{% endif %} product</h1><p>Listing for {{ shop.name }}</p></section>
+<section class="checkout-page"><form method="post" enctype="multipart/form-data" class="checkout-form-card">{% csrf_token %}
+    <div class="form-group"><label>Product name</label><input name="name" value="{{ product.name|default:'' }}" required></div>
+    <div class="form-group"><label>Brand</label><select name="brand" required>{% for brand in brands %}<option value="{{ brand.id }}" {% if product.brand_id == brand.id %}selected{% endif %}>{{ brand.name }}</option>{% endfor %}</select></div>
+    <div class="form-group"><label>Category</label><select name="category" required>{% for category in categories %}<option value="{{ category.id }}" {% if product.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></div>
+    <div class="form-group"><label>Gender</label><select name="gender">{% for value,label in gender_choices %}<option value="{{ value }}" {% if product.gender == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="form-group"><label>Description</label><textarea name="description" required>{{ product.description|default:'' }}</textarea></div>
+    <div class="form-group"><label>Price (₹)</label><input type="number" step="0.01" min="0.01" name="price" value="{{ product.price|default:'' }}" required></div>
+    <div class="form-group"><label>Sale price (optional)</label><input type="number" step="0.01" min="0.01" name="discount_price" value="{{ product.discount_price|default:'' }}"></div>
+    {% if not has_variants %}<div class="form-group"><label>Stock</label><input type="number" min="0" name="stock" value="{{ product.stock|default:'0' }}" required></div>{% else %}<p>Stock is managed by your size and color variants.</p>{% endif %}
+    <div class="form-group"><label>Available sizes</label><input name="available_sizes" value="{{ product.available_sizes|default:'' }}" placeholder="5,6,7,8,9" required></div>
+    <div class="form-group"><label>Product photo</label><input type="file" name="image" accept="image/*" {% if not product %}required{% endif %}></div>
+    <label><input type="checkbox" name="is_active" {% if product.is_active or not product %}checked{% endif %}> Visible in Jaunpur catalog</label>
+    <button class="auth-btn">Save listing</button>
+</form></section>
+{% endblock %}

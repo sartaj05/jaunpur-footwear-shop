@@ -41,6 +41,7 @@
                     <a href="{% url 'superadmin_dashboard' %}" class="dashboard-link">Dashboard</a>
                 {% endif %}
                 <a href="{% url 'shop_application' %}">Sell with us</a>
+                {% if user.footwear_shop.status == 'approved' %}<a href="{% url 'seller_dashboard' %}">Seller dashboard</a>{% endif %}
                 <a href="{% url 'cart' %}">Cart</a>
                 <a href="{% url 'wishlist' %}">Wishlist</a>
                 <a href="{% url 'my_orders' %}">My Orders</a>

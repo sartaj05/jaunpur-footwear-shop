@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Stock variants</h1><p>{{ product.name }} · size and color stock</p></section>
+<section class="checkout-page">
+    <form method="post" class="checkout-form-card">{% csrf_token %}<input type="hidden" name="action" value="add">
+        <div class="form-group"><label>Shoe size</label><input name="size" placeholder="7" required></div>
+        <div class="form-group"><label>Color</label><input name="color" placeholder="Black" required></div>
+        <div class="form-group"><label>Available stock</label><input type="number" name="stock" min="0" value="0" required></div>
+        <div class="form-group"><label>Price override (optional, ₹)</label><input type="number" name="price_override" min="0.01" step="0.01"></div>
+        <button class="auth-btn">Add variant</button>
+    </form>
+    <div class="checkout-form-card"><h2>Variants</h2>{% for variant in variants %}<div><p>Size {{ variant.size }} · {{ variant.color }} · stock {{ variant.stock }} · ₹{{ variant.final_price }}</p><form method="post">{% csrf_token %}<input type="hidden" name="action" value="remove"><input type="hidden" name="variant_id" value="{{ variant.id }}"><button class="secondary-btn">Remove variant</button></form></div>{% empty %}<p>No variants added.</p>{% endfor %}</div>
+</section>
+{% endblock %}

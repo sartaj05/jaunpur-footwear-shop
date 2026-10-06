@@ -10,7 +10,9 @@ from .models import Product, Brand, Category, ProductReview, WishlistItem
 
 
 def home(request):
-    featured_products = Product.objects.filter(is_active=True, is_featured=True)[:8]
+    featured_products = Product.objects.filter(is_active=True, is_featured=True).filter(
+        Q(shop__isnull=True) | Q(shop__status='approved')
+    )[:8]
     categories = Category.objects.all()
     brands = Brand.objects.all()
 
@@ -22,7 +24,9 @@ def home(request):
 
 
 def product_list(request):
-    products = Product.objects.filter(is_active=True)
+    products = Product.objects.filter(is_active=True).filter(
+        Q(shop__isnull=True) | Q(shop__status='approved')
+    )
     brands = Brand.objects.all()
     categories = Category.objects.all()
 
@@ -61,7 +65,11 @@ def product_list(request):
 
 
 def product_detail(request, pk):
-    product = get_object_or_404(Product, pk=pk, is_active=True)
+    product = get_object_or_404(
+        Product.objects.filter(Q(shop__isnull=True) | Q(shop__status='approved')),
+        pk=pk,
+        is_active=True,
+    )
     sizes = [s.strip() for s in product.available_sizes.split(',')]
     variants = product.variants.filter(is_active=True)
     reviews = product.reviews.select_related('user')
