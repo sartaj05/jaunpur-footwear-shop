@@ -110,6 +110,59 @@ class SellerOrder(models.Model):
         return f'{seller} · order #{self.order_id}'
 
 
+class DeliveryRider(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='delivery_rider_profile')
+    phone = models.CharField(max_length=15, blank=True)
+    home_pincode = models.CharField(max_length=6, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['user__username']
+
+    def __str__(self):
+        return self.user.get_full_name() or self.user.username
+
+
+class DeliveryRun(models.Model):
+    STATUS_CHOICES = [('planned', 'Planned'), ('in_progress', 'In progress'), ('completed', 'Completed')]
+
+    rider = models.ForeignKey(DeliveryRider, on_delete=models.PROTECT, related_name='runs')
+    pincode = models.CharField(max_length=6)
+    delivery_date = models.DateField()
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='planned')
+    route_note = models.CharField(max_length=240, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='created_delivery_runs')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['delivery_date', 'pincode', 'id']
+
+    def __str__(self):
+        return f'{self.pincode} · {self.delivery_date} · {self.rider}'
+
+
+class DeliveryAssignment(models.Model):
+    STATUS_CHOICES = [('assigned', 'Assigned'), ('delivered', 'Delivered'), ('failed', 'Delivery attempt failed')]
+
+    run = models.ForeignKey(DeliveryRun, on_delete=models.CASCADE, related_name='assignments')
+    seller_order = models.OneToOneField(SellerOrder, on_delete=models.CASCADE, related_name='delivery_assignment')
+    sequence = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='assigned')
+    delivered_to = models.CharField(max_length=120, blank=True)
+    proof_photo = models.ImageField(upload_to='delivery/proof/', blank=True, null=True)
+    note = models.TextField(blank=True)
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    delivered_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['run', 'sequence']
+        constraints = [models.UniqueConstraint(fields=['run', 'sequence'], name='unique_delivery_run_stop_sequence')]
+
+    def __str__(self):
+        return f'Stop {self.sequence} · {self.seller_order}'
+
+
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     seller_order = models.ForeignKey(SellerOrder, on_delete=models.SET_NULL, blank=True, null=True, related_name='items')

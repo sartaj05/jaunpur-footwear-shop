@@ -1,0 +1,19 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block content %}
+<h1>Jaunpur local delivery dispatch</h1>
+<p>Assign paid or cash-on-delivery shop orders to an active rider. Each route is limited to one Jaunpur PIN code.</p>
+{% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+<form method="post" class="checkout-form-card">{% csrf_token %}
+    <div class="form-group"><label>Delivery rider</label><select name="rider_id" required>{% for rider in riders %}<option value="{{ rider.id }}">{{ rider }} · {{ rider.phone }}</option>{% empty %}<option value="">Add active riders in Django Admin first</option>{% endfor %}</select></div>
+    <div class="form-group"><label>PIN code for this route</label><input name="pincode" pattern="[1-9][0-9]{5}" maxlength="6" required></div>
+    <div class="form-group"><label>Delivery date</label><input type="date" name="delivery_date" min="{{ today }}" required></div>
+    <div class="form-group"><label>Route note</label><input name="route_note" maxlength="240" placeholder="Meet at Jaunpur city center, then deliver nearby orders"></div>
+    {% for pincode, seller_orders in grouped_orders.items %}
+    <fieldset><legend>PIN {{ pincode }}</legend>
+        {% for seller_order in seller_orders %}<label class="dispatch-order"><input type="checkbox" name="seller_orders" value="{{ seller_order.id }}"> Order #{{ seller_order.order_id }} · {{ seller_order.shop.name }} · {{ seller_order.order.full_name }} · {{ seller_order.fulfillment_date|default:'Flexible date' }} · {{ seller_order.get_status_display }}</label>{% endfor %}
+    </fieldset>
+    {% empty %}<p>No unassigned Jaunpur delivery orders are ready for dispatch.</p>{% endfor %}
+    <button class="auth-btn" {% if not riders %}disabled{% endif %}>Create PIN-code route</button>
+</form>
+<section class="featured-section"><h2>Recent routes</h2>{% for run in runs %}<article class="checkout-form-card"><h3>Route #{{ run.id }} · PIN {{ run.pincode }} · {{ run.delivery_date }}</h3><p>Rider: {{ run.rider }} · {{ run.get_status_display }}{% if run.route_note %} · {{ run.route_note }}{% endif %}</p><ol>{% for assignment in run.assignments.all %}<li>Order #{{ assignment.seller_order.order_id }} · {{ assignment.seller_order.shop.name }} · {{ assignment.get_status_display }}{% if assignment.delivered_at %} at {{ assignment.delivered_at }}{% endif %}</li>{% endfor %}</ol></article>{% empty %}<p>No routes created yet.</p>{% endfor %}</section>
+{% endblock %}

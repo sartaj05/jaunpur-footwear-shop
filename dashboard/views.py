@@ -5,10 +5,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
-from datetime import timedelta
+from datetime import date, timedelta
+import re
 
 from products.models import Product, Brand, Category
-from orders.models import Order, OrderItem, OrderTrackingEvent, PaymentAttempt, SellerOrder
+from orders.models import DeliveryAssignment, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, SellerOrder
 from orders.notifications import send_order_status_update
 from orders.payments import release_order_inventory
 from django.db import transaction
@@ -292,4 +293,67 @@ def seller_payouts(request):
         'eligible_orders': eligible.select_related('shop', 'order').order_by('created_at'),
         'paid_orders': paid,
         'eligible_total': eligible.aggregate(total=Sum('net_amount'))['total'] or 0,
+    })
+
+
+@staff_member_required
+def delivery_dispatch(request):
+    pending_dispatch = SellerOrder.objects.filter(
+        shop__isnull=False,
+        fulfillment_method='delivery',
+        delivery_assignment__isnull=True,
+    ).exclude(status='delivered').exclude(order__status='cancelled').filter(
+        Q(order__payment_status='paid') | Q(order__payment_method='Cash on Delivery')
+    ).select_related('order', 'shop').order_by('order__delivery_pincode', 'fulfillment_date', 'created_at')
+    error = ''
+    if request.method == 'POST':
+        try:
+            rider_id = int(request.POST.get('rider_id', ''))
+            pincode = request.POST.get('pincode', '').strip()
+            delivery_date = date.fromisoformat(request.POST.get('delivery_date', ''))
+            seller_order_ids = [int(value) for value in request.POST.getlist('seller_orders')]
+        except (TypeError, ValueError):
+            rider_id, pincode, delivery_date, seller_order_ids = 0, '', None, []
+            error = 'Choose a rider, delivery date, Jaunpur PIN code, and orders.'
+        rider = DeliveryRider.objects.filter(pk=rider_id, is_active=True).first()
+        selected_orders = list(pending_dispatch.filter(pk__in=seller_order_ids))
+        if not error and (not rider or not re.fullmatch(r'[1-9][0-9]{5}', pincode) or not delivery_date or delivery_date < timezone.localdate() or not seller_order_ids or len(selected_orders) != len(set(seller_order_ids))):
+            error = 'Choose a valid active rider and eligible delivery orders.'
+        elif not error and any(row.order.delivery_pincode != pincode for row in selected_orders):
+            error = 'A delivery run can contain orders for one PIN code only.'
+        elif not error and any(row.fulfillment_date and row.fulfillment_date != delivery_date for row in selected_orders):
+            error = 'Use each order’s scheduled local delivery date.'
+        if not error:
+            with transaction.atomic():
+                run = DeliveryRun.objects.create(
+                    rider=rider,
+                    pincode=pincode,
+                    delivery_date=delivery_date,
+                    status='in_progress',
+                    route_note=request.POST.get('route_note', '').strip()[:240],
+                    created_by=request.user,
+                )
+                for sequence, seller_order in enumerate(selected_orders, start=1):
+                    DeliveryAssignment.objects.create(run=run, seller_order=seller_order, sequence=sequence)
+                    seller_order.status = 'out_for_delivery'
+                    seller_order.save(update_fields=['status'])
+                    seller_order.order.status = 'out_for_delivery'
+                    seller_order.order.save(update_fields=['status'])
+                    OrderTrackingEvent.objects.create(
+                        order=seller_order.order,
+                        status='out_for_delivery',
+                        note=f'Jaunpur delivery run {run.pk} assigned to {rider}.',
+                        created_by=request.user,
+                    )
+            messages.success(request, f'Created PIN-code delivery run #{run.pk} with {len(selected_orders)} stop(s).')
+            return redirect('delivery_dispatch')
+    grouped_orders = {}
+    for seller_order in pending_dispatch:
+        grouped_orders.setdefault(seller_order.order.delivery_pincode or 'No PIN', []).append(seller_order)
+    return render(request, 'dashboard/delivery_dispatch.html', {
+        'grouped_orders': grouped_orders,
+        'riders': DeliveryRider.objects.filter(is_active=True).select_related('user'),
+        'runs': DeliveryRun.objects.select_related('rider__user').prefetch_related('assignments__seller_order__order', 'assignments__seller_order__shop').order_by('-created_at')[:40],
+        'today': timezone.localdate().isoformat(),
+        'error': error,
     })

@@ -10,7 +10,7 @@ from decimal import Decimal
 import re
 import uuid
 from products.models import Product, ProductVariant
-from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
+from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
 from .notifications import send_order_confirmation
 from .payments import (
     PaymentGatewayError,
@@ -565,7 +565,8 @@ def fail_razorpay_payment(request, attempt_id):
 @login_required
 def my_orders(request):
     orders = Order.objects.filter(user=request.user).prefetch_related(
-        'tracking_events', 'return_requests', 'payment_attempts', 'seller_orders__shop', 'seller_orders__items'
+        'tracking_events', 'return_requests', 'payment_attempts', 'seller_orders__shop', 'seller_orders__items',
+        'seller_orders__delivery_assignment__run__rider__user',
     ).order_by('-created_at')
     return render(request, 'orders/my_orders.html', {'orders': orders})
 
@@ -624,3 +625,74 @@ def request_return(request, order_id):
         return redirect('my_orders')
 
     return render(request, 'orders/request_return.html', {'order': order})
+
+
+@login_required
+def rider_deliveries(request):
+    rider = get_object_or_404(DeliveryRider, user=request.user, is_active=True)
+    assignments = DeliveryAssignment.objects.filter(run__rider=rider).select_related(
+        'run', 'seller_order__order', 'seller_order__shop'
+    ).prefetch_related('seller_order__items').order_by('run__delivery_date', 'run__pincode', 'sequence')
+    if request.method == 'POST':
+        try:
+            assignment_id = int(request.POST.get('assignment_id', ''))
+        except (TypeError, ValueError):
+            assignment_id = 0
+        assignment = get_object_or_404(assignments, pk=assignment_id)
+        action = request.POST.get('action')
+        if assignment.status == 'delivered':
+            messages.info(request, 'This delivery stop is already marked delivered.')
+        elif action == 'delivered':
+            delivered_to = request.POST.get('delivered_to', '').strip()
+            proof_photo = request.FILES.get('proof_photo')
+            invalid_photo = bool(proof_photo and proof_photo.size > 5 * 1024 * 1024)
+            if proof_photo and not invalid_photo:
+                try:
+                    from PIL import Image
+
+                    proof_photo.seek(0)
+                    with Image.open(proof_photo) as opened_photo:
+                        opened_photo.verify()
+                    proof_photo.seek(0)
+                except (OSError, ValueError):
+                    invalid_photo = True
+            if not delivered_to:
+                messages.error(request, 'Enter who received the order to confirm delivery.')
+            elif invalid_photo:
+                messages.error(request, 'Choose a valid proof photo under 5 MB.')
+            else:
+                with transaction.atomic():
+                    assignment.status = 'delivered'
+                    assignment.delivered_to = delivered_to[:120]
+                    assignment.note = request.POST.get('note', '').strip()
+                    assignment.delivered_at = timezone.now()
+                    if proof_photo:
+                        assignment.proof_photo = proof_photo
+                    assignment.save(update_fields=['status', 'delivered_to', 'note', 'delivered_at', 'proof_photo'])
+                    seller_order = assignment.seller_order
+                    seller_order.status = 'delivered'
+                    seller_order.save(update_fields=['status'])
+                    order = seller_order.order
+                    remaining = order.seller_orders.exclude(status='delivered').exists()
+                    order.status = 'out_for_delivery' if remaining else 'delivered'
+                    order.save(update_fields=['status'])
+                    OrderTrackingEvent.objects.create(
+                        order=order,
+                        status=order.status,
+                        note=f'{seller_order.shop.name if seller_order.shop_id else "Jaunpur Footwear"}: delivered to {delivered_to}.',
+                        created_by=request.user,
+                    )
+                    if not assignment.run.assignments.exclude(status='delivered').exists():
+                        assignment.run.status = 'completed'
+                        assignment.run.save(update_fields=['status'])
+                messages.success(request, f'Order #{seller_order.order_id} delivery recorded.')
+        elif action == 'failed':
+            note = request.POST.get('note', '').strip()
+            if not note:
+                messages.error(request, 'Add a short note about the failed delivery attempt.')
+            else:
+                assignment.note = note
+                assignment.save(update_fields=['note'])
+                messages.warning(request, 'Attempt recorded. This stop remains on your route for retry.')
+        return redirect('rider_deliveries')
+    return render(request, 'orders/rider_deliveries.html', {'rider': rider, 'assignments': assignments})

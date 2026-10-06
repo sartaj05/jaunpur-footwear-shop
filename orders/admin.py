@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
+from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
 
 
 class OrderItemInline(admin.TabularInline):
@@ -62,3 +62,25 @@ class SellerOrderAdmin(admin.ModelAdmin):
     list_display = ['id', 'order', 'shop', 'sales_amount', 'commission_amount', 'net_amount', 'status', 'payout_status', 'created_at']
     list_filter = ['status', 'payout_status', 'created_at']
     search_fields = ['shop__name', 'order__id']
+
+
+@admin.register(DeliveryRider)
+class DeliveryRiderAdmin(admin.ModelAdmin):
+    list_display = ['user', 'phone', 'home_pincode', 'is_active']
+    list_filter = ['is_active', 'home_pincode']
+    search_fields = ['user__username', 'user__first_name', 'phone', 'home_pincode']
+
+
+@admin.register(DeliveryRun)
+class DeliveryRunAdmin(admin.ModelAdmin):
+    list_display = ['id', 'delivery_date', 'pincode', 'rider', 'status']
+    list_filter = ['status', 'delivery_date', 'pincode']
+    search_fields = ['rider__user__username', 'pincode']
+    inlines = []
+
+
+@admin.register(DeliveryAssignment)
+class DeliveryAssignmentAdmin(admin.ModelAdmin):
+    list_display = ['run', 'sequence', 'seller_order', 'status', 'delivered_to', 'delivered_at']
+    list_filter = ['status', 'run__delivery_date', 'run__pincode']
+    search_fields = ['seller_order__order__id', 'seller_order__shop__name', 'delivered_to']

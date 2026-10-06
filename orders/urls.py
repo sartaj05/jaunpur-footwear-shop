@@ -8,6 +8,7 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),
     path('coupons/apply/', views.apply_coupon, name='apply_coupon'),
     path('my-orders/', views.my_orders, name='my_orders'),
+    path('rider/deliveries/', views.rider_deliveries, name='rider_deliveries'),
     path('returns/<int:order_id>/', views.request_return, name='request_return'),
     path('payments/razorpay/verify/', views.verify_razorpay_payment, name='verify_razorpay_payment'),
     path('payments/razorpay/fail/<int:attempt_id>/', views.fail_razorpay_payment, name='fail_razorpay_payment'),

@@ -47,6 +47,7 @@
             <section class="seller-order-group">
                 <h5>{{ seller_order.shop.name|default:'Jaunpur Footwear' }} · {{ seller_order.get_status_display }}</h5>
                 <p>{{ seller_order.get_fulfillment_method_display }}{% if seller_order.fulfillment_date %} · {{ seller_order.fulfillment_date }}{% endif %}{% if seller_order.fulfillment_slot %} · {{ seller_order.fulfillment_slot.start_time|time:'g:i A' }}–{{ seller_order.fulfillment_slot.end_time|time:'g:i A' }}{% endif %}</p>
+                {% if seller_order.delivery_assignment %}<p>Local rider: {{ seller_order.delivery_assignment.run.rider }}{% if seller_order.delivery_assignment.run.rider.phone %} · <a href="tel:{{ seller_order.delivery_assignment.run.rider.phone }}">{{ seller_order.delivery_assignment.run.rider.phone }}</a>{% endif %} · {{ seller_order.delivery_assignment.get_status_display }}{% if seller_order.delivery_assignment.delivered_to %} · received by {{ seller_order.delivery_assignment.delivered_to }}{% endif %}</p>{% endif %}
                 {% for item in seller_order.items.all %}<div class="order-item-row"><span>{{ item.product_name }} | Size {{ item.size }}{% if item.color %} | {{ item.color }}{% endif %} | Qty {{ item.quantity }}</span><strong>₹{{ item.price }}</strong></div>{% endfor %}
             </section>
             {% endfor %}
