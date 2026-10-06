@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+{% if shop.banner %}<div class="page-banner" style="background-image:linear-gradient(#10231dcc,#10231dcc),url('{{ shop.banner.url }}');background-size:cover"><h1>{{ shop.name }}</h1></div>
+{% else %}<section class="page-banner"><h1>{{ shop.name }}</h1><p>{{ shop.city }}, Jaunpur · {{ shop.pincode }}</p></section>{% endif %}
+<section class="featured-section">
+    {% if shop.logo %}<img src="{{ shop.logo.url }}" alt="{{ shop.name }}" width="120">{% endif %}
+    <p>{{ shop.description|default:'A local Jaunpur footwear shop.' }}</p>
+    <p>{{ shop.address }}{% if shop.opening_hours %} · Hours: {{ shop.opening_hours }}{% endif %}</p>
+    <p>Call <a href="tel:{{ shop.phone }}">{{ shop.phone }}</a></p>
+    <h2>Products from {{ shop.name }}</h2>
+    <div class="product-grid">
+        {% for product in products %}<article class="product-card"><img src="{{ product.image.url }}" alt="{{ product.name }}"><div class="product-info"><p>{{ product.brand.name }}</p><h3>{{ product.name }}</h3><p>Sizes: {{ product.available_sizes }}</p><strong>₹{{ product.final_price }}</strong><a class="card-btn" href="{% url 'product_detail' product.id %}">View details</a></div></article>
+        {% empty %}<p>This shop is preparing its online catalog.</p>{% endfor %}
+    </div>
+</section>
+{% endblock %}

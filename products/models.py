@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from shops.models import Shop
 
 
 class Brand(models.Model):
@@ -103,6 +104,7 @@ class WishlistItem(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wishlist_items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='wishlisted_by')
     created_at = models.DateTimeField(auto_now_add=True)
+    shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, blank=True, null=True, related_name='products')
 
     class Meta:
         ordering = ['-created_at']

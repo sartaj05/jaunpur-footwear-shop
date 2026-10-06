@@ -31,9 +31,10 @@ class ProductAdmin(admin.ModelAdmin):
         'stock',
         'is_active',
         'is_featured',
+        'shop',
     ]
 
-    list_filter = ['brand', 'category', 'gender', 'is_active', 'is_featured']
+    list_filter = ['brand', 'category', 'gender', 'is_active', 'is_featured', 'shop']
     search_fields = ['name', 'brand__name', 'category__name']
 
 

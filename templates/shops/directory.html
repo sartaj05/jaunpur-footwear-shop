@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Jaunpur footwear shops</h1><p>Explore approved local shops and the footwear they stock.</p></section>
+<section class="featured-section"><div class="product-grid">
+    {% for shop in shops %}
+    <article class="product-card"><div class="product-info">
+        {% if shop.logo %}<img src="{{ shop.logo.url }}" alt="{{ shop.name }}" width="100">{% endif %}
+        <h2><a href="{% url 'shop_page' shop.slug %}">{{ shop.name }}</a></h2>
+        <p>{{ shop.city }}, Jaunpur · {{ shop.pincode }}</p>
+        {% if shop.opening_hours %}<p>Hours: {{ shop.opening_hours }}</p>{% endif %}
+        {% if shop.description %}<p>{{ shop.description|truncatewords:24 }}</p>{% endif %}
+        <a class="card-btn" href="{% url 'shop_page' shop.slug %}">View shop</a>
+    </div></article>
+    {% empty %}<p>No local shops have been approved yet. <a href="{% url 'shop_application' %}">Apply to list your shop</a>.</p>{% endfor %}
+</div></section>
+{% endblock %}
