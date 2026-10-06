@@ -42,6 +42,19 @@
             </div>
             {% endfor %}
         </div>
+
+        <div class="tracking-timeline">
+            <h4>Tracking updates</h4>
+            {% for event in order.tracking_events.all %}
+            <div class="tracking-event">
+                <strong>{{ event.get_status_display }}</strong>
+                <time>{{ event.created_at|date:"M j, Y g:i A" }}</time>
+                {% if event.note %}<p>{{ event.note }}</p>{% endif %}
+            </div>
+            {% empty %}
+            <p>Tracking updates will appear when the shop updates your order.</p>
+            {% endfor %}
+        </div>
     </div>
     {% empty %}
     <div class="empty-cart">

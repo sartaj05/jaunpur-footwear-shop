@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
 
 from products.models import Product, Brand, Category
-from orders.models import Order
+from orders.models import Order, OrderTrackingEvent
 
 
 @staff_member_required
@@ -187,8 +187,17 @@ def update_order_status(request, pk):
     order = get_object_or_404(Order, pk=pk)
 
     if request.method == 'POST':
-        order.status = request.POST.get('status')
-        order.save()
+        new_status = request.POST.get('status')
+        valid_statuses = dict(Order.STATUS_CHOICES)
+        if new_status in valid_statuses and new_status != order.status:
+            order.status = new_status
+            order.save(update_fields=['status'])
+            OrderTrackingEvent.objects.create(
+                order=order,
+                status=new_status,
+                note=request.POST.get('note', '').strip() or valid_statuses[new_status],
+                created_by=request.user,
+            )
 
     return redirect('dashboard_orders')
 

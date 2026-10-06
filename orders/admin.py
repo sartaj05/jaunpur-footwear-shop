@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem
+from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent
 
 
 class OrderItemInline(admin.TabularInline):
@@ -7,12 +7,18 @@ class OrderItemInline(admin.TabularInline):
     extra = 0
 
 
+class OrderTrackingEventInline(admin.TabularInline):
+    model = OrderTrackingEvent
+    extra = 0
+    readonly_fields = ['created_at', 'created_by']
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'mobile', 'total_amount', 'status', 'created_at']
     list_filter = ['status', 'created_at']
     search_fields = ['user__username', 'mobile']
-    inlines = [OrderItemInline]
+    inlines = [OrderItemInline, OrderTrackingEventInline]
 
 
 admin.site.register(CartItem)

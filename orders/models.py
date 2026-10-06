@@ -26,6 +26,8 @@ class Order(models.Model):
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
         ('packed', 'Packed'),
+        ('shipped', 'Shipped'),
+        ('out_for_delivery', 'Out for delivery'),
         ('delivered', 'Delivered'),
         ('cancelled', 'Cancelled'),
     ]
@@ -47,6 +49,20 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.id} - {self.user.username}"
+
+
+class OrderTrackingEvent(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='tracking_events')
+    status = models.CharField(max_length=20, choices=Order.STATUS_CHOICES)
+    note = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+
+    def __str__(self):
+        return f'Order #{self.order_id}: {self.get_status_display()}'
 
 
 class OrderItem(models.Model):

@@ -6,7 +6,7 @@ from django.conf import settings
 from decimal import Decimal
 import re
 from products.models import Product, ProductVariant
-from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem
+from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent
 
 
 def delivery_fee_for(pincode, subtotal):
@@ -173,6 +173,12 @@ def checkout(request):
                 discount_amount=locked_discount,
                 coupon_code=locked_coupon.code if locked_coupon else '',
             )
+            OrderTrackingEvent.objects.create(
+                order=order,
+                status=order.status,
+                note='Order placed',
+                created_by=request.user,
+            )
 
             for item in locked_items:
                 unit_price = item.variant.final_price() if item.variant_id else item.product.final_price()
@@ -230,5 +236,5 @@ def apply_coupon(request):
 
 @login_required
 def my_orders(request):
-    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+    orders = Order.objects.filter(user=request.user).prefetch_related('tracking_events').order_by('-created_at')
     return render(request, 'orders/my_orders.html', {'orders': orders})
