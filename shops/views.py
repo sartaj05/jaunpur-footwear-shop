@@ -265,6 +265,20 @@ def seller_dashboard(request):
         Q(order__payment_status='paid') | Q(order__payment_method='Cash on Delivery')
     ).exclude(order__status='cancelled')
     paid_payouts = shop.seller_orders.filter(payout_status='paid')
+    low_stock_inventory = []
+    for product in products.prefetch_related('variants'):
+        active_variants = [variant for variant in product.variants.all() if variant.is_active]
+        stock_owners = active_variants or [product]
+        for stock_owner in stock_owners:
+            available = local_available_stock(stock_owner)
+            threshold = stock_owner.low_stock_threshold
+            if available <= threshold:
+                low_stock_inventory.append({
+                    'product': product,
+                    'variant': stock_owner if active_variants else None,
+                    'available': available,
+                    'reorder_quantity': max(1, threshold * 3 - available),
+                })
     return render(request, 'shops/seller_dashboard.html', {
         'shop': shop,
         'products': products,
@@ -272,6 +286,7 @@ def seller_dashboard(request):
         'paid_payout_total': paid_payouts.aggregate(total=Sum('net_amount'))['total'] or Decimal('0.00'),
         'shop_review_average': shop.reviews.filter(is_visible=True).aggregate(value=Avg('rating'))['value'],
         'shop_review_count': shop.reviews.filter(is_visible=True).count(),
+        'low_stock_inventory': low_stock_inventory,
     })
 
 
@@ -421,15 +436,16 @@ def seller_product_form(request, product_id=None):
         try:
             price = Decimal(request.POST.get('price', ''))
             stock = int(request.POST.get('stock', '0'))
+            low_stock_threshold = int(request.POST.get('low_stock_threshold', '5'))
             discount_text = request.POST.get('discount_price', '').strip()
             discount_price = Decimal(discount_text) if discount_text else None
         except (InvalidOperation, TypeError, ValueError):
-            price, stock, discount_price = None, -1, None
+            price, stock, low_stock_threshold, discount_price = None, -1, 0, None
         brand = Brand.objects.filter(pk=request.POST.get('brand')).first()
         category = Category.objects.filter(pk=request.POST.get('category')).first()
         image = request.FILES.get('image')
-        if not name or not description or not sizes or not brand or not category or price is None or price <= 0 or stock < 0:
-            messages.error(request, 'Complete the product fields with a valid positive price and stock quantity.')
+        if not name or not description or not sizes or not brand or not category or price is None or price <= 0 or stock < 0 or low_stock_threshold < 0:
+            messages.error(request, 'Complete the product fields with a valid price, stock quantity, and low-stock threshold.')
         elif discount_price is not None and (discount_price <= 0 or discount_price > price):
             messages.error(request, 'The sale price must be positive and no higher than the regular price.')
         elif not product and not image:
@@ -447,6 +463,7 @@ def seller_product_form(request, product_id=None):
             product.price = price
             product.discount_price = discount_price
             product.available_sizes = sizes
+            product.low_stock_threshold = low_stock_threshold
             product.is_active = request.POST.get('is_active') == 'on'
             if not product.pk or not product.variants.exists():
                 product.stock = stock
@@ -607,11 +624,12 @@ def seller_manage_variants(request, product_id):
             color = request.POST.get('color', '').strip()
             try:
                 stock = int(request.POST.get('stock', '0'))
+                low_stock_threshold = int(request.POST.get('low_stock_threshold', '5'))
                 price_override_text = request.POST.get('price_override', '').strip()
                 price_override = Decimal(price_override_text) if price_override_text else None
             except (TypeError, ValueError, InvalidOperation):
-                stock, price_override = -1, None
-            if not size or not color or stock < 0 or (price_override is not None and price_override <= 0):
+                stock, low_stock_threshold, price_override = -1, 0, None
+            if not size or not color or stock < 0 or low_stock_threshold < 0 or (price_override is not None and price_override <= 0):
                 messages.error(request, 'Enter a size, color, non-negative stock, and valid optional price.')
             elif product.variants.filter(size=size, color=color).exists():
                 messages.error(request, 'This size and color variant already exists.')
@@ -621,6 +639,7 @@ def seller_manage_variants(request, product_id):
                     size=size,
                     color=color,
                     stock=stock,
+                    low_stock_threshold=low_stock_threshold,
                     price_override=price_override,
                 )
                 messages.success(request, 'Size and color stock saved.')

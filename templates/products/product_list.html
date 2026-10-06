@@ -62,7 +62,7 @@
             <div class="product-card">
                 <div class="product-img-wrap">
                     <img src="{{ product.image.url }}" alt="{{ product.name }}">
-                    {% if product.stock <= 5 %}
+                    {% if product.is_low_stock %}
                     <span class="stock-badge">{% if is_hindi %}कम स्टॉक{% else %}Low Stock{% endif %}</span>
                     {% endif %}
                 </div>

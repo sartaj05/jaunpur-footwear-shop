@@ -43,6 +43,7 @@ class Product(models.Model):
     discount_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
 
     stock = models.PositiveIntegerField(default=0)
+    low_stock_threshold = models.PositiveIntegerField(default=5)
     available_sizes = models.CharField(
         max_length=200,
         help_text="Example: 6,7,8,9,10"
@@ -77,7 +78,7 @@ class Product(models.Model):
         return min([base_price, *promotional_prices])
 
     def is_low_stock(self):
-        return self.stock <= 5
+        return self.stock <= self.low_stock_threshold
 
     def __str__(self):
         return self.name
@@ -89,6 +90,7 @@ class ProductVariant(models.Model):
     size = models.CharField(max_length=10)
     color = models.CharField(max_length=40)
     stock = models.PositiveIntegerField(default=0)
+    low_stock_threshold = models.PositiveIntegerField(default=5)
     price_override = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     is_active = models.BooleanField(default=True)
 
@@ -102,6 +104,9 @@ class ProductVariant(models.Model):
         if self.price_override is not None:
             return self.product.price_after_promotions(self.price_override, pincode=pincode)
         return self.product.final_price(pincode=pincode)
+
+    def is_low_stock(self):
+        return self.stock <= self.low_stock_threshold
 
     @classmethod
     def sync_product_stock(cls, product_id):

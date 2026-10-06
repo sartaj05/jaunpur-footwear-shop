@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from orders.models import Order, SellerOrder
 from .models import Shop, ShopReview
+from products.models import Brand, Category, Product
 
 
 class VerifiedShopReviewTests(TestCase):
@@ -45,3 +46,28 @@ class VerifiedShopReviewTests(TestCase):
         response = self.client.get(reverse("review_shop", args=[self.seller_order.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+
+class SellerLowStockAlertTests(TestCase):
+    def test_seller_dashboard_alerts_on_configured_available_stock_threshold(self):
+        owner = User.objects.create_user(username="low-stock-owner", password="owner-password")
+        shop = Shop.objects.create(
+            owner=owner, name="Low Stock Shop", phone="9000000000", address="Jaunpur",
+            pincode="222001", status="approved",
+        )
+        brand = Brand.objects.create(name="Low Stock Brand")
+        category = Category.objects.create(name="Low Stock Shoes")
+        product = Product.objects.create(
+            shop=shop, name="Low Stock Shoe", brand=brand, category=category,
+            description="Shoe", price=Decimal("500.00"), stock=3,
+            low_stock_threshold=4, available_sizes="7,8", image="products/low-stock.jpg",
+        )
+        self.client.force_login(owner)
+
+        response = self.client.get(reverse("seller_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        alert = response.context["low_stock_inventory"][0]
+        self.assertEqual(alert["product"], product)
+        self.assertEqual(alert["available"], 3)
+        self.assertEqual(alert["reorder_quantity"], 9)

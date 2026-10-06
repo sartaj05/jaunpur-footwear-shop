@@ -29,6 +29,7 @@ class ProductAdmin(admin.ModelAdmin):
         'price',
         'discount_price',
         'stock',
+        'low_stock_threshold',
         'is_active',
         'is_featured',
         'shop',

@@ -8,7 +8,7 @@ from django.utils import timezone
 from datetime import date, timedelta
 import re
 
-from products.models import Product, Brand, Category
+from products.models import Product, ProductVariant, Brand, Category
 from orders.models import DeliveryAssignment, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, SellerOrder
 from orders.tasks import send_order_status_update_task
 from footwear.task_dispatch import dispatch_background_task
@@ -28,7 +28,10 @@ def superadmin_dashboard(request):
         'total_categories': Category.objects.count(),
         'total_orders': Order.objects.count(),
         'total_customers': User.objects.filter(is_staff=False).count(),
-        'low_stock_products': Product.objects.filter(stock__lte=5).count(),
+        'low_stock_products': (
+            Product.objects.filter(variants__isnull=True, stock__lte=F('low_stock_threshold')).distinct().count()
+            + ProductVariant.objects.filter(is_active=True, stock__lte=F('low_stock_threshold')).count()
+        ),
         'recent_orders': Order.objects.select_related('user').order_by('-created_at')[:8],
     }
     return render(request, 'dashboard/superadmin_dashboard.html', context)

@@ -118,7 +118,7 @@
                 <span class="discount-badge">Sale</span>
                 {% endif %}
 
-                {% if product.stock <= 5 %}
+                {% if product.is_low_stock %}
                 <span class="stock-badge">Low Stock</span>
                 {% endif %}
             </div>

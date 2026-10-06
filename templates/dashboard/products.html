@@ -34,7 +34,7 @@
             <td>{{ product.category.name }}</td>
             <td>₹{{ product.final_price }}</td>
             <td>
-                {% if product.stock <= 5 %}
+                {% if product.is_low_stock %}
                     <span class="badge badge-danger">{{ product.stock }}</span>
                 {% else %}
                     <span class="badge badge-success">{{ product.stock }}</span>

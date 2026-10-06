@@ -15,6 +15,7 @@ The feature list below describes the current repository scope. Some workflows re
 - Shop delivery coverage by Jaunpur PIN code
 - PIN-code-specific delivery fee and estimated delivery window; checkout checks the shop's slot capacity
 - Seller dashboard for shop-owned product and size/color stock management
+- Per-product and per-size/color stock thresholds, seller low-stock alerts, and suggested reorder quantities
 - Seller bulk catalog CSV import with matching product-photo uploads
 - Stable seller SKUs and marketplace product/category mappings
 - One checkout split into shop-specific seller orders with separate progress
