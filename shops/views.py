@@ -23,7 +23,8 @@ from urllib.parse import urlencode
 
 from products.models import Brand, Category, Product, ProductVariant
 from orders.models import Coupon, OrderTrackingEvent, ReturnRequest, SellerOrder
-from orders.notifications import send_order_status_update
+from orders.tasks import send_order_status_update_task
+from footwear.task_dispatch import dispatch_background_task
 from accounts.models import ReferralReward
 from accounts.services import award_loyalty_for_order
 
@@ -350,7 +351,7 @@ def update_seller_order_status(request, seller_order_id):
                         reward.reward_coupon_code = coupon_code
                         reward.earned_at = timezone.now()
                         reward.save(update_fields=['status', 'reward_coupon_code', 'earned_at'])
-            send_order_status_update(seller_order.order_id)
+            transaction.on_commit(lambda order_id=seller_order.order_id: dispatch_background_task(send_order_status_update_task, order_id))
             messages.success(request, 'Your part of the customer order was updated.')
     return redirect('seller_orders')
 

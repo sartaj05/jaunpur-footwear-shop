@@ -10,7 +10,8 @@ import re
 
 from products.models import Product, Brand, Category
 from orders.models import DeliveryAssignment, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, SellerOrder
-from orders.notifications import send_order_status_update
+from orders.tasks import send_order_status_update_task
+from footwear.task_dispatch import dispatch_background_task
 from orders.payments import release_order_inventory
 from accounts.services import award_loyalty_for_order
 from django.db import transaction
@@ -216,7 +217,7 @@ def update_order_status(request, pk):
                 note=request.POST.get('note', '').strip() or valid_statuses[new_status],
                 created_by=request.user,
             )
-            transaction.on_commit(lambda order_id=order.pk: send_order_status_update(order_id))
+            transaction.on_commit(lambda order_id=order.pk: dispatch_background_task(send_order_status_update_task, order_id))
 
     return redirect('dashboard_orders')
 

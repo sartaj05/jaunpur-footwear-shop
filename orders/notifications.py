@@ -62,9 +62,16 @@ def send_whatsapp_template(phone, template_name, body_parameters, language_code=
 
 def _send_order_whatsapp(order, profile):
     if not profile or not profile.whatsapp_order_updates:
-        return
+        return True
+    if not all((
+        settings.WHATSAPP_GRAPH_API_VERSION,
+        settings.WHATSAPP_PHONE_NUMBER_ID,
+        settings.WHATSAPP_ACCESS_TOKEN,
+        settings.WHATSAPP_ORDER_TEMPLATE,
+    )):
+        return True
     language = 'hi' if profile.preferred_language == 'hi' else 'en_US'
-    send_whatsapp_template(
+    return send_whatsapp_template(
         order.mobile or profile.mobile,
         settings.WHATSAPP_ORDER_TEMPLATE,
         [order.pk, order.full_name, order.get_status_display()],
@@ -75,7 +82,7 @@ def _send_order_whatsapp(order, profile):
 def send_order_confirmation(order_id):
     order = Order.objects.select_related('user').prefetch_related('items').filter(pk=order_id).first()
     if not order:
-        return
+        return True
 
     item_lines = [
         f'- {item.product_name} | size {item.size} | quantity {item.quantity}'
@@ -90,28 +97,32 @@ def send_order_confirmation(order_id):
         f'Total: ₹{order.total_amount}',
         f'Current status: {order.get_status_display()}',
     ])
+    delivered = []
     if order.user.email:
-        send_mail(
+        delivered.append(send_mail(
             f'Order #{order.pk} received',
             message,
             settings.DEFAULT_FROM_EMAIL,
             [order.user.email],
-            fail_silently=True,
-        )
-    _send_order_whatsapp(order, CustomerProfile.objects.filter(user_id=order.user_id).first())
+            fail_silently=False,
+        ) == 1)
+    delivered.append(_send_order_whatsapp(order, CustomerProfile.objects.filter(user_id=order.user_id).first()))
+    return all(delivered)
 
 
 def send_order_status_update(order_id):
     order = Order.objects.select_related('user').filter(pk=order_id).first()
     if not order:
-        return
+        return True
 
+    delivered = []
     if order.user.email:
-        send_mail(
+        delivered.append(send_mail(
             f'Order #{order.pk} update',
             f'Your order #{order.pk} is now {order.get_status_display()}.',
             settings.DEFAULT_FROM_EMAIL,
             [order.user.email],
-            fail_silently=True,
-        )
-    _send_order_whatsapp(order, CustomerProfile.objects.filter(user_id=order.user_id).first())
+            fail_silently=False,
+        ) == 1)
+    delivered.append(_send_order_whatsapp(order, CustomerProfile.objects.filter(user_id=order.user_id).first()))
+    return all(delivered)

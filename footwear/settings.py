@@ -227,6 +227,21 @@ AMAZON_OAUTH_VERSION = os.environ.get('AMAZON_OAUTH_VERSION', '')
 AMAZON_LWA_TOKEN_URL = os.environ.get('AMAZON_LWA_TOKEN_URL', 'https://api.amazon.com/auth/o2/token')
 AMAZON_SP_API_ENDPOINT = os.environ.get('AMAZON_SP_API_ENDPOINT', 'https://sellingpartnerapi-eu.amazon.com')
 MARKETPLACE_API_USER_AGENT = os.environ.get('MARKETPLACE_API_USER_AGENT', 'JaunpurFootwear/1.0 (Language=Python)')
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', '')
+if IS_PRODUCTION and not CELERY_BROKER_URL:
+    raise ImproperlyConfigured("CELERY_BROKER_URL is required in production.")
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_TASK_TIME_LIMIT = 300
+CELERY_TASK_SOFT_TIME_LIMIT = 270
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BEAT_SCHEDULE = {
+    "authorized-marketplace-sync-every-30-minutes": {
+        "task": "orders.tasks.sync_marketplace_channels_task",
+        "schedule": 1800.0,
+    },
+}
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'

@@ -28,18 +28,19 @@ class CheckoutFlowTests(TestCase):
         )
         self.client.force_login(self.user)
 
-    @patch("orders.views.send_order_confirmation")
+    @patch("orders.tasks.send_order_confirmation")
     def test_cash_on_delivery_creates_order_and_decrements_stock(self, send_confirmation):
         CartItem.objects.create(user=self.user, product=self.product, size="8", quantity=2)
 
-        response = self.client.post(reverse("checkout"), {
-            "payment_method": "cod",
-            "pincode": "222001",
-            "full_name": "Test Buyer",
-            "mobile": "9876543210",
-            "address": "Test address, Jaunpur",
-            "fulfillment_platform": "delivery",
-        })
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(reverse("checkout"), {
+                "payment_method": "cod",
+                "pincode": "222001",
+                "full_name": "Test Buyer",
+                "mobile": "9876543210",
+                "address": "Test address, Jaunpur",
+                "fulfillment_platform": "delivery",
+            })
 
         self.assertRedirects(response, reverse("my_orders"))
         order = Order.objects.get(user=self.user)

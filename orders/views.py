@@ -11,7 +11,8 @@ import re
 import uuid
 from products.models import Product, ProductVariant
 from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
-from .notifications import send_order_confirmation, send_order_status_update
+from .tasks import send_order_confirmation_task, send_order_status_update_task
+from footwear.task_dispatch import dispatch_background_task
 from .payments import (
     PaymentGatewayError,
     create_razorpay_order,
@@ -405,7 +406,7 @@ def checkout(request):
         if payment_method_choice == 'cod':
             request.session.pop('coupon_code', None)
             request.session.pop('delivery_pincode', None)
-            transaction.on_commit(lambda order_id=order.pk: send_order_confirmation(order_id))
+            transaction.on_commit(lambda order_id=order.pk: dispatch_background_task(send_order_confirmation_task, order_id))
             return redirect('my_orders')
 
         attempt = PaymentAttempt.objects.create(
@@ -543,7 +544,7 @@ def verify_razorpay_payment(request):
 
     request.session.pop('coupon_code', None)
     request.session.pop('delivery_pincode', None)
-    transaction.on_commit(lambda order_id=order.pk: send_order_confirmation(order_id))
+    transaction.on_commit(lambda order_id=order.pk: dispatch_background_task(send_order_confirmation_task, order_id))
     messages.success(request, 'Payment received and your order is confirmed.')
     return redirect('my_orders')
 
@@ -715,7 +716,7 @@ def rider_deliveries(request):
                         note=f'{seller_order.shop.name if seller_order.shop_id else "Jaunpur Footwear"}: delivered to {delivered_to}.',
                         created_by=request.user,
                     )
-                    transaction.on_commit(lambda order_id=order.pk: send_order_status_update(order_id))
+                    transaction.on_commit(lambda order_id=order.pk: dispatch_background_task(send_order_status_update_task, order_id))
                     if not assignment.run.assignments.exclude(status='delivered').exists():
                         assignment.run.status = 'completed'
                         assignment.run.save(update_fields=['status'])

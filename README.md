@@ -101,6 +101,8 @@ The marketplace OAuth/API flows are gated on provider approval, app credentials,
 
 GitHub Actions runs Django checks, migration drift checks, and the automated test suite for pushes and pull requests to `main` and `sartaj`.
 
+In local development, notification tasks run inline. Set `CELERY_BROKER_URL` in production to queue email/WhatsApp delivery and periodic authorized marketplace sync. Run one worker with `celery -A footwear worker -l INFO` and a scheduler with `celery -A footwear beat -l INFO`. Staff can review queued task outcomes under **Background job runs** in Django admin; marketplace-specific sync details remain in the marketplace sync history.
+
 ## Razorpay Setup
 
 Online checkout is available after setting Razorpay API keys in the environment. Use test keys while developing; never commit your secret key.

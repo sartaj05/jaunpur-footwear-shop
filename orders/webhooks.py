@@ -14,7 +14,8 @@ from django.views.decorators.http import require_POST
 from accounts.models import ReferralReward
 
 from .models import Coupon, Order, OrderTrackingEvent, PaymentAttempt, PaymentWebhookEvent
-from .notifications import send_order_confirmation
+from .tasks import send_order_confirmation_task
+from footwear.task_dispatch import dispatch_background_task
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,7 @@ def razorpay_webhook(request):
                         reward_coupon_code=order.coupon_code,
                         status="earned",
                     ).update(status="redeemed")
-                transaction.on_commit(lambda order_id=order.pk: send_order_confirmation(order_id))
+                transaction.on_commit(lambda order_id=order.pk: dispatch_background_task(send_order_confirmation_task, order_id))
             elif attempt.status == "paid" and attempt.gateway_payment_id != str(entity["id"]):
                 event.status = "failed"
                 event.error_summary = "A different payment is already recorded for this attempt."
