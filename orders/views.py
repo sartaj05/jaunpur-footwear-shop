@@ -7,6 +7,7 @@ from decimal import Decimal
 import re
 from products.models import Product, ProductVariant
 from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent
+from .notifications import send_order_confirmation
 
 
 def delivery_fee_for(pincode, subtotal):
@@ -203,6 +204,7 @@ def checkout(request):
 
         request.session.pop('coupon_code', None)
         request.session.pop('delivery_pincode', None)
+        transaction.on_commit(lambda order_id=order.pk: send_order_confirmation(order_id))
         return redirect('my_orders')
 
     return render(request, 'orders/checkout.html', {

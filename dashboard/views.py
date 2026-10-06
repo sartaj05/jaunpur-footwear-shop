@@ -4,6 +4,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 from products.models import Product, Brand, Category
 from orders.models import Order, OrderTrackingEvent
+from orders.notifications import send_order_status_update
+from django.db import transaction
 
 
 @staff_member_required
@@ -198,6 +200,7 @@ def update_order_status(request, pk):
                 note=request.POST.get('note', '').strip() or valid_statuses[new_status],
                 created_by=request.user,
             )
+            transaction.on_commit(lambda order_id=order.pk: send_order_status_update(order_id))
 
     return redirect('dashboard_orders')
 

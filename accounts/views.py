@@ -7,6 +7,7 @@ from .models import CustomerProfile
 def register_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
+        email = request.POST.get('email', '').strip()
         mobile = request.POST.get('mobile')
         password = request.POST.get('password')
         address = request.POST.get('address')
@@ -16,7 +17,12 @@ def register_view(request):
                 'error': 'Username already exists'
             })
 
-        user = User.objects.create_user(username=username, password=password)
+        if email and User.objects.filter(email__iexact=email).exists():
+            return render(request, 'accounts/register.html', {
+                'error': 'An account already uses this email address'
+            })
+
+        user = User.objects.create_user(username=username, email=email, password=password)
         CustomerProfile.objects.create(
             user=user,
             mobile=mobile,
