@@ -6,6 +6,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
 from products.models import Brand, Category, Product, ProductVariant
+from orders.models import OrderTrackingEvent, SellerOrder
+from orders.notifications import send_order_status_update
 
 from .models import Shop, ShopCoverage
 
@@ -109,6 +111,48 @@ def seller_dashboard(request):
     shop = get_object_or_404(Shop, owner=request.user)
     products = shop.products.select_related('brand', 'category').order_by('-created_at')
     return render(request, 'shops/seller_dashboard.html', {'shop': shop, 'products': products})
+
+
+@login_required
+def seller_orders(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    orders = shop.seller_orders.select_related('order', 'order__user').prefetch_related('items').order_by('-created_at')
+    return render(request, 'shops/seller_orders.html', {
+        'shop': shop,
+        'seller_orders': orders,
+        'status_choices': SellerOrder.STATUS_CHOICES,
+    })
+
+
+@login_required
+def update_seller_order_status(request, seller_order_id):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    seller_order = get_object_or_404(SellerOrder, pk=seller_order_id, shop=shop)
+    if request.method == 'POST':
+        status = request.POST.get('status')
+        valid_statuses = dict(SellerOrder.STATUS_CHOICES)
+        if seller_order.order.status == 'cancelled' or seller_order.order.payment_status == 'failed':
+            messages.error(request, 'This checkout is no longer active.')
+        elif seller_order.order.payment_status == 'pending':
+            messages.error(request, 'Wait until online payment is confirmed before processing this order.')
+        elif status not in valid_statuses:
+            messages.error(request, 'Choose a valid order status.')
+        elif status != seller_order.status:
+            seller_order.status = status
+            seller_order.save(update_fields=['status'])
+            OrderTrackingEvent.objects.create(
+                order=seller_order.order,
+                status=status,
+                note=f'{shop.name}: {request.POST.get("note", "").strip() or valid_statuses[status]}',
+                created_by=request.user,
+            )
+            statuses = set(seller_order.order.seller_orders.values_list('status', flat=True))
+            if len(statuses) == 1:
+                seller_order.order.status = statuses.pop()
+                seller_order.order.save(update_fields=['status'])
+            send_order_status_update(seller_order.order_id)
+            messages.success(request, 'Your part of the customer order was updated.')
+    return redirect('seller_orders')
 
 
 @login_required

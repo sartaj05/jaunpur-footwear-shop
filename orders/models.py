@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from products.models import Product, ProductVariant
+from shops.models import Shop
 from decimal import Decimal
 
 
@@ -73,8 +74,33 @@ class OrderTrackingEvent(models.Model):
         return f'Order #{self.order_id}: {self.get_status_display()}'
 
 
+class SellerOrder(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+        ('packed', 'Packed'),
+        ('shipped', 'Shipped'),
+        ('out_for_delivery', 'Out for delivery'),
+        ('delivered', 'Delivered'),
+    ]
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='seller_orders')
+    shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, blank=True, null=True, related_name='seller_orders')
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+
+    def __str__(self):
+        seller = self.shop.name if self.shop_id else 'Jaunpur Footwear'
+        return f'{seller} · order #{self.order_id}'
+
+
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    seller_order = models.ForeignKey(SellerOrder, on_delete=models.SET_NULL, blank=True, null=True, related_name='items')
     product_name = models.CharField(max_length=200)
     size = models.CharField(max_length=10)
     color = models.CharField(max_length=40, blank=True, default='')

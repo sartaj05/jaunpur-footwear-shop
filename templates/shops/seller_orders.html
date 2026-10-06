@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>{{ shop.name }} orders</h1><p>Only orders containing your shop's products are shown.</p></section>
+<section class="orders-page">{% for seller_order in seller_orders %}<article class="order-card">
+    <div class="order-header"><h2>Customer order #{{ seller_order.order_id }}</h2><span>{{ seller_order.get_status_display }}</span></div>
+    <p>{{ seller_order.order.full_name }} · {{ seller_order.order.mobile }}</p>
+    <p>Ship to: {{ seller_order.order.address }}, {{ seller_order.order.delivery_pincode }}</p>
+    <p>Online payment: {{ seller_order.order.get_payment_status_display }} · Your items: ₹{{ seller_order.subtotal }}</p>
+    <ul>{% for item in seller_order.items.all %}<li>{{ item.product_name }} · size {{ item.size }}{% if item.color %}, {{ item.color }}{% endif %} · qty {{ item.quantity }}</li>{% endfor %}</ul>
+    <form method="post" action="{% url 'update_seller_order_status' seller_order.id %}">{% csrf_token %}<select name="status">{% for value,label in status_choices %}<option value="{{ value }}" {% if seller_order.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><input name="note" placeholder="Customer update (optional)"><button class="secondary-btn">Update status</button></form>
+</article>{% empty %}<p>No orders yet.</p>{% endfor %}</section>
+{% endblock %}

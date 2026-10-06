@@ -10,7 +10,7 @@ from decimal import Decimal
 import re
 import uuid
 from products.models import Product, ProductVariant
-from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest
+from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
 from .notifications import send_order_confirmation
 from .payments import (
     PaymentGatewayError,
@@ -202,10 +202,22 @@ def checkout(request):
                 created_by=request.user,
             )
 
+            seller_orders = {}
             for item in locked_items:
                 unit_price = item.variant.final_price() if item.variant_id else item.product.final_price()
+                seller_order_key = item.product.shop_id
+                if seller_order_key not in seller_orders:
+                    seller_orders[seller_order_key] = SellerOrder.objects.create(
+                        order=order,
+                        shop_id=seller_order_key,
+                        subtotal=Decimal('0.00'),
+                    )
+                seller_order = seller_orders[seller_order_key]
+                seller_order.subtotal += unit_price * item.quantity
+                seller_order.save(update_fields=['subtotal'])
                 OrderItem.objects.create(
                     order=order,
+                    seller_order=seller_order,
                     product_name=item.product.name,
                     size=item.size,
                     color=item.color,
@@ -398,7 +410,7 @@ def fail_razorpay_payment(request, attempt_id):
 @login_required
 def my_orders(request):
     orders = Order.objects.filter(user=request.user).prefetch_related(
-        'tracking_events', 'return_requests', 'payment_attempts'
+        'tracking_events', 'return_requests', 'payment_attempts', 'seller_orders__shop', 'seller_orders__items'
     ).order_by('-created_at')
     return render(request, 'orders/my_orders.html', {'orders': orders})
 

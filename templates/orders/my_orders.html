@@ -40,15 +40,29 @@
             {% endif %}
         </div>
 
+        {% if order.seller_orders.all %}
+        <div class="order-items">
+            <h4>Items by shop</h4>
+            {% for seller_order in order.seller_orders.all %}
+            <section class="seller-order-group">
+                <h5>{{ seller_order.shop.name|default:'Jaunpur Footwear' }} · {{ seller_order.get_status_display }}</h5>
+                {% for item in seller_order.items.all %}<div class="order-item-row"><span>{{ item.product_name }} | Size {{ item.size }}{% if item.color %} | {{ item.color }}{% endif %} | Qty {{ item.quantity }}</span><strong>₹{{ item.price }}</strong></div>{% endfor %}
+            </section>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="order-items">
             <h4>Items</h4>
 
+            {% if not order.seller_orders.all %}
             {% for item in order.items.all %}
             <div class="order-item-row">
                 <span>{{ item.product_name }} | Size {{ item.size }}{% if item.color %} | {{ item.color }}{% endif %} | Qty {{ item.quantity }}</span>
                 <strong>₹{{ item.price }}</strong>
             </div>
             {% endfor %}
+            {% endif %}
         </div>
 
         <div class="tracking-timeline">
