@@ -13,7 +13,7 @@ from products.models import Brand, Category, Product, ProductVariant
 from orders.models import OrderTrackingEvent, SellerOrder
 from orders.notifications import send_order_status_update
 
-from .models import MarketplaceConnection, Shop, ShopCoverage, ShopFulfillmentSlot
+from .models import MarketplaceConnection, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot
 
 
 @login_required
@@ -368,3 +368,28 @@ def export_marketplace_feed(request, channel):
                 product.final_price(), product.stock, '', '',
             ])
     return response
+
+
+@login_required
+def ondc_setup(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    enrollment, _ = ONDCEnrollment.objects.get_or_create(shop=shop)
+    if request.method == 'POST' and enrollment.status != 'onboarded':
+        participant_name = request.POST.get('participant_name', '').strip()
+        participant_contact = request.POST.get('participant_contact', '').strip()
+        if not participant_name or not participant_contact:
+            messages.error(request, 'Enter the Seller Network Participant name and a contact detail.')
+        else:
+            enrollment.participant_name = participant_name
+            enrollment.participant_contact = participant_contact
+            enrollment.seller_network_id = request.POST.get('seller_network_id', '').strip()
+            enrollment.application_reference = request.POST.get('application_reference', '').strip()
+            enrollment.status = 'submitted'
+            enrollment.submitted_at = timezone.now()
+            enrollment.save(update_fields=[
+                'participant_name', 'participant_contact', 'seller_network_id',
+                'application_reference', 'status', 'submitted_at', 'updated_at',
+            ])
+            messages.success(request, 'ONDC partner details were saved for admin review.')
+            return redirect('ondc_setup')
+    return render(request, 'shops/ondc_setup.html', {'shop': shop, 'enrollment': enrollment})

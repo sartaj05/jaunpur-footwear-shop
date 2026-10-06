@@ -111,3 +111,26 @@ class MarketplaceConnection(models.Model):
 
     def __str__(self):
         return f'{self.shop.name} · {self.get_channel_display()}'
+
+
+class ONDCEnrollment(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Partner request submitted'),
+        ('partner_confirmed', 'Seller Network Participant confirmed'),
+        ('onboarded', 'Seller onboarding recorded'),
+        ('rejected', 'More information required'),
+    ]
+
+    shop = models.OneToOneField(Shop, on_delete=models.CASCADE, related_name='ondc_enrollment')
+    participant_name = models.CharField(max_length=160, blank=True)
+    participant_contact = models.CharField(max_length=160, blank=True)
+    seller_network_id = models.CharField(max_length=120, blank=True)
+    application_reference = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    staff_note = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'ONDC onboarding · {self.shop.name}'

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>ONDC seller onboarding</h1><p>Track {{ shop.name }}'s Seller Network Participant setup.</p></section>
+<section class="checkout-page">
+    <form method="post" class="checkout-form-card">{% csrf_token %}
+        <p>Status: <strong>{{ enrollment.get_status_display }}</strong></p>
+        <div class="form-group"><label>Seller Network Participant name</label><input name="participant_name" value="{{ enrollment.participant_name }}" required></div>
+        <div class="form-group"><label>Participant contact</label><input name="participant_contact" value="{{ enrollment.participant_contact }}" placeholder="Email or phone" required></div>
+        <div class="form-group"><label>Seller network ID (if assigned)</label><input name="seller_network_id" value="{{ enrollment.seller_network_id }}"></div>
+        <div class="form-group"><label>Application reference (optional)</label><input name="application_reference" value="{{ enrollment.application_reference }}"></div>
+        <button class="auth-btn" {% if enrollment.status == 'onboarded' %}disabled{% endif %}>Save onboarding details</button>
+        {% if enrollment.staff_note %}<p>Admin note: {{ enrollment.staff_note }}</p>{% endif %}
+    </form>
+    <aside class="checkout-form-card"><h2>Connection requirements</h2><p>ONDC sellers join through a Seller Network Participant. This page records the partner and onboarding status; it does not send live ONDC catalog or order traffic. Ask your selected participant to onboard this shop and platform before switching traffic on.</p><a href="https://www.ondc.org/pages/seller-network-participants.html" target="_blank" rel="noopener">Read ONDC seller participant requirements</a></aside>
+</section>
+{% endblock %}
