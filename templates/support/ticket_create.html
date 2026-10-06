@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>New support request</h1><p>Tell the Jaunpur Footwear team what happened.</p></section>
+<form class="checkout-form-card" method="post">{% csrf_token %}
+    <div class="form-group"><label for="subject">Subject</label><input id="subject" name="subject" maxlength="140" required></div>
+    <div class="form-group"><label for="category">Issue type</label><select id="category" name="category">{% for value,label in categories %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+    <div class="form-group"><label for="order">Related order (optional)</label><select id="order" name="order_id"><option value="">No order</option>{% for order in orders %}<option value="{{ order.id }}">Order #{{ order.id }} · {{ order.created_at|date:"M j, Y" }}</option>{% endfor %}</select></div>
+    <div class="form-group"><label for="description">Describe the issue</label><textarea id="description" name="description" minlength="10" rows="6" required></textarea></div>
+    <button class="auth-btn">Send request</button>
+</form>
+{% endblock %}

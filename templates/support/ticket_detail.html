@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Support request #{{ ticket.id }}</h1><p>{{ ticket.get_status_display }} · {{ ticket.get_category_display }}{% if ticket.order_id %} · Order #{{ ticket.order_id }}{% endif %}</p></section>
+<section class="orders-page">
+    <article class="order-card"><h2>{{ ticket.subject }}</h2><p>{{ ticket.description|linebreaksbr }}</p><small>Opened {{ ticket.created_at }}</small></article>
+    <h2>Conversation</h2>
+    {% for message in ticket.messages.all %}<article class="order-card"><strong>{{ message.author.get_full_name|default:message.author.username|default:'Jaunpur Footwear support' }}</strong><p>{{ message.body|linebreaksbr }}</p><small>{{ message.created_at }}</small></article>{% empty %}<p>No replies yet. Our team will review your request.</p>{% endfor %}
+    {% if ticket.status != 'closed' %}<form class="checkout-form-card" method="post">{% csrf_token %}<label for="message">Add a reply</label><textarea id="message" name="message" minlength="2" rows="4" required></textarea><button class="auth-btn">Send reply</button></form>{% endif %}
+    <a href="{% url 'support_list' %}">Back to my requests</a>
+</section>
+{% endblock %}

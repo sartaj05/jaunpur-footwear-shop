@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     'orders',
     'dashboard',
     'shops',
+    'support',
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

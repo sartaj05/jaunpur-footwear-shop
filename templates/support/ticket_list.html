@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Help & support</h1><p>Track your questions about Jaunpur shops, payments, orders, delivery, or returns.</p></section>
+<section class="orders-page">
+    <a class="auth-btn" href="{% url 'support_create' %}">Create a support request</a>
+    {% for ticket in tickets %}
+    <article class="order-card">
+        <h2><a href="{% url 'support_detail' ticket.id %}">#{{ ticket.id }} · {{ ticket.subject }}</a></h2>
+        <p>{{ ticket.get_category_display }} · {{ ticket.get_status_display }}{% if ticket.order_id %} · Order #{{ ticket.order_id }}{% endif %}</p>
+        <small>Updated {{ ticket.updated_at }}</small>
+    </article>
+    {% empty %}<p>You have no support requests yet.</p>{% endfor %}
+</section>
+{% endblock %}

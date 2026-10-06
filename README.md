@@ -47,6 +47,7 @@ This repository currently documents **50 feature areas**: 42 customer and seller
 - Customer-owned downloadable order receipt PDF
 - Opt-in English or Hindi WhatsApp order updates (Meta Cloud API configuration required)
 - Return and exchange requests
+- Customer support tickets tied to an optional order, with staff assignment and replies
 - Staff-queued Razorpay refunds for received, paid online returns, with duplicate protection and stock restoration after provider acceptance
 - Customer login/register
 - Shoe size finder
