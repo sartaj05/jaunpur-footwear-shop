@@ -1,9 +1,13 @@
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+from datetime import timedelta
 
 from products.models import Product, Brand, Category
-from orders.models import Order, OrderTrackingEvent
+from orders.models import Order, OrderItem, OrderTrackingEvent
 from orders.notifications import send_order_status_update
 from django.db import transaction
 
@@ -209,3 +213,34 @@ def update_order_status(request, pk):
 def dashboard_customers(request):
     customers = User.objects.filter(is_staff=False).order_by('-date_joined')
     return render(request, 'dashboard/customers.html', {'customers': customers})
+
+
+@staff_member_required
+def sales_reports(request):
+    periods = {'7': 7, '30': 30, '90': 90, '365': 365}
+    selected_period = request.GET.get('days', '30')
+    if selected_period not in periods:
+        selected_period = '30'
+    start_date = timezone.now() - timedelta(days=periods[selected_period])
+    orders = Order.objects.filter(created_at__gte=start_date).exclude(status='cancelled')
+
+    summary = orders.aggregate(order_count=Count('id'), total_revenue=Sum('total_amount'))
+    order_count = summary['order_count'] or 0
+    total_revenue = summary['total_revenue'] or 0
+    average_order_value = total_revenue / order_count if order_count else 0
+    sales_by_day = orders.annotate(day=TruncDate('created_at')).values('day').annotate(
+        order_count=Count('id'), revenue=Sum('total_amount')
+    ).order_by('day')
+    top_products = OrderItem.objects.filter(order__in=orders).values('product_name').annotate(
+        units_sold=Sum('quantity'),
+        revenue=Sum(ExpressionWrapper(F('price') * F('quantity'), output_field=DecimalField(max_digits=12, decimal_places=2))),
+    ).order_by('-units_sold')[:10]
+
+    return render(request, 'dashboard/sales_reports.html', {
+        'selected_period': selected_period,
+        'order_count': order_count,
+        'total_revenue': total_revenue,
+        'average_order_value': average_order_value,
+        'sales_by_day': sales_by_day,
+        'top_products': top_products,
+    })
