@@ -38,6 +38,12 @@
 
         <p class="detail-description">{{ product.description }}</p>
 
+        <div class="product-rating-summary">
+            <strong>Customer rating:</strong>
+            {% if average_rating %}{{ average_rating|floatformat:1 }} / 5{% else %}No ratings yet{% endif %}
+            <span>({{ reviews|length }} reviews)</span>
+        </div>
+
         <form method="post" action="{% url 'add_to_cart' product.id %}" class="cart-form">
             {% csrf_token %}
 
@@ -85,6 +91,42 @@
             <p>✅ Size exchange support as per shop policy</p>
         </div>
     </div>
+</section>
+
+<section class="product-reviews">
+    <h2>Customer reviews</h2>
+    {% for review in reviews %}
+    <article class="review-card">
+        <div><strong>{{ review.title|default:"Customer review" }}</strong> <span>{{ review.rating }}/5</span></div>
+        <p>{{ review.body }}</p>
+        <small>{{ review.user.username }} · {{ review.created_at|date:"M j, Y" }}</small>
+    </article>
+    {% empty %}
+    <p>No reviews yet. Be the first to share feedback.</p>
+    {% endfor %}
+
+    {% if user.is_authenticated %}
+    <form method="post" action="{% url 'submit_review' product.id %}" class="review-form">
+        {% csrf_token %}
+        <h3>Write a review</h3>
+        <label for="reviewRating">Rating</label>
+        <select id="reviewRating" name="rating" required>
+            <option value="">Choose a rating</option>
+            <option value="5">5 — Excellent</option>
+            <option value="4">4 — Good</option>
+            <option value="3">3 — Average</option>
+            <option value="2">2 — Poor</option>
+            <option value="1">1 — Bad</option>
+        </select>
+        <label for="reviewTitle">Title</label>
+        <input id="reviewTitle" name="title" maxlength="120">
+        <label for="reviewBody">Review</label>
+        <textarea id="reviewBody" name="body" required></textarea>
+        <button class="primary-btn" type="submit">Save review</button>
+    </form>
+    {% else %}
+    <p><a href="{% url 'login' %}">Log in</a> to write a review.</p>
+    {% endif %}
 </section>
 
 {% endblock %}

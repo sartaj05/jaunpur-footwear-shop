@@ -3,7 +3,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
-from .models import Product, Brand, Category, WishlistItem
+from django.db.models import Avg
+from .models import Product, Brand, Category, ProductReview, WishlistItem
 
 
 def home(request):
@@ -51,11 +52,15 @@ def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk, is_active=True)
     sizes = [s.strip() for s in product.available_sizes.split(',')]
     variants = product.variants.filter(is_active=True)
+    reviews = product.reviews.select_related('user')
+    average_rating = reviews.aggregate(Avg('rating'))['rating__avg']
 
     return render(request, 'products/product_detail.html', {
         'product': product,
         'sizes': sizes,
         'variants': variants,
+        'reviews': reviews,
+        'average_rating': average_rating,
         'is_wishlisted': (
             request.user.is_authenticated
             and WishlistItem.objects.filter(user=request.user, product=product).exists()
@@ -87,6 +92,28 @@ def remove_from_wishlist(request, product_id):
     WishlistItem.objects.filter(user=request.user, product_id=product_id).delete()
     messages.success(request, 'Product removed from your wishlist.')
     return redirect('wishlist')
+
+
+@login_required
+@require_POST
+def submit_review(request, product_id):
+    product = get_object_or_404(Product, pk=product_id, is_active=True)
+    try:
+        rating = int(request.POST.get('rating', ''))
+    except (TypeError, ValueError):
+        rating = 0
+    body = request.POST.get('body', '').strip()
+    title = request.POST.get('title', '').strip()
+    if rating not in range(1, 6) or not body:
+        messages.error(request, 'Choose a rating from 1 to 5 and write a review.')
+    else:
+        ProductReview.objects.update_or_create(
+            product=product,
+            user=request.user,
+            defaults={'rating': rating, 'title': title, 'body': body},
+        )
+        messages.success(request, 'Your product review was saved.')
+    return redirect('product_detail', pk=product.pk)
 
 
 def size_finder(request):
