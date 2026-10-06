@@ -1,6 +1,7 @@
 import re
 import csv
 import io
+import json
 import os
 import secrets
 from decimal import Decimal, InvalidOperation
@@ -27,7 +28,7 @@ from accounts.models import ReferralReward
 from accounts.services import award_loyalty_for_order
 
 from .models import MarketplaceChannelOrder, MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
-from .inventory import update_mapping_allocation
+from .inventory import local_available_stock, update_mapping_allocation
 from .marketplace_auth import (
     MarketplaceAuthorizationError,
     encrypt_marketplace_token,
@@ -1037,25 +1038,219 @@ def export_marketplace_feed(request, channel):
 def ondc_setup(request):
     shop = get_object_or_404(Shop, owner=request.user, status='approved')
     enrollment, _ = ONDCEnrollment.objects.get_or_create(shop=shop)
-    if request.method == 'POST' and enrollment.status != 'onboarded':
+    if request.method == 'POST':
         participant_name = request.POST.get('participant_name', '').strip()
         participant_contact = request.POST.get('participant_contact', '').strip()
         if not participant_name or not participant_contact:
             messages.error(request, 'Enter the Seller Network Participant name and a contact detail.')
         else:
-            enrollment.participant_name = participant_name
-            enrollment.participant_contact = participant_contact
-            enrollment.seller_network_id = request.POST.get('seller_network_id', '').strip()
-            enrollment.application_reference = request.POST.get('application_reference', '').strip()
-            enrollment.status = 'submitted'
-            enrollment.submitted_at = timezone.now()
-            enrollment.save(update_fields=[
+            participant_values = {
+                'participant_name': participant_name[:160],
+                'participant_contact': participant_contact[:160],
+                'seller_network_id': request.POST.get('seller_network_id', '').strip()[:120],
+                'participant_seller_id': request.POST.get('participant_seller_id', '').strip()[:120],
+                'network_subscriber_id': request.POST.get('network_subscriber_id', '').strip()[:120],
+                'application_reference': request.POST.get('application_reference', '').strip()[:120],
+            }
+            identity_fields = (
                 'participant_name', 'participant_contact', 'seller_network_id',
-                'application_reference', 'status', 'submitted_at', 'updated_at',
+                'participant_seller_id', 'network_subscriber_id',
+            )
+            participant_changed = any(
+                getattr(enrollment, field) != participant_values[field]
+                for field in identity_fields
+            )
+            for field, value in participant_values.items():
+                setattr(enrollment, field, value)
+            if participant_changed or enrollment.status in ('draft', 'needs_changes'):
+                enrollment.status = 'submitted'
+                enrollment.submitted_at = timezone.now()
+                enrollment.participant_supports_retail = False
+                enrollment.catalog_exported_at = None
+                enrollment.production_activated_at = None
+            enrollment.save(update_fields=[
+                'participant_name', 'participant_contact', 'seller_network_id', 'participant_seller_id',
+                'network_subscriber_id', 'application_reference', 'participant_supports_retail', 'status',
+                'submitted_at', 'catalog_exported_at', 'production_activated_at', 'updated_at',
             ])
-            messages.success(request, 'ONDC partner details were saved for admin review.')
+            messages.success(request, 'Seller Network Participant details were saved for Jaunpur admin review.')
             return redirect('ondc_setup')
-    return render(request, 'shops/ondc_setup.html', {'shop': shop, 'enrollment': enrollment})
+    readiness = _ondc_catalog_readiness(shop)
+    participant_confirmed = enrollment.status in (
+        'partner_confirmed', 'catalog_exported', 'production_approval_pending', 'live',
+    ) and enrollment.participant_supports_retail
+    return render(request, 'shops/ondc_setup.html', {
+        'shop': shop,
+        'enrollment': enrollment,
+        'readiness': readiness,
+        'participant_confirmed': participant_confirmed,
+        'can_export_catalog': participant_confirmed and readiness['ready'],
+    })
+
+
+def _ondc_catalog_readiness(shop):
+    products = list(shop.products.filter(is_active=True).select_related('brand', 'category').prefetch_related('variants'))
+    active_product_count = len(products)
+    missing_skus = []
+    missing_images = []
+    inactive_variant_products = []
+    zero_stock_count = 0
+    missing_hindi_count = 0
+    for product in products:
+        all_variants = list(product.variants.all())
+        variants = [variant for variant in all_variants if variant.is_active]
+        if all_variants and not variants:
+            inactive_variant_products.append(product.name)
+        if variants and not any(variant.stock > 0 for variant in variants):
+            zero_stock_count += 1
+        elif not all_variants and product.stock <= 0:
+            zero_stock_count += 1
+        if variants and any(not variant.seller_sku for variant in variants):
+            missing_skus.append(product.name)
+        elif not variants and not product.seller_sku:
+            missing_skus.append(product.name)
+        if not product.image:
+            missing_images.append(product.name)
+        if not product.description_hi and not product.name_hi:
+            missing_hindi_count += 1
+
+    checklist = [
+        {
+            'label': 'Shop profile is approved and verified in Jaunpur',
+            'ready': shop.status == 'approved' and shop.verification_status == 'verified',
+            'detail': 'A verified Jaunpur seller profile is required before production onboarding.',
+        },
+        {
+            'label': 'Shop contact, address, and PIN code are complete',
+            'ready': bool(shop.phone and shop.address and re.fullmatch(r'[1-9][0-9]{5}', shop.pincode or '')),
+            'detail': 'The participant needs a shop contact and Jaunpur location.',
+        },
+        {
+            'label': 'At least one active product is listed',
+            'ready': active_product_count > 0,
+            'detail': f'{active_product_count} active product(s) found.',
+        },
+        {
+            'label': 'Every active listing has a seller SKU and product image',
+            'ready': not missing_skus and not missing_images and not inactive_variant_products,
+            'detail': '; '.join(filter(None, [
+                f'Seller SKU missing: {", ".join(missing_skus[:5])}' if missing_skus else '',
+                f'Image missing: {", ".join(missing_images[:5])}' if missing_images else '',
+                f'No active size/color variants: {", ".join(inactive_variant_products[:5])}' if inactive_variant_products else '',
+            ])) or 'Catalog identifiers and images are present.',
+        },
+        {
+            'label': 'Seller Network Participant details are recorded',
+            'ready': bool(shop.ondc_enrollment.participant_name and shop.ondc_enrollment.participant_contact),
+            'detail': 'Add the participant name and an email or phone contact.',
+        },
+        {
+            'label': 'Participant confirmed ONDC retail support',
+            'ready': shop.ondc_enrollment.participant_supports_retail,
+            'detail': 'The Jaunpur admin must confirm the selected participant supports the retail domain.',
+        },
+    ]
+    blockers = [item['detail'] for item in checklist if not item['ready']]
+    warnings = []
+    if zero_stock_count:
+        warnings.append(f'{zero_stock_count} product(s) currently have no sellable stock; restock them before launch.')
+    if missing_hindi_count:
+        warnings.append(f'{missing_hindi_count} product(s) have no Hindi name or description.')
+    if not shop.coverage_areas.filter(is_active=True).exists():
+        warnings.append('No Jaunpur delivery PIN-code coverage areas are configured yet.')
+    return {
+        'checklist': checklist,
+        'blockers': blockers,
+        'warnings': warnings,
+        'ready': not blockers,
+        'product_count': active_product_count,
+    }
+
+
+@login_required
+@require_POST
+def export_ondc_catalog(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    enrollment = get_object_or_404(ONDCEnrollment, shop=shop)
+    participant_confirmed = enrollment.status in (
+        'partner_confirmed', 'catalog_exported', 'production_approval_pending', 'live',
+    ) and enrollment.participant_supports_retail
+    readiness = _ondc_catalog_readiness(shop)
+    if not participant_confirmed or not readiness['ready']:
+        messages.error(request, 'Complete the ONDC readiness checklist and get participant eligibility confirmed before exporting.')
+        return redirect('ondc_setup')
+
+    products = shop.products.filter(is_active=True).select_related('brand', 'category').prefetch_related('variants').order_by('name')
+    catalog_items = []
+    for product in products:
+        image_url = request.build_absolute_uri(product.image.url) if product.image else ''
+        variants = [variant for variant in product.variants.all() if variant.is_active]
+        base = {
+            'product_name': product.name,
+            'product_name_hi': product.name_hi,
+            'description': product.description,
+            'description_hi': product.description_hi,
+            'brand': product.brand.name,
+            'category': product.category.name,
+            'image_url': image_url,
+            'currency': 'INR',
+        }
+        if variants:
+            for variant in variants:
+                catalog_items.append({
+                    **base,
+                    'seller_sku': variant.seller_sku,
+                    'price': str(variant.final_price()),
+                    'available_stock_snapshot': local_available_stock(variant),
+                    'size': variant.size,
+                    'color': variant.color,
+                })
+        else:
+            catalog_items.append({
+                **base,
+                'seller_sku': product.seller_sku,
+                'price': str(product.final_price()),
+                'available_stock_snapshot': local_available_stock(product),
+                'size': '',
+                'color': '',
+            })
+
+    payload = {
+        'schema_version': 'jaunpur-footwear.ondc-seller-handoff.v1',
+        'generated_at': timezone.now().isoformat(),
+        'purpose': 'Seller catalog snapshot for manual handoff to the confirmed Seller Network Participant.',
+        'seller': {
+            'shop_name': shop.name,
+            'shop_id': shop.pk,
+            'jaunpur_verified': shop.verification_status == 'verified',
+            'phone': shop.phone,
+            'email': shop.email,
+            'address': shop.address,
+            'city': shop.city,
+            'district': shop.district,
+            'pincode': shop.pincode,
+            'seller_network_id': enrollment.seller_network_id,
+            'participant_seller_id': enrollment.participant_seller_id,
+            'network_subscriber_id': enrollment.network_subscriber_id,
+            'application_reference': enrollment.application_reference,
+        },
+        'jaunpur_delivery_areas': [
+            {'pincode': area.pincode, 'area_name': area.area_name, 'delivery_fee_inr': str(area.delivery_fee)}
+            for area in shop.coverage_areas.filter(is_active=True).order_by('pincode')
+        ],
+        'stock_note': 'Available stock values are a point-in-time snapshot after existing marketplace reservations; arrange participant order and inventory synchronization before production traffic.',
+        'products': catalog_items,
+    }
+    if enrollment.status == 'partner_confirmed':
+        enrollment.status = 'catalog_exported'
+        enrollment.catalog_exported_at = timezone.now()
+        enrollment.save(update_fields=['status', 'catalog_exported_at', 'updated_at'])
+    elif enrollment.catalog_exported_at is None:
+        enrollment.catalog_exported_at = timezone.now()
+        enrollment.save(update_fields=['catalog_exported_at', 'updated_at'])
+    response = HttpResponse(json.dumps(payload, ensure_ascii=False, indent=2), content_type='application/json; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="jaunpur-ondc-{shop.slug}-catalog.json"'
+    return response
 
 
 def set_site_language(request, language):

@@ -1,16 +1,44 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="page-banner"><h1>ONDC seller onboarding</h1><p>Track {{ shop.name }}'s Seller Network Participant setup.</p></section>
+<section class="page-banner">
+    <h1>ONDC seller onboarding</h1>
+    <p>Prepare {{ shop.name }} for onboarding through an eligible Seller Network Participant.</p>
+</section>
 <section class="checkout-page">
-    <form method="post" class="checkout-form-card">{% csrf_token %}
-        <p>Status: <strong>{{ enrollment.get_status_display }}</strong></p>
-        <div class="form-group"><label>Seller Network Participant name</label><input name="participant_name" value="{{ enrollment.participant_name }}" required></div>
-        <div class="form-group"><label>Participant contact</label><input name="participant_contact" value="{{ enrollment.participant_contact }}" placeholder="Email or phone" required></div>
-        <div class="form-group"><label>Seller network ID (if assigned)</label><input name="seller_network_id" value="{{ enrollment.seller_network_id }}"></div>
-        <div class="form-group"><label>Application reference (optional)</label><input name="application_reference" value="{{ enrollment.application_reference }}"></div>
-        <button class="auth-btn" {% if enrollment.status == 'onboarded' %}disabled{% endif %}>Save onboarding details</button>
+    <div class="checkout-form-card">
+        <h2>Onboarding status</h2>
+        <p><strong>{{ enrollment.get_status_display }}</strong></p>
+        {% if enrollment.production_activated_at %}<p>Production confirmation recorded {{ enrollment.production_activated_at|date:'M j, Y g:i A' }}.</p>{% endif %}
+        {% if enrollment.catalog_exported_at %}<p>Catalog handoff last exported {{ enrollment.catalog_exported_at|date:'M j, Y g:i A' }}.</p>{% endif %}
         {% if enrollment.staff_note %}<p>Admin note: {{ enrollment.staff_note }}</p>{% endif %}
-    </form>
-    <aside class="checkout-form-card"><h2>Connection requirements</h2><p>ONDC sellers join through a Seller Network Participant. This page records the partner and onboarding status; it does not send live ONDC catalog or order traffic. Ask your selected participant to onboard this shop and platform before switching traffic on.</p><a href="https://www.ondc.org/pages/seller-network-participants.html" target="_blank" rel="noopener">Read ONDC seller participant requirements</a></aside>
+        <form method="post" class="checkout-form-card">{% csrf_token %}
+            <h3>Seller Network Participant</h3>
+            <div class="form-group"><label>Participant name</label><input name="participant_name" value="{{ enrollment.participant_name }}" maxlength="160" required></div>
+            <div class="form-group"><label>Participant contact</label><input name="participant_contact" value="{{ enrollment.participant_contact }}" maxlength="160" placeholder="Email or phone" required></div>
+            <div class="form-group"><label>Seller Network Participant ID (if assigned)</label><input name="seller_network_id" value="{{ enrollment.seller_network_id }}" maxlength="120"></div>
+            <div class="form-group"><label>Participant seller ID (if assigned)</label><input name="participant_seller_id" value="{{ enrollment.participant_seller_id }}" maxlength="120"></div>
+            <div class="form-group"><label>Network subscriber ID (if assigned)</label><input name="network_subscriber_id" value="{{ enrollment.network_subscriber_id }}" maxlength="120"></div>
+            <div class="form-group"><label>Application reference (optional)</label><input name="application_reference" value="{{ enrollment.application_reference }}" maxlength="120"></div>
+            <button class="auth-btn">Save participant details</button>
+        </form>
+    </div>
+    <aside class="checkout-form-card">
+        <h2>Jaunpur catalog readiness</h2>
+        <p>{{ readiness.product_count }} active product(s) are listed.</p>
+        <ul>
+            {% for item in readiness.checklist %}
+            <li>{% if item.ready %}✓{% else %}○{% endif %} <strong>{{ item.label }}</strong><br>{{ item.detail }}</li>
+            {% endfor %}
+        </ul>
+        {% if readiness.warnings %}<h3>Before launch</h3><ul>{% for warning in readiness.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
+        {% if can_export_catalog %}
+            <form method="post" action="{% url 'export_ondc_catalog' %}">{% csrf_token %}<button class="primary-btn">Download participant catalog JSON</button></form>
+        {% else %}
+            <p>Catalog export unlocks after Jaunpur admin confirms the participant's retail support and the required seller/catalog details are ready.</p>
+        {% endif %}
+        <p>The JSON is a point-in-time catalog snapshot for you to share with the participant. Product stock and ONDC orders do not synchronize from this file.</p>
+        <p>Participant approval, ONDC network configuration, credentials, and production order/inventory integration must be completed with the participant before any live traffic.</p>
+        <a href="https://www.ondc.org/pages/seller-network-participants.html" target="_blank" rel="noopener">Review ONDC Seller Network Participants</a>
+    </aside>
 </section>
 {% endblock %}

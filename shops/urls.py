@@ -38,6 +38,7 @@ urlpatterns = [
     path('seller/marketplaces/catalog/', views.manage_marketplace_catalog, name='manage_marketplace_catalog'),
     path('seller/marketplaces/<slug:channel>/request/', views.request_marketplace_setup, name='request_marketplace_setup'),
     path('seller/marketplaces/<slug:channel>/catalog.csv', views.export_marketplace_feed, name='export_marketplace_feed'),
+    path('seller/ondc/catalog.json', views.export_ondc_catalog, name='export_ondc_catalog'),
     path('seller/ondc/', views.ondc_setup, name='ondc_setup'),
     path('', views.shop_directory, name='shop_directory'),
     path('<slug:slug>/', views.shop_page, name='shop_page'),

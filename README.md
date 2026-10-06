@@ -150,3 +150,9 @@ python manage.py runserver
 ```
 
 Get the API version and template approval from your Meta Business account. Never commit the access token. For the official send-message request format, see the [Meta WhatsApp Cloud API documentation](https://developers.facebook.com/docs/whatsapp/cloud-api/overview).
+
+## ONDC Seller Network Participant Onboarding
+
+An approved Jaunpur seller can record its Seller Network Participant and application details from **ONDC seller onboarding**. The Jaunpur admin reviews the participant and confirms whether it supports retail; after the shop profile and catalog pass the readiness checklist, the seller can download a JSON catalog snapshot for manual handoff. Admins can track participant confirmation, catalog export, production approval, and the externally confirmed live status.
+
+This workflow prepares seller information and the catalog handoff. It does not connect to ONDC, submit data to a participant, synchronize inventory/orders, or activate production traffic. Complete participant onboarding, network credentials, and live order/inventory integration with an eligible [ONDC Seller Network Participant](https://www.ondc.org/pages/seller-network-participants.html) before launch. The exported stock is a timestamped snapshot; it must not be treated as live stock synchronization.

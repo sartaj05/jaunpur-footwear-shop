@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 
 from .models import MarketplaceChannelOrder, MarketplaceChannelOrderItem, MarketplaceConnection, MarketplaceProductMapping, MarketplaceSyncRun, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
@@ -55,10 +56,34 @@ class MarketplaceConnectionAdmin(admin.ModelAdmin):
 
 @admin.register(ONDCEnrollment)
 class ONDCEnrollmentAdmin(admin.ModelAdmin):
-    list_display = ['shop', 'participant_name', 'seller_network_id', 'status', 'submitted_at']
+    class Form(forms.ModelForm):
+        class Meta:
+            model = ONDCEnrollment
+            fields = '__all__'
+
+        def clean(self):
+            cleaned = super().clean()
+            if cleaned.get('status') == 'live':
+                if not cleaned.get('participant_supports_retail'):
+                    self.add_error('participant_supports_retail', 'Confirm that this participant supports the ONDC retail domain before marking production live.')
+                if not cleaned.get('participant_seller_id') or not cleaned.get('network_subscriber_id'):
+                    self.add_error(None, 'Record the participant seller ID and network subscriber ID before marking production live.')
+            return cleaned
+
+    form = Form
+    list_display = ['shop', 'participant_name', 'seller_network_id', 'participant_supports_retail', 'status', 'submitted_at']
     list_filter = ['status', 'submitted_at']
-    search_fields = ['shop__name', 'participant_name', 'seller_network_id', 'application_reference']
-    readonly_fields = ['submitted_at', 'updated_at']
+    search_fields = ['shop__name', 'participant_name', 'seller_network_id', 'participant_seller_id', 'network_subscriber_id', 'application_reference']
+    readonly_fields = ['submitted_at', 'catalog_exported_at', 'production_activated_at', 'updated_at']
+
+    def save_model(self, request, obj, form, change):
+        from django.utils import timezone
+
+        if obj.status == 'live' and not obj.production_activated_at:
+            obj.production_activated_at = timezone.now()
+        elif obj.status != 'live':
+            obj.production_activated_at = None
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(ShopPromotion)

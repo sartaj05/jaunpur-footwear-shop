@@ -155,18 +155,25 @@ class ONDCEnrollment(models.Model):
         ('draft', 'Draft'),
         ('submitted', 'Partner request submitted'),
         ('partner_confirmed', 'Seller Network Participant confirmed'),
-        ('onboarded', 'Seller onboarding recorded'),
-        ('rejected', 'More information required'),
+        ('catalog_exported', 'Catalog handoff exported'),
+        ('production_approval_pending', 'Production approval pending'),
+        ('live', 'Production connection confirmed'),
+        ('needs_changes', 'More information required'),
     ]
 
     shop = models.OneToOneField(Shop, on_delete=models.CASCADE, related_name='ondc_enrollment')
     participant_name = models.CharField(max_length=160, blank=True)
     participant_contact = models.CharField(max_length=160, blank=True)
     seller_network_id = models.CharField(max_length=120, blank=True)
+    participant_seller_id = models.CharField(max_length=120, blank=True)
+    network_subscriber_id = models.CharField(max_length=120, blank=True)
     application_reference = models.CharField(max_length=120, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    participant_supports_retail = models.BooleanField(default=False)
+    status = models.CharField(max_length=32, choices=STATUS_CHOICES, default='draft')
     staff_note = models.TextField(blank=True)
     submitted_at = models.DateTimeField(blank=True, null=True)
+    catalog_exported_at = models.DateTimeField(blank=True, null=True)
+    production_activated_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
