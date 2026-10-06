@@ -73,3 +73,37 @@ def exchange_flipkart_code(code):
     if not isinstance(token_data, dict) or not token_data.get('access_token'):
         raise MarketplaceAuthorizationError('Flipkart returned an incomplete authorization response.')
     return token_data
+
+
+def exchange_amazon_code(code):
+    credentials = (
+        settings.AMAZON_LWA_CLIENT_ID,
+        settings.AMAZON_LWA_CLIENT_SECRET,
+        settings.AMAZON_REDIRECT_URI,
+    )
+    if not all(credentials):
+        raise MarketplaceAuthorizationError('Amazon developer app credentials are not configured.')
+    body = urlencode({
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': settings.AMAZON_REDIRECT_URI,
+        'client_id': settings.AMAZON_LWA_CLIENT_ID,
+        'client_secret': settings.AMAZON_LWA_CLIENT_SECRET,
+    }).encode('utf-8')
+    request = Request(
+        settings.AMAZON_LWA_TOKEN_URL,
+        data=body,
+        headers={
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+        },
+        method='POST',
+    )
+    try:
+        with urlopen(request, timeout=15) as response:
+            token_data = json.loads(response.read().decode('utf-8'))
+    except (HTTPError, URLError, TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError):
+        raise MarketplaceAuthorizationError('Amazon could not authorize this seller account. Try again or contact support.') from None
+    if not isinstance(token_data, dict) or not token_data.get('access_token') or not token_data.get('refresh_token'):
+        raise MarketplaceAuthorizationError('Amazon returned an incomplete authorization response.')
+    return token_data

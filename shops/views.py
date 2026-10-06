@@ -30,6 +30,7 @@ from .models import MarketplaceConnection, MarketplaceProductMapping, ONDCEnroll
 from .marketplace_auth import (
     MarketplaceAuthorizationError,
     encrypt_marketplace_token,
+    exchange_amazon_code,
     exchange_flipkart_code,
     marketplace_encryption_is_configured,
 )
@@ -587,6 +588,129 @@ def marketplace_hub(request):
             'connection': shop.marketplace_connections.filter(channel=channel).first(),
         })
     return render(request, 'shops/marketplaces.html', {'shop': shop, 'channel_rows': channel_rows})
+
+
+@login_required
+@require_POST
+def save_amazon_marketplace_ids(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    connection = get_object_or_404(MarketplaceConnection, shop=shop, channel='amazon', status='approved')
+    submitted = request.POST.get('amazon_marketplace_ids', '').upper()
+    marketplace_ids = list(dict.fromkeys(value.strip() for value in submitted.split(',') if value.strip()))
+    if not marketplace_ids or len(marketplace_ids) > 25 or any(not re.fullmatch(r'[A-Z0-9_-]{5,20}', value) for value in marketplace_ids):
+        messages.error(request, 'Enter 1 to 25 marketplace IDs using letters, numbers, dashes, or underscores, separated by commas.')
+    else:
+        connection.amazon_marketplace_ids = ','.join(marketplace_ids)
+        connection.save(update_fields=['amazon_marketplace_ids', 'updated_at'])
+        messages.success(request, 'Amazon marketplace IDs saved for this seller account.')
+    return redirect('marketplace_hub')
+
+
+@login_required
+@require_POST
+def start_amazon_authorization(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    connection = get_object_or_404(MarketplaceConnection, shop=shop, channel='amazon', status='approved')
+    if not all((settings.AMAZON_APPLICATION_ID, settings.AMAZON_LWA_CLIENT_ID, settings.AMAZON_LWA_CLIENT_SECRET, settings.AMAZON_REDIRECT_URI)):
+        messages.error(request, 'Amazon app registration, LWA credentials, and callback URL are not configured yet.')
+        return redirect('marketplace_hub')
+    if not marketplace_encryption_is_configured():
+        messages.error(request, 'Set a valid marketplace token encryption key before connecting a seller account.')
+        return redirect('marketplace_hub')
+    if not connection.amazon_marketplace_ids:
+        messages.error(request, 'Save at least one Amazon marketplace ID before starting seller authorization.')
+        return redirect('marketplace_hub')
+    state = signing.dumps({
+        'connection_id': connection.pk,
+        'owner_id': request.user.pk,
+        'nonce': secrets.token_urlsafe(24),
+    }, salt='marketplace-amazon-oauth', compress=True)
+    request.session['amazon_oauth_state'] = state
+    authorization_params = {'application_id': settings.AMAZON_APPLICATION_ID, 'state': state}
+    if settings.AMAZON_OAUTH_VERSION == 'beta':
+        authorization_params['version'] = 'beta'
+    query = urlencode(authorization_params)
+    return redirect(f'{settings.AMAZON_AUTHORIZATION_URL}?{query}')
+
+
+@login_required
+@require_GET
+def amazon_authorization_callback(request):
+    state = request.GET.get('state', '')
+    expected_state = request.session.pop('amazon_oauth_state', '')
+    if not state or state != expected_state:
+        messages.error(request, 'Amazon authorization could not be verified. Start the connection again.')
+        return redirect('marketplace_hub')
+    try:
+        state_data = signing.loads(state, salt='marketplace-amazon-oauth', max_age=900)
+    except signing.BadSignature:
+        messages.error(request, 'Amazon authorization expired. Start the connection again.')
+        return redirect('marketplace_hub')
+    if state_data.get('owner_id') != request.user.pk:
+        messages.error(request, 'This Amazon authorization belongs to a different seller account.')
+        return redirect('marketplace_hub')
+    connection = MarketplaceConnection.objects.filter(
+        pk=state_data.get('connection_id'), shop__owner=request.user, channel='amazon', status='approved',
+    ).first()
+    if not connection:
+        messages.error(request, 'The approved Amazon seller setup could not be found.')
+        return redirect('marketplace_hub')
+    if request.GET.get('error'):
+        messages.error(request, 'Amazon seller authorization was declined or cancelled.')
+        return redirect('marketplace_hub')
+    code = request.GET.get('spapi_oauth_code', request.GET.get('code', '')).strip()
+    seller_id = request.GET.get('selling_partner_id', '').strip()
+    if not code or not re.fullmatch(r'[A-Za-z0-9_-]{1,120}', seller_id):
+        messages.error(request, 'Amazon did not return a valid authorization code and selling partner ID.')
+        return redirect('marketplace_hub')
+    callback_ids = request.GET.getlist('marketplaceIds') or request.GET.getlist('marketplace_ids')
+    if callback_ids:
+        callback_ids = list(dict.fromkeys(
+            value.strip().upper()
+            for raw_value in callback_ids
+            for value in raw_value.split(',')
+            if value.strip()
+        ))
+        if len(callback_ids) > 25 or any(not re.fullmatch(r'[A-Z0-9_-]{5,20}', value) for value in callback_ids):
+            messages.error(request, 'Amazon returned marketplace IDs in an unsupported format.')
+            return redirect('marketplace_hub')
+        connection.amazon_marketplace_ids = ','.join(callback_ids)
+    try:
+        token_data = exchange_amazon_code(code)
+        expires_in = max(0, int(token_data.get('expires_in', 0)))
+        connection.encrypted_access_token = encrypt_marketplace_token(token_data['access_token'])
+        connection.encrypted_refresh_token = encrypt_marketplace_token(token_data['refresh_token'])
+    except (MarketplaceAuthorizationError, TypeError, ValueError):
+        messages.error(request, 'Amazon connection failed. Check the app setup and try again.')
+        return redirect('marketplace_hub')
+    connection.seller_account_id = seller_id
+    connection.token_expires_at = timezone.now() + timedelta(seconds=expires_in) if expires_in else None
+    connection.authorization_status = 'connected'
+    connection.authorized_at = timezone.now()
+    connection.save(update_fields=[
+        'seller_account_id', 'amazon_marketplace_ids', 'encrypted_access_token', 'encrypted_refresh_token',
+        'token_expires_at', 'authorization_status', 'authorized_at', 'updated_at',
+    ])
+    messages.success(request, 'The Amazon seller account authorized this shop. Product, stock, and order synchronization is the next setup step.')
+    return redirect('marketplace_hub')
+
+
+@login_required
+@require_POST
+def disconnect_amazon(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    connection = get_object_or_404(MarketplaceConnection, shop=shop, channel='amazon', status='approved')
+    connection.encrypted_access_token = ''
+    connection.encrypted_refresh_token = ''
+    connection.token_expires_at = None
+    connection.authorized_at = None
+    connection.authorization_status = 'not_connected'
+    connection.save(update_fields=[
+        'encrypted_access_token', 'encrypted_refresh_token', 'token_expires_at',
+        'authorized_at', 'authorization_status', 'updated_at',
+    ])
+    messages.success(request, 'The Amazon authorization was removed from this Jaunpur shop.')
+    return redirect('marketplace_hub')
 
 
 @login_required

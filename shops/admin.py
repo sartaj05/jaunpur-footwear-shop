@@ -49,7 +49,7 @@ class MarketplaceConnectionAdmin(admin.ModelAdmin):
     list_display = ['shop', 'channel', 'seller_account_id', 'status', 'authorization_status', 'requested_at', 'updated_at']
     list_filter = ['channel', 'status', 'requested_at']
     search_fields = ['shop__name', 'seller_account_id']
-    readonly_fields = ['requested_at', 'updated_at']
+    readonly_fields = ['requested_at', 'updated_at', 'authorization_status', 'token_expires_at', 'authorized_at']
     exclude = ['encrypted_access_token', 'encrypted_refresh_token']
 
 

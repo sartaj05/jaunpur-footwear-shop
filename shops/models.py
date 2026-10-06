@@ -135,6 +135,7 @@ class MarketplaceConnection(models.Model):
     encrypted_refresh_token = models.TextField(blank=True)
     token_expires_at = models.DateTimeField(blank=True, null=True)
     authorized_at = models.DateTimeField(blank=True, null=True)
+    amazon_marketplace_ids = models.CharField(max_length=700, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

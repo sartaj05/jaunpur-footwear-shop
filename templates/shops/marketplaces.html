@@ -18,6 +18,16 @@
                 {% if row.connection.authorization_status == 'connected' %}<form method="post" action="{% url 'disconnect_flipkart' %}">{% csrf_token %}<button class="secondary-btn">Disconnect Flipkart seller account</button></form>
                 {% else %}<form method="post" action="{% url 'start_flipkart_authorization' %}">{% csrf_token %}<button class="primary-btn">Authorize Flipkart seller account</button></form>{% endif %}
             {% endif %}
+            {% if row.channel == 'amazon' and row.connection.status == 'approved' %}
+                <form method="post" action="{% url 'save_amazon_marketplace_ids' %}">{% csrf_token %}
+                    <label>Amazon marketplace IDs (comma separated)</label>
+                    <input name="amazon_marketplace_ids" value="{{ row.connection.amazon_marketplace_ids }}" maxlength="700" placeholder="A21TJRUUN4KGV">
+                    <button class="secondary-btn">Save marketplace IDs</button>
+                </form>
+                <p>Seller authorization: {{ row.connection.get_authorization_status_display }}</p>
+                {% if row.connection.authorization_status == 'connected' %}<form method="post" action="{% url 'disconnect_amazon' %}">{% csrf_token %}<button class="secondary-btn">Disconnect Amazon seller account</button></form>
+                {% else %}<form method="post" action="{% url 'start_amazon_authorization' %}">{% csrf_token %}<button class="primary-btn" {% if not row.connection.amazon_marketplace_ids %}disabled{% endif %}>Authorize Amazon seller account</button></form>{% endif %}
+            {% endif %}
         </div></article>
         {% endfor %}
     </div>

@@ -16,6 +16,7 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 - Shop pickup and local delivery appointments with weekly time slots
 - Amazon/Flipkart seller setup requests and catalog preparation CSV exports
 - Flipkart seller OAuth authorization with encrypted token storage
+- Amazon seller consent and LWA authorization-code exchange
 - ONDC Seller Network Participant onboarding tracker for Jaunpur shops
 - Per-shop commission statements and staff-recorded payout ledger
 - PIN-code-targeted shop promotions
@@ -107,6 +108,16 @@ MARKETPLACE_TOKEN_ENCRYPTION_KEY
 ```
 
 Generate a Fernet key once with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Keep the same key in a secret manager across deploys and back it up securely; changing it makes previously stored marketplace tokens unreadable. Seller tokens are encrypted before they are stored. Flipkart partner app access and each seller's authorization are required. This connection implements seller authorization and token storage; catalog and order API sync is a separate workflow. See the [Flipkart Seller API documentation](https://seller.flipkart.com/api-docs/FMSAPI.html).
+
+## Amazon Seller Authorization
+
+An approved seller can enter the Amazon marketplace IDs they use and authorize the registered SP-API application. Register this callback URL in the app and set it as `AMAZON_REDIRECT_URI`:
+
+```text
+https://your-domain.example/seller/marketplaces/amazon/callback/
+```
+
+Configure `AMAZON_APPLICATION_ID`, `AMAZON_LWA_CLIENT_ID`, `AMAZON_LWA_CLIENT_SECRET`, `AMAZON_REDIRECT_URI`, and the shared `MARKETPLACE_TOKEN_ENCRYPTION_KEY` on the server. `AMAZON_AUTHORIZATION_URL` defaults to the India Seller Central consent URL; set it to the Seller Central domain for the target marketplace region. Set `AMAZON_OAUTH_VERSION=beta` only when testing an app in Draft status. Amazon requires SP-API developer/app registration and seller authorization, and public apps may require Amazon approval before sellers can authorize them. The callback exchanges Amazon's authorization code through LWA and encrypts the returned seller tokens. Product, inventory, and order operations are implemented separately. See Amazon's [SP-API onboarding](https://developer-docs.amazon.com/sp-api/docs/onboarding-overview) and [connection guide](https://developer-docs.amazon.com/sp-api/docs/connecting-to-the-selling-partner-api).
 
 ## WhatsApp Order Updates
 
