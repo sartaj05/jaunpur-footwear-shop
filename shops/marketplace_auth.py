@@ -45,25 +45,25 @@ def marketplace_encryption_is_configured():
         return False
 
 
-def exchange_flipkart_code(code):
+def exchange_flipkart_code(code, state):
     credentials = (settings.FLIPKART_CLIENT_ID, settings.FLIPKART_CLIENT_SECRET, settings.FLIPKART_REDIRECT_URI)
     if not all(credentials):
         raise MarketplaceAuthorizationError('Flipkart developer app credentials are not configured.')
     basic = base64.b64encode(f'{settings.FLIPKART_CLIENT_ID}:{settings.FLIPKART_CLIENT_SECRET}'.encode('utf-8')).decode('ascii')
-    body = urlencode({
+    query = urlencode({
         'grant_type': 'authorization_code',
         'code': code,
+        'state': state,
         'redirect_uri': settings.FLIPKART_REDIRECT_URI,
-    }).encode('utf-8')
+    })
+    separator = '&' if '?' in settings.FLIPKART_TOKEN_URL else '?'
     request = Request(
-        settings.FLIPKART_TOKEN_URL,
-        data=body,
+        f'{settings.FLIPKART_TOKEN_URL}{separator}{query}',
         headers={
             'Authorization': f'Basic {basic}',
-            'Content-Type': 'application/x-www-form-urlencoded',
             'Accept': 'application/json',
         },
-        method='POST',
+        method='GET',
     )
     try:
         with urlopen(request, timeout=15) as response:

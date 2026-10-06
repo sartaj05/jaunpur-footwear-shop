@@ -134,8 +134,10 @@ class MarketplaceConnection(models.Model):
     encrypted_access_token = models.TextField(blank=True)
     encrypted_refresh_token = models.TextField(blank=True)
     token_expires_at = models.DateTimeField(blank=True, null=True)
+    refresh_token_expires_at = models.DateTimeField(blank=True, null=True)
     authorized_at = models.DateTimeField(blank=True, null=True)
     amazon_marketplace_ids = models.CharField(max_length=700, blank=True)
+    fulfillment_location_id = models.CharField(max_length=120, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -223,11 +225,12 @@ class MarketplaceProductMapping(models.Model):
     ]
 
     connection = models.ForeignKey(MarketplaceConnection, on_delete=models.CASCADE, related_name='product_mappings')
-    product = models.ForeignKey('products.Product', on_delete=models.CASCADE, related_name='marketplace_mappings')
-    variant = models.ForeignKey('products.ProductVariant', on_delete=models.CASCADE, blank=True, null=True, related_name='marketplace_mappings')
+    product = models.ForeignKey('products.Product', on_delete=models.PROTECT, related_name='marketplace_mappings')
+    variant = models.ForeignKey('products.ProductVariant', on_delete=models.PROTECT, blank=True, null=True, related_name='marketplace_mappings')
     external_sku = models.CharField(max_length=120)
     external_listing_id = models.CharField(max_length=160, blank=True)
     category_path = models.CharField(max_length=240, blank=True)
+    allocated_quantity = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     error_text = models.TextField(blank=True)
     last_synced_at = models.DateTimeField(blank=True, null=True)
@@ -244,3 +247,80 @@ class MarketplaceProductMapping(models.Model):
 
     def __str__(self):
         return f'{self.connection.get_channel_display()} · {self.external_sku}'
+
+
+class MarketplaceSyncRun(models.Model):
+    STATUS_CHOICES = [('running', 'Running'), ('succeeded', 'Succeeded'), ('failed', 'Failed')]
+
+    connection = models.ForeignKey(MarketplaceConnection, on_delete=models.CASCADE, related_name='sync_runs')
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='running')
+    orders_seen = models.PositiveIntegerField(default=0)
+    order_items_seen = models.PositiveIntegerField(default=0)
+    inventory_updates = models.PositiveIntegerField(default=0)
+    error_summary = models.TextField(blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-started_at']
+
+    def __str__(self):
+        return f'{self.connection.get_channel_display()} sync · {self.get_status_display()}'
+
+
+class MarketplaceChannelOrder(models.Model):
+    RECONCILIATION_CHOICES = [('open', 'Needs reconciliation'), ('reconciled', 'Reconciled')]
+
+    connection = models.ForeignKey(MarketplaceConnection, on_delete=models.CASCADE, related_name='channel_orders')
+    external_order_id = models.CharField(max_length=160)
+    marketplace_id = models.CharField(max_length=40, blank=True)
+    external_status = models.CharField(max_length=80, blank=True)
+    purchased_at = models.DateTimeField(blank=True, null=True)
+    currency = models.CharField(max_length=3, default='INR')
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    marketplace_fee = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    settlement_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    settlement_reference = models.CharField(max_length=160, blank=True)
+    reconciliation_status = models.CharField(max_length=12, choices=RECONCILIATION_CHOICES, default='open')
+    reconciled_at = models.DateTimeField(blank=True, null=True)
+    last_synced_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-purchased_at', '-created_at']
+        constraints = [models.UniqueConstraint(fields=['connection', 'external_order_id'], name='unique_marketplace_channel_order')]
+
+    def __str__(self):
+        return f'{self.connection.get_channel_display()} order {self.external_order_id}'
+
+
+class MarketplaceChannelOrderItem(models.Model):
+    INVENTORY_CHOICES = [
+        ('pending', 'Pending inventory reservation'),
+        ('reserved', 'Reserved from shared stock'),
+        ('shortage', 'Stock shortage'),
+        ('unmapped', 'SKU needs mapping'),
+        ('released', 'Reservation released'),
+        ('sold', 'Fulfilled from reserved stock'),
+    ]
+
+    order = models.ForeignKey(MarketplaceChannelOrder, on_delete=models.CASCADE, related_name='items')
+    external_item_id = models.CharField(max_length=160)
+    external_sku = models.CharField(max_length=120, blank=True)
+    mapping = models.ForeignKey(MarketplaceProductMapping, on_delete=models.SET_NULL, blank=True, null=True, related_name='channel_order_items')
+    quantity = models.PositiveIntegerField(default=0)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    currency = models.CharField(max_length=3, default='INR')
+    external_status = models.CharField(max_length=80, blank=True)
+    inventory_status = models.CharField(max_length=12, choices=INVENTORY_CHOICES, default='pending')
+    consumed_quantity = models.PositiveIntegerField(default=0)
+    allocation_consumed_quantity = models.PositiveIntegerField(default=0)
+    allocation_processed_quantity = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['id']
+        constraints = [models.UniqueConstraint(fields=['order', 'external_item_id'], name='unique_marketplace_channel_order_item')]
+
+    def __str__(self):
+        return f'{self.order.external_order_id} · {self.external_sku or self.external_item_id}'

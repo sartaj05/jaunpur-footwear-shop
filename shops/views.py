@@ -26,7 +26,8 @@ from orders.notifications import send_order_status_update
 from accounts.models import ReferralReward
 from accounts.services import award_loyalty_for_order
 
-from .models import MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
+from .models import MarketplaceChannelOrder, MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
+from .inventory import update_mapping_allocation
 from .marketplace_auth import (
     MarketplaceAuthorizationError,
     encrypt_marketplace_token,
@@ -533,8 +534,11 @@ def seller_delete_product(request, product_id):
     shop = get_object_or_404(Shop, owner=request.user, status='approved')
     product = get_object_or_404(Product, pk=product_id, shop=shop)
     if request.method == 'POST':
-        product.delete()
-        messages.success(request, 'Your product listing was removed.')
+        if product.marketplace_mappings.exists():
+            messages.error(request, 'Remove its marketplace mappings before deleting this product.')
+        else:
+            product.delete()
+            messages.success(request, 'Your product listing was removed.')
     return redirect('seller_dashboard')
 
 
@@ -567,8 +571,12 @@ def seller_manage_variants(request, product_id):
                 )
                 messages.success(request, 'Size and color stock saved.')
         elif action == 'remove':
-            ProductVariant.objects.filter(pk=request.POST.get('variant_id'), product=product).delete()
-            messages.success(request, 'Variant removed.')
+            variant = product.variants.filter(pk=request.POST.get('variant_id')).first()
+            if variant and variant.marketplace_mappings.exists():
+                messages.error(request, 'Remove this variant marketplace mapping before deleting the variant.')
+            elif variant:
+                variant.delete()
+                messages.success(request, 'Variant removed.')
         return redirect('seller_manage_variants', product_id=product.pk)
     return render(request, 'shops/seller_variants.html', {
         'shop': shop,
@@ -582,12 +590,93 @@ def marketplace_hub(request):
     shop = get_object_or_404(Shop, owner=request.user, status='approved')
     channel_rows = []
     for channel, label in MarketplaceConnection.CHANNEL_CHOICES:
+        connection = shop.marketplace_connections.filter(channel=channel).first()
         channel_rows.append({
             'channel': channel,
             'label': label,
-            'connection': shop.marketplace_connections.filter(channel=channel).first(),
+            'connection': connection,
+            'last_run': connection.sync_runs.first() if connection else None,
         })
     return render(request, 'shops/marketplaces.html', {'shop': shop, 'channel_rows': channel_rows})
+
+
+@login_required
+@require_POST
+def save_flipkart_fulfillment_location(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    connection = get_object_or_404(MarketplaceConnection, shop=shop, channel='flipkart', status='approved')
+    location_id = request.POST.get('fulfillment_location_id', '').strip()
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,120}', location_id):
+        messages.error(request, 'Enter the Flipkart location ID from the seller onboarding account.')
+    else:
+        connection.fulfillment_location_id = location_id
+        connection.save(update_fields=['fulfillment_location_id', 'updated_at'])
+        messages.success(request, 'Flipkart fulfillment location saved.')
+    return redirect('marketplace_hub')
+
+
+@login_required
+@require_POST
+def run_marketplace_sync(request, connection_id):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    connection = get_object_or_404(
+        MarketplaceConnection, pk=connection_id, shop=shop, status='approved', authorization_status='connected',
+    )
+    from .marketplace_sync import sync_marketplace_connection
+
+    run = sync_marketplace_connection(connection)
+    if run.status == 'succeeded':
+        messages.success(request, f'Sync complete: {run.orders_seen} orders, {run.order_items_seen} items, {run.inventory_updates} listing stock updates.')
+        if run.error_summary:
+            messages.warning(request, 'Some listing updates need attention. Review the product catalog mappings.')
+    else:
+        messages.error(request, run.error_summary or 'Marketplace sync failed.')
+    return redirect('marketplace_hub')
+
+
+@login_required
+def marketplace_channel_orders(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    if request.method == 'POST':
+        channel_order = get_object_or_404(
+            MarketplaceChannelOrder,
+            pk=request.POST.get('order_id'),
+            connection__shop=shop,
+        )
+        fee_text = request.POST.get('marketplace_fee', '').strip()
+        settlement_text = request.POST.get('settlement_amount', '').strip()
+        reference = request.POST.get('settlement_reference', '').strip()
+        try:
+            fee = Decimal(fee_text) if fee_text else None
+            settlement = Decimal(settlement_text) if settlement_text else None
+            if fee is not None and fee < 0:
+                raise InvalidOperation
+            if any(value is not None and abs(value) >= Decimal('10000000000') for value in (fee, settlement)):
+                raise InvalidOperation
+        except (InvalidOperation, TypeError, ValueError):
+            messages.error(request, 'Enter valid fee and settlement amounts.')
+        else:
+            is_reconciled = fee is not None and settlement is not None and bool(reference)
+            channel_order.marketplace_fee = fee
+            channel_order.settlement_amount = settlement
+            channel_order.settlement_reference = reference[:160]
+            channel_order.reconciliation_status = 'reconciled' if is_reconciled else 'open'
+            channel_order.reconciled_at = timezone.now() if is_reconciled else None
+            channel_order.save(update_fields=[
+                'marketplace_fee', 'settlement_amount', 'settlement_reference',
+                'reconciliation_status', 'reconciled_at',
+            ])
+            messages.success(request, 'Marketplace fee and settlement reconciliation saved.')
+        return redirect('marketplace_channel_orders')
+    orders = MarketplaceChannelOrder.objects.filter(
+        connection__shop=shop,
+    ).select_related('connection').prefetch_related('items').order_by('-purchased_at', '-created_at')[:100]
+    local_orders = SellerOrder.objects.filter(shop=shop).select_related('order').prefetch_related('items').order_by('-created_at')[:100]
+    return render(request, 'shops/marketplace_orders.html', {
+        'shop': shop,
+        'orders': orders,
+        'local_orders': local_orders,
+    })
 
 
 @login_required
@@ -597,8 +686,8 @@ def save_amazon_marketplace_ids(request):
     connection = get_object_or_404(MarketplaceConnection, shop=shop, channel='amazon', status='approved')
     submitted = request.POST.get('amazon_marketplace_ids', '').upper()
     marketplace_ids = list(dict.fromkeys(value.strip() for value in submitted.split(',') if value.strip()))
-    if not marketplace_ids or len(marketplace_ids) > 25 or any(not re.fullmatch(r'[A-Z0-9_-]{5,20}', value) for value in marketplace_ids):
-        messages.error(request, 'Enter 1 to 25 marketplace IDs using letters, numbers, dashes, or underscores, separated by commas.')
+    if len(marketplace_ids) != 1 or any(not re.fullmatch(r'[A-Z0-9_-]{5,20}', value) for value in marketplace_ids):
+        messages.error(request, 'Enter exactly one Amazon marketplace ID for shared Jaunpur stock synchronization.')
     else:
         connection.amazon_marketplace_ids = ','.join(marketplace_ids)
         connection.save(update_fields=['amazon_marketplace_ids', 'updated_at'])
@@ -671,7 +760,7 @@ def amazon_authorization_callback(request):
             for value in raw_value.split(',')
             if value.strip()
         ))
-        if len(callback_ids) > 25 or any(not re.fullmatch(r'[A-Z0-9_-]{5,20}', value) for value in callback_ids):
+        if len(callback_ids) != 1 or any(not re.fullmatch(r'[A-Z0-9_-]{5,20}', value) for value in callback_ids):
             messages.error(request, 'Amazon returned marketplace IDs in an unsupported format.')
             return redirect('marketplace_hub')
         connection.amazon_marketplace_ids = ','.join(callback_ids)
@@ -685,11 +774,12 @@ def amazon_authorization_callback(request):
         return redirect('marketplace_hub')
     connection.seller_account_id = seller_id
     connection.token_expires_at = timezone.now() + timedelta(seconds=expires_in) if expires_in else None
+    connection.refresh_token_expires_at = timezone.now() + timedelta(days=365)
     connection.authorization_status = 'connected'
     connection.authorized_at = timezone.now()
     connection.save(update_fields=[
         'seller_account_id', 'amazon_marketplace_ids', 'encrypted_access_token', 'encrypted_refresh_token',
-        'token_expires_at', 'authorization_status', 'authorized_at', 'updated_at',
+        'token_expires_at', 'refresh_token_expires_at', 'authorization_status', 'authorized_at', 'updated_at',
     ])
     messages.success(request, 'The Amazon seller account authorized this shop. Product, stock, and order synchronization is the next setup step.')
     return redirect('marketplace_hub')
@@ -703,10 +793,11 @@ def disconnect_amazon(request):
     connection.encrypted_access_token = ''
     connection.encrypted_refresh_token = ''
     connection.token_expires_at = None
+    connection.refresh_token_expires_at = None
     connection.authorized_at = None
     connection.authorization_status = 'not_connected'
     connection.save(update_fields=[
-        'encrypted_access_token', 'encrypted_refresh_token', 'token_expires_at',
+        'encrypted_access_token', 'encrypted_refresh_token', 'token_expires_at', 'refresh_token_expires_at',
         'authorized_at', 'authorization_status', 'updated_at',
     ])
     messages.success(request, 'The Amazon authorization was removed from this Jaunpur shop.')
@@ -771,7 +862,7 @@ def flipkart_authorization_callback(request):
         messages.error(request, 'Flipkart did not return an authorization code.')
         return redirect('marketplace_hub')
     try:
-        token_data = exchange_flipkart_code(code)
+        token_data = exchange_flipkart_code(code, state)
         expires_in = max(0, int(token_data.get('expires_in', 0)))
         connection.encrypted_access_token = encrypt_marketplace_token(token_data['access_token'])
         connection.encrypted_refresh_token = encrypt_marketplace_token(token_data.get('refresh_token', ''))
@@ -779,10 +870,12 @@ def flipkart_authorization_callback(request):
         messages.error(request, 'Flipkart connection failed. Check the app setup and try again.')
         return redirect('marketplace_hub')
     connection.token_expires_at = timezone.now() + timedelta(seconds=expires_in) if expires_in else None
+    refresh_expires_in = token_data.get('refresh_token_expires_in')
+    connection.refresh_token_expires_at = timezone.now() + timedelta(seconds=max(0, int(refresh_expires_in))) if refresh_expires_in else None
     connection.authorization_status = 'connected'
     connection.authorized_at = timezone.now()
     connection.save(update_fields=[
-        'encrypted_access_token', 'encrypted_refresh_token', 'token_expires_at',
+        'encrypted_access_token', 'encrypted_refresh_token', 'token_expires_at', 'refresh_token_expires_at',
         'authorization_status', 'authorized_at', 'updated_at',
     ])
     messages.success(request, 'The Flipkart seller account authorized this shop. Product, stock, and order synchronization is the next setup step.')
@@ -797,10 +890,11 @@ def disconnect_flipkart(request):
     connection.encrypted_access_token = ''
     connection.encrypted_refresh_token = ''
     connection.token_expires_at = None
+    connection.refresh_token_expires_at = None
     connection.authorized_at = None
     connection.authorization_status = 'not_connected'
     connection.save(update_fields=[
-        'encrypted_access_token', 'encrypted_refresh_token', 'token_expires_at',
+        'encrypted_access_token', 'encrypted_refresh_token', 'token_expires_at', 'refresh_token_expires_at',
         'authorized_at', 'authorization_status', 'updated_at',
     ])
     messages.success(request, 'The Flipkart authorization was removed from this Jaunpur shop.')
@@ -813,12 +907,35 @@ def manage_marketplace_catalog(request):
     connections = shop.marketplace_connections.filter(status='approved')
     error = ''
     if request.method == 'POST':
+        if request.POST.get('action') == 'remove_mapping':
+            mapping = get_object_or_404(MarketplaceProductMapping, pk=request.POST.get('mapping_id'), connection__shop=shop)
+            if mapping.allocated_quantity or mapping.status != 'draft':
+                messages.error(request, 'Only draft marketplace mappings with zero reserved stock can be removed. Deactivate submitted listings in the marketplace first.')
+            else:
+                mapping.delete()
+                messages.success(request, 'Marketplace product mapping removed.')
+            return redirect('manage_marketplace_catalog')
+        if request.POST.get('action') == 'update_allocation':
+            mapping = get_object_or_404(MarketplaceProductMapping, pk=request.POST.get('mapping_id'), connection__shop=shop)
+            try:
+                allocation = int(request.POST.get('allocated_quantity', ''))
+            except (TypeError, ValueError):
+                allocation = -1
+            if allocation < 0:
+                messages.error(request, 'Enter a non-negative marketplace stock allocation.')
+            elif not update_mapping_allocation(mapping, allocation):
+                messages.error(request, 'Marketplace allocations cannot exceed the current shared stock for this product or variant.')
+            else:
+                messages.success(request, f'{mapping.external_sku} now reserves {allocation} unit(s) for {mapping.connection.get_channel_display()}.')
+            return redirect('manage_marketplace_catalog')
         try:
             connection_id = int(request.POST.get('connection_id', ''))
             product_id = int(request.POST.get('product_id', ''))
             variant_id = int(request.POST.get('variant_id')) if request.POST.get('variant_id', '').strip() else None
+            allocated_quantity = int(request.POST.get('allocated_quantity', '0'))
         except (TypeError, ValueError):
             connection_id, product_id, variant_id = 0, 0, None
+            allocated_quantity = -1
             error = 'Choose a valid marketplace product and variant.'
         connection = connections.filter(pk=connection_id).first()
         product = shop.products.filter(is_active=True, pk=product_id).first()
@@ -827,10 +944,12 @@ def manage_marketplace_catalog(request):
             variant = product.variants.filter(is_active=True, pk=variant_id).first()
         external_sku = request.POST.get('external_sku', '').strip()
         category_path = request.POST.get('category_path', '').strip()
+        external_listing_id = request.POST.get('external_listing_id', '').strip()
+        has_variants = product.variants.filter(is_active=True).exists() if product else False
         if error:
             pass
-        elif not connection or not product or (variant_id and not variant) or not external_sku:
-            error = 'Choose an approved marketplace, one of your products, a matching variant, and an external SKU.'
+        elif not connection or not product or (variant_id and not variant) or (has_variants and not variant) or not external_sku or allocated_quantity < 0:
+            error = 'Choose an approved marketplace, map each size/color variant, enter a marketplace SKU, and use a non-negative stock allocation.'
         else:
             mapping = MarketplaceProductMapping.objects.filter(
                 connection=connection,
@@ -848,11 +967,15 @@ def manage_marketplace_catalog(request):
                     mapping = MarketplaceProductMapping(connection=connection, product=product, variant=variant)
                 mapping.external_sku = external_sku
                 mapping.category_path = category_path
+                mapping.external_listing_id = external_listing_id
                 mapping.status = 'draft'
                 mapping.error_text = ''
                 mapping.save()
-                messages.success(request, f'Marketplace SKU mapping saved for {product.name}.')
-                return redirect('manage_marketplace_catalog')
+                if not update_mapping_allocation(mapping, allocated_quantity):
+                    error = 'The allocations across connected channels cannot exceed current product or variant stock.'
+                else:
+                    messages.success(request, f'Marketplace SKU mapping saved for {product.name}.')
+                    return redirect('manage_marketplace_catalog')
     return render(request, 'shops/marketplace_catalog.html', {
         'shop': shop,
         'connections': connections,
@@ -898,14 +1021,14 @@ def export_marketplace_feed(request, channel):
                 writer.writerow([
                     variant.seller_sku, mapping.external_sku if mapping else '', mapping.category_path if mapping else '', shop.name, product.name,
                     product.brand.name, product.category.name, product.description,
-                    variant.final_price(), variant.stock, variant.size, variant.color,
+                    variant.final_price(), mapping.allocated_quantity if mapping else 0, variant.size, variant.color,
                 ])
         else:
             mapping = MarketplaceProductMapping.objects.filter(connection=connection, product=product, variant__isnull=True).first()
             writer.writerow([
                 product.seller_sku, mapping.external_sku if mapping else '', mapping.category_path if mapping else '', shop.name, product.name,
                 product.brand.name, product.category.name, product.description,
-                product.final_price(), product.stock, '', '',
+                product.final_price(), mapping.allocated_quantity if mapping else 0, '', '',
             ])
     return response
 

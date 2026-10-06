@@ -168,6 +168,7 @@ FLIPKART_CLIENT_SECRET = os.environ.get('FLIPKART_CLIENT_SECRET', '')
 FLIPKART_REDIRECT_URI = os.environ.get('FLIPKART_REDIRECT_URI', '')
 FLIPKART_AUTHORIZATION_URL = os.environ.get('FLIPKART_AUTHORIZATION_URL', 'https://seller.flipkart.com/oauth/authorize')
 FLIPKART_TOKEN_URL = os.environ.get('FLIPKART_TOKEN_URL', 'https://api.flipkart.net/oauth-service/oauth/token')
+FLIPKART_API_BASE_URL = os.environ.get('FLIPKART_API_BASE_URL', 'https://api.flipkart.net/sellers')
 AMAZON_APPLICATION_ID = os.environ.get('AMAZON_APPLICATION_ID', '')
 AMAZON_LWA_CLIENT_ID = os.environ.get('AMAZON_LWA_CLIENT_ID', '')
 AMAZON_LWA_CLIENT_SECRET = os.environ.get('AMAZON_LWA_CLIENT_SECRET', '')
@@ -175,6 +176,8 @@ AMAZON_REDIRECT_URI = os.environ.get('AMAZON_REDIRECT_URI', '')
 AMAZON_AUTHORIZATION_URL = os.environ.get('AMAZON_AUTHORIZATION_URL', 'https://sellercentral.amazon.in/apps/authorize/consent')
 AMAZON_OAUTH_VERSION = os.environ.get('AMAZON_OAUTH_VERSION', '')
 AMAZON_LWA_TOKEN_URL = os.environ.get('AMAZON_LWA_TOKEN_URL', 'https://api.amazon.com/auth/o2/token')
+AMAZON_SP_API_ENDPOINT = os.environ.get('AMAZON_SP_API_ENDPOINT', 'https://sellingpartnerapi-eu.amazon.com')
+MARKETPLACE_API_USER_AGENT = os.environ.get('MARKETPLACE_API_USER_AGENT', 'JaunpurFootwear/1.0 (Language=Python)')
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'

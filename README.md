@@ -17,6 +17,9 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 - Amazon/Flipkart seller setup requests and catalog preparation CSV exports
 - Flipkart seller OAuth authorization with encrypted token storage
 - Amazon seller consent and LWA authorization-code exchange
+- Shared stock reservations across the Jaunpur shop and authorized marketplace channels
+- Unified Jaunpur, Amazon, and Flipkart seller order inbox
+- Manual marketplace fee and settlement reconciliation records
 - ONDC Seller Network Participant onboarding tracker for Jaunpur shops
 - Per-shop commission statements and staff-recorded payout ledger
 - PIN-code-targeted shop promotions
@@ -118,6 +121,19 @@ https://your-domain.example/seller/marketplaces/amazon/callback/
 ```
 
 Configure `AMAZON_APPLICATION_ID`, `AMAZON_LWA_CLIENT_ID`, `AMAZON_LWA_CLIENT_SECRET`, `AMAZON_REDIRECT_URI`, and the shared `MARKETPLACE_TOKEN_ENCRYPTION_KEY` on the server. `AMAZON_AUTHORIZATION_URL` defaults to the India Seller Central consent URL; set it to the Seller Central domain for the target marketplace region. Set `AMAZON_OAUTH_VERSION=beta` only when testing an app in Draft status. Amazon requires SP-API developer/app registration and seller authorization, and public apps may require Amazon approval before sellers can authorize them. The callback exchanges Amazon's authorization code through LWA and encrypts the returned seller tokens. Product, inventory, and order operations are implemented separately. See Amazon's [SP-API onboarding](https://developer-docs.amazon.com/sp-api/docs/onboarding-overview) and [connection guide](https://developer-docs.amazon.com/sp-api/docs/connecting-to-the-selling-partner-api).
+
+## Shared Marketplace Stock and Orders
+
+In the marketplace product catalog, map every sellable size/color SKU and enter the quantity reserved for each channel. The sum of marketplace reservations cannot exceed current stock; Jaunpur storefront checkout can only use the unreserved units. When a channel order is imported, the matching shared stock and that channel's reservation are reduced. Unmapped SKUs and stock shortages are shown in the order inbox.
+
+Flipkart inventory sync also needs the seller's fulfillment location ID and each listing's Flipkart product ID. Amazon shared-stock sync currently supports one Amazon marketplace ID per connection and seller-fulfilled listings. The Amazon connection needs approved Orders and listing API roles. Select **Sync orders and reserved stock now** in the marketplace hub, or run this command from a scheduled job:
+
+```powershell
+python manage.py sync_marketplace_channels
+python manage.py sync_marketplace_channels --shop-id 12 --channel amazon
+```
+
+Set `AMAZON_SP_API_ENDPOINT` for the seller's SP-API region. The default points at Amazon's EU endpoint used for Jaunpur's India marketplace. `FLIPKART_API_BASE_URL` defaults to `https://api.flipkart.net/sellers`. Seller API access and approval are required. The order inbox stores no Amazon or Flipkart buyer contact/address fields. Fees and settlements are entered from marketplace statements in the inbox; this release does not import settlement reports automatically. The Amazon order importer uses the current [Orders API v2026-01-01](https://developer-docs.amazon.com/sp-api/reference/searchorders) and the Flipkart [seller order API](https://seller.flipkart.com/api-docs/order-api-docs/OMAPIRef.html).
 
 ## WhatsApp Order Updates
 

@@ -1,37 +1,48 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="page-banner"><h1>Amazon and Flipkart setup</h1><p>Prepare {{ shop.name }}'s catalog for marketplace listings.</p></section>
+<section class="page-banner"><h1>Amazon and Flipkart setup</h1><p>Connect authorized Jaunpur seller accounts and synchronize shared stock and marketplace orders.</p></section>
 <section class="featured-section">
-    <p>Submit a seller setup request for review. Approved shops can prepare catalog CSV files; Flipkart seller authorization is also available after the Jaunpur Footwear admin setup review. Product, stock, and order synchronization still needs its separate API workflow.</p>
+    <p>Setup review is separate from each seller's authorization. Marketplace orders are stored without buyer contact or address details. Stock updates use the channel quantities reserved in the product catalog.</p>
     <div class="product-grid">
         {% for row in channel_rows %}
         <article class="product-card"><div class="product-info"><h2>{{ row.label }}</h2>
-            {% if row.connection %}<p>Status: {{ row.connection.get_status_display }}</p>{% if row.connection.seller_account_id %}<p>Seller ID: {{ row.connection.seller_account_id }}</p>{% endif %}{% endif %}
+            {% if row.connection %}<p>Setup: {{ row.connection.get_status_display }}</p>{% if row.connection.seller_account_id %}<p>Seller ID: {{ row.connection.seller_account_id }}</p>{% endif %}{% endif %}
             {% if not row.connection or row.connection.status != 'approved' %}<form method="post" action="{% url 'request_marketplace_setup' row.channel %}">{% csrf_token %}
                 <label>Marketplace seller account ID (optional)</label>
                 <input name="seller_account_id" value="{{ row.connection.seller_account_id|default:'' }}" maxlength="120">
                 <button class="secondary-btn">Request setup review</button>
             </form>{% endif %}
-            {% if row.connection.status == 'approved' %}<a class="card-btn" href="{% url 'export_marketplace_feed' row.channel %}">Download catalog CSV</a>{% endif %}
-            {% if row.channel == 'flipkart' and row.connection.status == 'approved' %}
+            {% if row.connection.status == 'approved' %}
+                <a class="card-btn" href="{% url 'export_marketplace_feed' row.channel %}">Download catalog CSV</a>
                 <p>Seller authorization: {{ row.connection.get_authorization_status_display }}</p>
-                {% if row.connection.authorization_status == 'connected' %}<form method="post" action="{% url 'disconnect_flipkart' %}">{% csrf_token %}<button class="secondary-btn">Disconnect Flipkart seller account</button></form>
-                {% else %}<form method="post" action="{% url 'start_flipkart_authorization' %}">{% csrf_token %}<button class="primary-btn">Authorize Flipkart seller account</button></form>{% endif %}
-            {% endif %}
-            {% if row.channel == 'amazon' and row.connection.status == 'approved' %}
-                <form method="post" action="{% url 'save_amazon_marketplace_ids' %}">{% csrf_token %}
-                    <label>Amazon marketplace IDs (comma separated)</label>
-                    <input name="amazon_marketplace_ids" value="{{ row.connection.amazon_marketplace_ids }}" maxlength="700" placeholder="A21TJRUUN4KGV">
-                    <button class="secondary-btn">Save marketplace IDs</button>
-                </form>
-                <p>Seller authorization: {{ row.connection.get_authorization_status_display }}</p>
-                {% if row.connection.authorization_status == 'connected' %}<form method="post" action="{% url 'disconnect_amazon' %}">{% csrf_token %}<button class="secondary-btn">Disconnect Amazon seller account</button></form>
-                {% else %}<form method="post" action="{% url 'start_amazon_authorization' %}">{% csrf_token %}<button class="primary-btn" {% if not row.connection.amazon_marketplace_ids %}disabled{% endif %}>Authorize Amazon seller account</button></form>{% endif %}
+                {% if row.channel == 'flipkart' %}
+                    <form method="post" action="{% url 'save_flipkart_fulfillment_location' %}">{% csrf_token %}
+                        <label>Flipkart fulfillment location ID</label>
+                        <input name="fulfillment_location_id" value="{{ row.connection.fulfillment_location_id }}" maxlength="120" required>
+                        <button class="secondary-btn">Save fulfillment location</button>
+                    </form>
+                    {% if row.connection.authorization_status == 'connected' %}<form method="post" action="{% url 'disconnect_flipkart' %}">{% csrf_token %}<button class="secondary-btn">Disconnect Flipkart seller account</button></form>
+                    {% else %}<form method="post" action="{% url 'start_flipkart_authorization' %}">{% csrf_token %}<button class="primary-btn">Authorize Flipkart seller account</button></form>{% endif %}
+                {% endif %}
+                {% if row.channel == 'amazon' %}
+                    <form method="post" action="{% url 'save_amazon_marketplace_ids' %}">{% csrf_token %}
+                        <label>One Amazon marketplace ID for shared stock</label>
+                        <input name="amazon_marketplace_ids" value="{{ row.connection.amazon_marketplace_ids }}" maxlength="40" placeholder="A21TJRUUN4KGV" required>
+                        <button class="secondary-btn">Save marketplace ID</button>
+                    </form>
+                    {% if row.connection.authorization_status == 'connected' %}<form method="post" action="{% url 'disconnect_amazon' %}">{% csrf_token %}<button class="secondary-btn">Disconnect Amazon seller account</button></form>
+                    {% else %}<form method="post" action="{% url 'start_amazon_authorization' %}">{% csrf_token %}<button class="primary-btn" {% if not row.connection.amazon_marketplace_ids %}disabled{% endif %}>Authorize Amazon seller account</button></form>{% endif %}
+                {% endif %}
+                {% if row.connection.authorization_status == 'connected' %}
+                    <form method="post" action="{% url 'run_marketplace_sync' row.connection.id %}">{% csrf_token %}<button class="primary-btn">Sync orders and reserved stock now</button></form>
+                    <a class="card-btn" href="{% url 'marketplace_channel_orders' %}">Open marketplace order inbox</a>
+                {% endif %}
+                {% if row.last_run %}<p>Last sync: {{ row.last_run.get_status_display }} at {{ row.last_run.started_at|date:'M j, Y g:i A' }} - {{ row.last_run.orders_seen }} orders / {{ row.last_run.inventory_updates }} stock updates</p>{% if row.last_run.error_summary %}<p class="error-box">{{ row.last_run.error_summary|linebreaksbr }}</p>{% endif %}{% endif %}
             {% endif %}
         </div></article>
         {% endfor %}
     </div>
-    <p>Amazon and Flipkart each require seller registration and authorized developer access. The live API sync for listings, inventory, and orders must be configured after those accounts approve the connection.</p>
+    <p>Amazon uses the SP-API Orders 2026 endpoint and Listings Items inventory updates. Flipkart uses its seller shipment and listing inventory APIs. API access, roles, app approval, seller authorization, and correct listing mappings are required.</p>
 </section>
-<section class="featured-section"><a class="primary-btn" href="{% url 'manage_marketplace_catalog' %}">Map products to marketplace SKUs</a></section>
+<section class="featured-section"><a class="primary-btn" href="{% url 'manage_marketplace_catalog' %}">Map marketplace SKUs and reserve stock</a> <a class="secondary-btn" href="{% url 'marketplace_channel_orders' %}">Marketplace order and settlement inbox</a></section>
 {% endblock %}

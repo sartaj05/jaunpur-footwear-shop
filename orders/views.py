@@ -20,6 +20,7 @@ from .payments import (
     verify_razorpay_signature,
 )
 from shops.models import ShopCoverage, ShopFulfillmentSlot
+from shops.inventory import local_available_stock
 from accounts.models import ReferralReward
 from accounts.services import award_loyalty_for_order
 
@@ -158,11 +159,11 @@ def add_to_cart(request, product_id):
             variant = get_object_or_404(ProductVariant, id=variant_id, product=product, is_active=True)
             size = variant.size
             color = variant.color
-            available_stock = variant.stock
+            available_stock = local_available_stock(variant)
         else:
             size = request.POST.get('size', '').strip()
             color = request.POST.get('color', '').strip()
-            available_stock = product.stock
+            available_stock = local_available_stock(product)
             valid_sizes = [choice.strip() for choice in product.available_sizes.split(',') if choice.strip()]
             if size not in valid_sizes:
                 messages.error(request, 'Choose one of the available shoe sizes.')
@@ -283,8 +284,12 @@ def checkout(request):
                 if not item.product.is_active or (item.product.shop_id and item.product.shop.status != 'approved'):
                     messages.error(request, f'{item.product.name} is no longer available in the Jaunpur catalog.')
                     return redirect('cart')
-                stock_owner = item.variant if item.variant_id else item.product
-                if item.quantity > stock_owner.stock:
+                stock_owner = (
+                    ProductVariant.objects.select_for_update().get(pk=item.variant_id)
+                    if item.variant_id else Product.objects.select_for_update().get(pk=item.product_id)
+                )
+                available_stock = local_available_stock(stock_owner)
+                if item.quantity > available_stock:
                     messages.error(request, f'{item.product.name} no longer has enough stock for your cart.')
                     return redirect('cart')
 

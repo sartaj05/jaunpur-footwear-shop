@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Marketplace order inbox</h1><p>Amazon and Flipkart seller orders with mapped Jaunpur SKUs, shared stock status, and fee/settlement review.</p></section>
+<section class="featured-section"><a class="secondary-btn" href="{% url 'marketplace_hub' %}">Back to marketplace connections</a>
+    <h2>Jaunpur storefront orders</h2>
+    {% for order in local_orders %}<article class="checkout-form-card"><h3>Jaunpur order #{{ order.order_id }}</h3><p>{{ order.get_status_display }} - {{ order.order.created_at|date:'M j, Y g:i A' }} - INR {{ order.sales_amount|default:order.subtotal }}</p><ul>{% for item in order.items.all %}<li>{{ item.product_name }} - Qty {{ item.quantity }}{% if item.size %} - Size {{ item.size }}{% endif %}</li>{% endfor %}</ul></article>{% empty %}<p>No Jaunpur storefront orders yet.</p>{% endfor %}
+    <h2>Amazon and Flipkart orders</h2>
+    {% for order in orders %}
+    <article class="checkout-form-card">
+        <h2>{{ order.connection.get_channel_display }} order {{ order.external_order_id }}</h2>
+        <p>{{ order.external_status }}{% if order.marketplace_id %} - Marketplace {{ order.marketplace_id }}{% endif %}{% if order.purchased_at %} - {{ order.purchased_at|date:'M j, Y g:i A' }}{% endif %}</p>
+        <p>Order total: {{ order.currency }} {{ order.total_amount }} - Reconciliation: {{ order.get_reconciliation_status_display }}</p>
+        <ul>{% for item in order.items.all %}<li>{{ item.external_sku|default:item.external_item_id }} - Qty {{ item.quantity }} - {{ item.currency }} {{ item.unit_price|default:'-' }} - {{ item.external_status }} - {{ item.get_inventory_status_display }}{% if item.mapping %} - Jaunpur: {{ item.mapping.product.name }}{% if item.mapping.variant %} size {{ item.mapping.variant.size }} / {{ item.mapping.variant.color }}{% endif %}{% endif %}</li>{% empty %}<li>No order item details returned.</li>{% endfor %}</ul>
+        <form method="post" class="checkout-form-card">{% csrf_token %}<input type="hidden" name="order_id" value="{{ order.id }}">
+            <h3>Fee and settlement review</h3>
+            <p>Enter values from the marketplace settlement statement. Settlement data is recorded manually in this version.</p>
+            <div class="form-group"><label>Marketplace fee</label><input type="number" name="marketplace_fee" min="0" step="0.01" value="{{ order.marketplace_fee|default_if_none:'' }}"></div>
+            <div class="form-group"><label>Settlement amount</label><input type="number" name="settlement_amount" step="0.01" value="{{ order.settlement_amount|default_if_none:'' }}"></div>
+            <div class="form-group"><label>Settlement reference</label><input name="settlement_reference" maxlength="160" value="{{ order.settlement_reference }}"></div>
+            <button class="secondary-btn">Save reconciliation</button>
+        </form>
+    </article>
+    {% empty %}<p>No Amazon or Flipkart orders have been synchronized yet.</p>{% endfor %}
+</section>
+{% endblock %}

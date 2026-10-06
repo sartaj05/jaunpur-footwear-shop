@@ -33,6 +33,7 @@ class Product(models.Model):
     seller_sku = models.CharField(max_length=64, unique=True, blank=True, null=True)
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, blank=True, null=True, related_name='products')
 
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='men')
     description = models.TextField()
@@ -134,8 +135,6 @@ class WishlistItem(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wishlist_items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='wishlisted_by')
     created_at = models.DateTimeField(auto_now_add=True)
-
-    shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, blank=True, null=True, related_name='products')
 
     class Meta:
         ordering = ['-created_at']

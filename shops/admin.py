@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
+from .models import MarketplaceChannelOrder, MarketplaceChannelOrderItem, MarketplaceConnection, MarketplaceProductMapping, MarketplaceSyncRun, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
 
 
 @admin.register(Shop)
@@ -71,6 +71,30 @@ class ShopPromotionAdmin(admin.ModelAdmin):
 
 @admin.register(MarketplaceProductMapping)
 class MarketplaceProductMappingAdmin(admin.ModelAdmin):
-    list_display = ['connection', 'external_sku', 'product', 'variant', 'status', 'last_synced_at']
+    list_display = ['connection', 'external_sku', 'product', 'variant', 'allocated_quantity', 'status', 'last_synced_at']
     list_filter = ['connection__channel', 'status']
     search_fields = ['external_sku', 'product__name', 'connection__shop__name']
+
+
+@admin.register(MarketplaceSyncRun)
+class MarketplaceSyncRunAdmin(admin.ModelAdmin):
+    list_display = ['connection', 'status', 'orders_seen', 'order_items_seen', 'inventory_updates', 'started_at', 'completed_at']
+    list_filter = ['connection__channel', 'status', 'started_at']
+    search_fields = ['connection__shop__name', 'error_summary']
+    readonly_fields = ['connection', 'status', 'orders_seen', 'order_items_seen', 'inventory_updates', 'error_summary', 'started_at', 'completed_at']
+
+
+class MarketplaceChannelOrderItemInline(admin.TabularInline):
+    model = MarketplaceChannelOrderItem
+    extra = 0
+    can_delete = False
+    readonly_fields = ['external_item_id', 'external_sku', 'mapping', 'quantity', 'unit_price', 'currency', 'external_status', 'inventory_status', 'consumed_quantity']
+
+
+@admin.register(MarketplaceChannelOrder)
+class MarketplaceChannelOrderAdmin(admin.ModelAdmin):
+    list_display = ['connection', 'external_order_id', 'external_status', 'total_amount', 'marketplace_fee', 'settlement_amount', 'reconciliation_status', 'purchased_at']
+    list_filter = ['connection__channel', 'reconciliation_status', 'external_status', 'purchased_at']
+    search_fields = ['external_order_id', 'settlement_reference', 'connection__shop__name']
+    readonly_fields = ['connection', 'external_order_id', 'marketplace_id', 'external_status', 'purchased_at', 'currency', 'total_amount', 'created_at', 'last_synced_at']
+    inlines = [MarketplaceChannelOrderItemInline]
