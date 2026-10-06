@@ -232,3 +232,23 @@ LOGOUT_REDIRECT_URL = 'home'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+MEDIA_STORAGE_BACKEND = os.environ.get(
+    "DJANGO_MEDIA_STORAGE", "s3" if IS_PRODUCTION else "local"
+).strip().lower()
+if MEDIA_STORAGE_BACKEND == "s3":
+    AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "")
+    if IS_PRODUCTION and not AWS_STORAGE_BUCKET_NAME:
+        raise ImproperlyConfigured("AWS_STORAGE_BUCKET_NAME is required for production media storage.")
+    AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "") or None
+    AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL", "") or None
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = True
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+    STORAGES = {
+        "default": {"BACKEND": "storages.backends.s3.S3Storage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+elif MEDIA_STORAGE_BACKEND != "local":
+    raise ImproperlyConfigured("DJANGO_MEDIA_STORAGE must be 'local' or 's3'.")
