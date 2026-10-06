@@ -1,6 +1,8 @@
 # Jaunpur Footwear Shop
 
-A Django template-based footwear e-commerce project for shoes, slippers, sandals and local shop products.
+A Jaunpur-focused, multi-seller footwear marketplace built with Django. Customers can browse local shop catalogs, check size/color stock, place orders, and track delivery. Local sellers can manage their storefronts, products, fulfillment, and connected marketplace workflows.
+
+This repository currently documents **46 feature areas**: 38 customer and seller areas plus 8 admin areas. Some features require an approved provider account or human review. In particular, Amazon/Flipkart API work needs authorized seller accounts, marketplace fees and settlements are entered manually, and ONDC is an onboarding handoff rather than a live network connection.
 
 ## Features
 
@@ -56,28 +58,39 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 
 ## Tech Stack
 
-- Python
-- Django
-- HTML
-- CSS
-- JavaScript
-- SQLite
-- Bootstrap Icons optional
+- Python 3.11+ and Django 5.2
+- Django templates, HTML, CSS, and JavaScript
+- Django ORM, migrations, authentication, sessions, and admin
+- SQLite for local development
+- Pillow for product and shop image fields
+- cryptography/Fernet for encrypted marketplace OAuth tokens
+- Python standard library HTTP clients for Razorpay, email, WhatsApp, Amazon, and Flipkart integrations
+
+This repository is a server-rendered Django app. React and FastAPI are skills the maintainer is learning; they are not used by this application.
 
 ## Project Setup
 
-```bash
-python -m venv venv
-venv\Scripts\activate
+PowerShell on Windows:
 
-pip install django pillow cryptography
-
-python manage.py makemigrations
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 python manage.py migrate
-
 python manage.py createsuperuser
 python manage.py runserver
 ```
+
+The project migrations are committed, so a fresh local database needs `migrate`; do not create new migrations just to start the app. The local SQLite database and uploaded files live in `db.sqlite3` and `media/`.
+
+## Launch Readiness
+
+The feature set is strong enough for a portfolio walkthrough and interview discussion. The repository is **not production-ready yet**. Before a public launch, rotate the committed development `SECRET_KEY`, load secrets from the hosting provider, set `DEBUG=False`, configure real `ALLOWED_HOSTS` and CSRF trusted origins, enable HTTPS and secure cookies, and run Django's deployment check. The current project uses SQLite and local media storage; move production data to managed PostgreSQL and use persistent/object storage for uploaded product images. The current `tests.py` files are placeholders; add automated coverage for checkout stock races, payment callbacks, seller permissions, marketplace sync idempotency, and returns before accepting real customer orders.
+
+See Django's [deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/) before exposing the site publicly. Django specifically calls out production secrets, `DEBUG`, `ALLOWED_HOSTS`, HTTPS, backups, and using a production WSGI/ASGI server.
+
+The marketplace OAuth/API flows are gated on provider approval, app credentials, and each seller's authorization. WhatsApp requires Meta configuration and customer opt-in. ONDC currently stores participant onboarding details and exports a catalog snapshot; it does not sync live ONDC inventory or orders.
 
 ## Razorpay Setup
 
