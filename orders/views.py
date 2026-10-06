@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from products.models import Product, ProductVariant
-from .models import CartItem, Order, OrderItem
+from .models import CartItem, Coupon, Order, OrderItem
 
 
 @login_required
@@ -95,6 +95,16 @@ def checkout(request):
         return redirect('cart')
 
     total = sum(item.total_price() for item in items)
+    coupon_code = request.session.get('coupon_code', '')
+    coupon = Coupon.objects.filter(code__iexact=coupon_code).first() if coupon_code else None
+    if coupon and coupon.is_valid_for(total):
+        discount = coupon.discount_for(total)
+    else:
+        discount = 0
+        if coupon_code:
+            request.session.pop('coupon_code', None)
+            coupon_code = ''
+            messages.warning(request, 'The applied coupon is no longer valid.')
 
     if request.method == 'POST':
         with transaction.atomic():
@@ -109,12 +119,25 @@ def checkout(request):
                     messages.error(request, f'{item.product.name} no longer has enough stock for your cart.')
                     return redirect('cart')
 
+            locked_subtotal = sum(
+                (item.variant.final_price() if item.variant_id else item.product.final_price()) * item.quantity
+                for item in locked_items
+            )
+            locked_coupon = Coupon.objects.select_for_update().filter(code__iexact=coupon_code).first() if coupon_code else None
+            if locked_coupon and locked_coupon.is_valid_for(locked_subtotal):
+                locked_discount = locked_coupon.discount_for(locked_subtotal)
+            else:
+                locked_coupon = None
+                locked_discount = 0
+
             order = Order.objects.create(
                 user=request.user,
                 full_name=request.POST.get('full_name'),
                 mobile=request.POST.get('mobile'),
                 address=request.POST.get('address'),
-                total_amount=total,
+                total_amount=locked_subtotal - locked_discount,
+                discount_amount=locked_discount,
+                coupon_code=locked_coupon.code if locked_coupon else '',
             )
 
             for item in locked_items:
@@ -132,14 +155,40 @@ def checkout(request):
                 stock_owner.stock -= item.quantity
                 stock_owner.save(update_fields=['stock'])
 
+            if locked_coupon:
+                locked_coupon.used_count += 1
+                locked_coupon.save(update_fields=['used_count'])
+
             CartItem.objects.filter(user=request.user).delete()
 
+        request.session.pop('coupon_code', None)
         return redirect('my_orders')
 
     return render(request, 'orders/checkout.html', {
         'items': items,
         'total': total,
+        'discount': discount,
+        'grand_total': total - discount,
+        'coupon_code': coupon_code,
     })
+
+
+@login_required
+def apply_coupon(request):
+    if request.method == 'POST':
+        code = request.POST.get('code', '').strip().upper()
+        subtotal = sum(
+            item.total_price()
+            for item in CartItem.objects.filter(user=request.user).select_related('product', 'variant')
+        )
+        coupon = Coupon.objects.filter(code__iexact=code).first()
+        if coupon and coupon.is_valid_for(subtotal):
+            request.session['coupon_code'] = coupon.code
+            messages.success(request, f'Coupon {coupon.code} was applied.')
+        else:
+            request.session.pop('coupon_code', None)
+            messages.error(request, 'This coupon is invalid or does not apply to your cart.')
+    return redirect('checkout')
 
 
 @login_required

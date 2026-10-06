@@ -10,6 +10,18 @@
 <section class="checkout-page">
 
     <div class="checkout-form-card">
+        <h2>Discount code</h2>
+        <form method="post" action="{% url 'apply_coupon' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="couponCode">Coupon code</label>
+                <input id="couponCode" name="code" value="{{ coupon_code }}" placeholder="Enter a coupon code">
+            </div>
+            <button class="secondary-btn" type="submit">Apply coupon</button>
+        </form>
+    </div>
+
+    <div class="checkout-form-card">
         <h2>Delivery Details</h2>
 
         <form method="post">
@@ -46,10 +58,14 @@
         </div>
         {% endfor %}
 
+        {% if coupon_code %}
+        <div class="summary-row"><span>Coupon ({{ coupon_code }})</span><strong>-₹{{ discount }}</strong></div>
+        {% endif %}
         <div class="summary-row total">
-            <span>Total</span>
+            <span>Subtotal</span>
             <strong>₹{{ total }}</strong>
         </div>
+        <div class="summary-row total"><span>Total</span><strong>₹{{ grand_total }}</strong></div>
     </div>
 
 </section>

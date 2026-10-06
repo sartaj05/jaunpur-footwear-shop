@@ -27,6 +27,7 @@
             <p><strong>Mobile:</strong> {{ order.mobile }}</p>
             <p><strong>Address:</strong> {{ order.address }}</p>
             <p><strong>Total:</strong> ₹{{ order.total_amount }}</p>
+            {% if order.coupon_code %}<p><strong>Coupon:</strong> {{ order.coupon_code }} (saved ₹{{ order.discount_amount }})</p>{% endif %}
             <p><strong>Payment:</strong> {{ order.payment_method }}</p>
         </div>
 

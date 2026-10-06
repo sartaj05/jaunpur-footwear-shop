@@ -1,6 +1,8 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import User
 from products.models import Product, ProductVariant
+from decimal import Decimal
 
 
 class CartItem(models.Model):
@@ -33,6 +35,8 @@ class Order(models.Model):
     mobile = models.CharField(max_length=15)
     address = models.TextField()
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    coupon_code = models.CharField(max_length=30, blank=True)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_method = models.CharField(max_length=50, default='Cash on Delivery')
@@ -50,3 +54,40 @@ class OrderItem(models.Model):
     color = models.CharField(max_length=40, blank=True, default='')
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+
+
+class Coupon(models.Model):
+    DISCOUNT_TYPES = [
+        ('percent', 'Percentage'),
+        ('fixed', 'Fixed amount'),
+    ]
+
+    code = models.CharField(max_length=30, unique=True)
+    discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPES, default='percent')
+    discount_value = models.DecimalField(max_digits=8, decimal_places=2)
+    minimum_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    starts_at = models.DateTimeField(blank=True, null=True)
+    expires_at = models.DateTimeField(blank=True, null=True)
+    usage_limit = models.PositiveIntegerField(blank=True, null=True)
+    used_count = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    def is_valid_for(self, amount, at=None):
+        at = at or timezone.now()
+        return (
+            self.is_active
+            and amount >= self.minimum_order_amount
+            and (self.starts_at is None or at >= self.starts_at)
+            and (self.expires_at is None or at <= self.expires_at)
+            and (self.usage_limit is None or self.used_count < self.usage_limit)
+        )
+
+    def discount_for(self, amount):
+        if self.discount_type == 'percent':
+            discount = amount * self.discount_value / Decimal('100')
+        else:
+            discount = self.discount_value
+        return min(amount, discount).quantize(Decimal('0.01'))
+
+    def __str__(self):
+        return self.code
