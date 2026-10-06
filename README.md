@@ -84,7 +84,7 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-The project migrations are committed, so a fresh local database needs `migrate`; do not create new migrations just to start the app. The local SQLite database and uploaded files live in `db.sqlite3` and `media/`.
+The project migrations are committed, so a fresh local database needs `migrate`; do not create new migrations just to start the app. Local development uses SQLite. Production requires `DJANGO_DATABASE_URL` with a managed PostgreSQL connection URL; the PostgreSQL driver is included in `requirements.txt`. Before moving existing data, test migrations and a database backup/restore against a staging copy.
 
 ## Launch Readiness
 

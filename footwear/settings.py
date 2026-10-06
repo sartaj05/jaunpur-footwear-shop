@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -111,12 +111,37 @@ WSGI_APPLICATION = "footwear.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
+DATABASE_URL = os.environ.get("DJANGO_DATABASE_URL", "").strip()
+if DATABASE_URL:
+    parsed_database_url = urlparse(DATABASE_URL)
+    if parsed_database_url.scheme in {"postgres", "postgresql", "postgresql+psycopg"}:
+        database_options = parse_qs(parsed_database_url.query)
+        DATABASES = {"default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": unquote(parsed_database_url.path.lstrip("/")),
+            "USER": unquote(parsed_database_url.username or ""),
+            "PASSWORD": unquote(parsed_database_url.password or ""),
+            "HOST": parsed_database_url.hostname or "",
+            "PORT": parsed_database_url.port or "",
+            "CONN_MAX_AGE": 600,
+            "OPTIONS": {key: values[-1] for key, values in database_options.items()},
+        }}
+        if IS_PRODUCTION and "sslmode" not in DATABASES["default"]["OPTIONS"]:
+            DATABASES["default"]["OPTIONS"]["sslmode"] = "require"
+    elif parsed_database_url.scheme == "sqlite":
+        DATABASES = {"default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": unquote(parsed_database_url.path),
+        }}
+    else:
+        raise ImproperlyConfigured("DJANGO_DATABASE_URL must use PostgreSQL or SQLite.")
+elif IS_PRODUCTION:
+    raise ImproperlyConfigured("DJANGO_DATABASE_URL must point to production PostgreSQL.")
+else:
+    DATABASES = {"default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+    }}
 
 
 # Password validation
