@@ -212,6 +212,25 @@ class PaymentWebhookEvent(models.Model):
         return f'{self.event_type} · {self.event_id}'
 
 
+class ReturnRefundAttempt(models.Model):
+    STATUS_CHOICES = [
+        ('queued', 'Queued'),
+        ('processing', 'Processing'),
+        ('submitted', 'Refund submitted to provider'),
+        ('review_required', 'Manual review required'),
+    ]
+    return_request = models.OneToOneField(ReturnRequest, on_delete=models.PROTECT, related_name='refund_attempt')
+    amount_subunits = models.PositiveBigIntegerField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='queued')
+    provider_refund_id = models.CharField(max_length=120, blank=True)
+    error_summary = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Return #{self.return_request_id} refund · {self.get_status_display()}'
+
+
 class Coupon(models.Model):
     DISCOUNT_TYPES = [
         ('percent', 'Percentage'),

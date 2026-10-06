@@ -4,7 +4,7 @@ Copy `.env.example` to `.env` for local configuration. Production mode is enable
 
 A Jaunpur-focused, multi-seller footwear marketplace built with Django. Customers can browse local shop catalogs, check size/color stock, place orders, and track delivery. Local sellers can manage their storefronts, products, fulfillment, and connected marketplace workflows.
 
-This repository currently documents **48 feature areas**: 40 customer and seller areas plus 8 admin areas. Some features require an approved provider account or human review. In particular, Amazon/Flipkart API work needs authorized seller accounts, marketplace fees and settlements are entered manually, and ONDC is an onboarding handoff rather than a live network connection.
+This repository currently documents **49 feature areas**: 41 customer and seller areas plus 8 admin areas. Some features require an approved provider account or human review. In particular, Amazon/Flipkart API work needs authorized seller accounts, marketplace fees and settlements are entered manually, and ONDC is an onboarding handoff rather than a live network connection.
 
 ## Features
 
@@ -46,6 +46,7 @@ This repository currently documents **48 feature areas**: 40 customer and seller
 - Order tracking timeline and email updates
 - Opt-in English or Hindi WhatsApp order updates (Meta Cloud API configuration required)
 - Return and exchange requests
+- Staff-queued Razorpay refunds for received, paid online returns, with duplicate protection and stock restoration after provider acceptance
 - Customer login/register
 - Shoe size finder
 - WhatsApp order support
@@ -109,6 +110,8 @@ In local development, notification tasks run inline. Set `CELERY_BROKER_URL` in 
 Online checkout is available after setting Razorpay API keys in the environment. Use test keys while developing; never commit your secret key.
 
 Register `https://your-domain.example/orders/payments/razorpay/webhook/` in Razorpay for `payment.captured` events and set `RAZORPAY_WEBHOOK_SECRET` to the webhook secret (this is separate from the API key secret). The endpoint verifies Razorpay's HMAC signature, checks the captured amount/currency against the stored attempt, and ignores duplicate event IDs. Failed or mismatched events are visible in the staff admin for review.
+
+For a paid online return, staff first mark the returned item as received, then select it in Django admin and choose **Queue verified Razorpay refunds for received returns**. Refund jobs are one-per-return and stock is restored only after the provider accepts the refund. A timeout or mismatched provider response goes to manual review; check Razorpay before retrying because refund submission may have succeeded even if the response was lost. COD returns and exchanges do not use this refund action.
 
 PowerShell:
 

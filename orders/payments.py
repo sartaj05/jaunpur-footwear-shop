@@ -62,6 +62,17 @@ def fetch_razorpay_payment(payment_id):
     return _razorpay_request(f'payments/{payment_id}')
 
 
+def create_razorpay_refund(payment_id, amount_subunits, return_request_id):
+    return _razorpay_request(
+        f'payments/{payment_id}/refund',
+        method='POST',
+        payload={
+            'amount': amount_subunits,
+            'notes': {'return_request_id': str(return_request_id)},
+        },
+    )
+
+
 def release_order_inventory(order):
     if order.stock_released:
         return

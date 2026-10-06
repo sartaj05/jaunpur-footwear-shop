@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, PaymentWebhookEvent, ReturnRequest, SellerOrder
+from django.db import transaction
+from django.contrib import messages
+from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, PaymentWebhookEvent, ReturnRefundAttempt, ReturnRequest, SellerOrder
+from .tasks import process_return_refund_task
+from footwear.task_dispatch import dispatch_background_task
 
 
 class OrderItemInline(admin.TabularInline):
@@ -59,9 +63,61 @@ class DeliveryRateAdmin(admin.ModelAdmin):
 
 @admin.register(ReturnRequest)
 class ReturnRequestAdmin(admin.ModelAdmin):
-    list_display = ['id', 'order', 'customer', 'request_type', 'status', 'refund_status', 'pickup_scheduled_at', 'requested_at']
+    actions = ['queue_razorpay_refunds']
+    list_display = ['id', 'order', 'customer', 'request_type', 'status', 'refund_status', 'pickup_scheduled_at', 'refund_action', 'requested_at']
     list_filter = ['request_type', 'status', 'refund_status', 'pickup_required', 'requested_at']
     search_fields = ['order__id', 'customer__username', 'reason', 'refund_reference']
+
+    @admin.display(description='Payment action')
+    def refund_action(self, obj):
+        if obj.request_type == 'return' and obj.status == 'received' and obj.refund_status == 'pending':
+            return 'Select row and choose the refund action'
+        if hasattr(obj, 'refund_attempt'):
+            return obj.refund_attempt.get_status_display()
+        return '—'
+
+    @admin.action(description='Queue verified Razorpay refunds for received returns')
+    def queue_razorpay_refunds(self, request, queryset):
+        queued = 0
+        for row in queryset.select_related('order', 'order_item'):
+            with transaction.atomic():
+                return_request = ReturnRequest.objects.select_for_update(of=('self',)).select_related('order', 'order_item').get(pk=row.pk)
+                eligible = (
+                    return_request.request_type == 'return'
+                    and return_request.status == 'received'
+                    and return_request.refund_status == 'pending'
+                    and return_request.order.payment_status == 'paid'
+                    and return_request.order_item_id
+                    and return_request.order.payment_attempts.filter(status='paid', gateway_payment_id__gt='').exists()
+                    and not ReturnRefundAttempt.objects.filter(return_request=return_request).exists()
+                )
+                if not eligible:
+                    continue
+                amount_subunits = int(return_request.order_item.price * return_request.order_item.quantity * 100)
+                ReturnRefundAttempt.objects.create(return_request=return_request, amount_subunits=amount_subunits)
+                transaction.on_commit(lambda return_id=return_request.pk: dispatch_background_task(process_return_refund_task, return_id))
+                queued += 1
+        if queued:
+            self.message_user(request, f'Queued {queued} Razorpay refund job(s). Review their status before responding to customers.', messages.SUCCESS)
+        else:
+            self.message_user(request, 'No selected return was eligible for a new online refund.', messages.WARNING)
+
+
+@admin.register(ReturnRefundAttempt)
+class ReturnRefundAttemptAdmin(admin.ModelAdmin):
+    list_display = ['return_request', 'amount_subunits', 'status', 'provider_refund_id', 'updated_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['return_request__order_id', 'provider_refund_id', 'error_summary']
+    readonly_fields = ['return_request', 'amount_subunits', 'status', 'provider_refund_id', 'error_summary', 'created_at', 'updated_at']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(PaymentAttempt)

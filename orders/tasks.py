@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from dashboard.models import BackgroundJobRun
 from .notifications import send_order_confirmation, send_order_status_update
+from .refunds import process_return_refund
 
 
 class NotificationDeliveryError(Exception):
@@ -85,3 +86,29 @@ def sync_marketplace_channels_task(self, shop_id=None, channel=None, job_id=None
         run_record.status = "succeeded"
         run_record.finished_at = timezone.now()
         run_record.save(update_fields=["status", "finished_at"])
+
+
+@shared_task(bind=True)
+def process_return_refund_task(self, return_request_id, job_id=None):
+    run = BackgroundJobRun.objects.filter(pk=job_id).first() if job_id else None
+    if run:
+        run.status = "running"
+        run.started_at = timezone.now()
+        run.save(update_fields=["status", "started_at"])
+    try:
+        refund = process_return_refund(return_request_id)
+        if refund is None:
+            raise ValueError("Return is not eligible for a Razorpay refund yet.")
+        if refund.status == "review_required":
+            raise RuntimeError(refund.error_summary or "Refund needs manual provider review.")
+    except Exception as exc:
+        if run:
+            run.status = "failed"
+            run.error_summary = f"{exc.__class__.__name__}: {str(exc)[:260]}"
+            run.finished_at = timezone.now()
+            run.save(update_fields=["status", "error_summary", "finished_at"])
+        raise
+    if run:
+        run.status = "succeeded"
+        run.finished_at = timezone.now()
+        run.save(update_fields=["status", "finished_at"])

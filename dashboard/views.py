@@ -361,3 +361,4 @@ def delivery_dispatch(request):
         'today': timezone.localdate().isoformat(),
         'error': error,
     })
+
