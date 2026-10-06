@@ -5,6 +5,7 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 ## Features
 
 ### Customer Side
+- Jaunpur footwear shop applications with staff approval
 - Home page
 - Product listing
 - Product search

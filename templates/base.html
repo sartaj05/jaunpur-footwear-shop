@@ -39,6 +39,7 @@
                 {% if user.is_staff %}
                     <a href="{% url 'superadmin_dashboard' %}" class="dashboard-link">Dashboard</a>
                 {% endif %}
+                <a href="{% url 'shop_application' %}">Sell with us</a>
                 <a href="{% url 'cart' %}">Cart</a>
                 <a href="{% url 'wishlist' %}">Wishlist</a>
                 <a href="{% url 'my_orders' %}">My Orders</a>
