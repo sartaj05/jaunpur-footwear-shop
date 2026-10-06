@@ -70,6 +70,10 @@ This repository currently documents **46 feature areas**: 38 customer and seller
 
 This repository is a server-rendered Django app. React and FastAPI are skills the maintainer is learning; they are not used by this application.
 
+### Read-only API (v1)
+
+The first Django REST Framework endpoints are available at `/api/v1/products/`, `/api/v1/shops/`, and authenticated `/api/v1/my/orders/`. Product search accepts `?q=...`; collection responses are paginated. The API is read-only so it does not bypass the existing checkout and seller permission rules. See the [Django REST Framework quickstart](https://www.django-rest-framework.org/tutorial/quickstart/) before extending it with write operations.
+
 ## Project Setup
 
 PowerShell on Windows:

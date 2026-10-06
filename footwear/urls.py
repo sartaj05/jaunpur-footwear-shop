@@ -6,6 +6,7 @@ from .health import health_check
 
 urlpatterns = [
     path('health/', health_check, name='health_check'),
+    path('api/v1/', include('api.urls')),
     path('admin/', admin.site.urls),
 
     path('', include('products.urls')),
