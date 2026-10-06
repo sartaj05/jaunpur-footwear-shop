@@ -55,6 +55,15 @@
             <p>Tracking updates will appear when the shop updates your order.</p>
             {% endfor %}
         </div>
+
+        {% for return_request in order.return_requests.all %}
+        <p class="return-request-status">
+            {{ return_request.get_request_type_display }} request: {{ return_request.get_status_display }}
+        </p>
+        {% endfor %}
+        {% if order.status == 'delivered' %}
+        <a class="secondary-btn" href="{% url 'request_return' order.id %}">Request return or exchange</a>
+        {% endif %}
     </div>
     {% empty %}
     <div class="empty-cart">

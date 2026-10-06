@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent
+from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent, ReturnRequest
 
 
 class OrderItemInline(admin.TabularInline):
@@ -36,3 +36,10 @@ class DeliveryRateAdmin(admin.ModelAdmin):
     list_display = ['pincode_prefix', 'fee', 'free_delivery_minimum', 'is_active']
     list_filter = ['is_active']
     search_fields = ['pincode_prefix']
+
+
+@admin.register(ReturnRequest)
+class ReturnRequestAdmin(admin.ModelAdmin):
+    list_display = ['id', 'order', 'customer', 'request_type', 'status', 'requested_at']
+    list_filter = ['request_type', 'status', 'requested_at']
+    search_fields = ['order__id', 'customer__username', 'reason']

@@ -119,3 +119,33 @@ class DeliveryRate(models.Model):
 
     def __str__(self):
         return f'{self.pincode_prefix} - {self.fee}'
+
+
+class ReturnRequest(models.Model):
+    REQUEST_TYPES = [
+        ('return', 'Return'),
+        ('exchange', 'Exchange'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('received', 'Item received'),
+        ('completed', 'Completed'),
+    ]
+
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='return_requests')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='return_requests')
+    order_item = models.ForeignKey(OrderItem, on_delete=models.SET_NULL, blank=True, null=True, related_name='return_requests')
+    request_type = models.CharField(max_length=10, choices=REQUEST_TYPES)
+    reason = models.TextField()
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='pending')
+    staff_note = models.TextField(blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f'{self.get_request_type_display()} for order #{self.order_id}'

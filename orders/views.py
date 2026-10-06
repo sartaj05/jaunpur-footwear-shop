@@ -2,11 +2,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.utils import timezone
+from datetime import timedelta
 from django.conf import settings
 from decimal import Decimal
 import re
 from products.models import Product, ProductVariant
-from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent
+from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent, ReturnRequest
 from .notifications import send_order_confirmation
 
 
@@ -238,5 +240,47 @@ def apply_coupon(request):
 
 @login_required
 def my_orders(request):
-    orders = Order.objects.filter(user=request.user).prefetch_related('tracking_events').order_by('-created_at')
+    orders = Order.objects.filter(user=request.user).prefetch_related('tracking_events', 'return_requests').order_by('-created_at')
     return render(request, 'orders/my_orders.html', {'orders': orders})
+
+
+@login_required
+def request_return(request, order_id):
+    order = get_object_or_404(Order, pk=order_id, user=request.user)
+    return_window = timedelta(days=getattr(settings, 'RETURN_WINDOW_DAYS', 7))
+    if order.status != 'delivered' or timezone.now() - order.created_at > return_window:
+        messages.error(request, 'Returns and exchanges are available for delivered orders within 7 days.')
+        return redirect('my_orders')
+
+    if request.method == 'POST':
+        request_type = request.POST.get('request_type')
+        reason = request.POST.get('reason', '').strip()
+        item_id = request.POST.get('order_item')
+        order_item = None
+        if item_id:
+            order_item = get_object_or_404(OrderItem, pk=item_id, order=order)
+        if request_type not in dict(ReturnRequest.REQUEST_TYPES) or not reason:
+            messages.error(request, 'Choose return or exchange and enter a reason.')
+            return render(request, 'orders/request_return.html', {'order': order})
+
+        duplicate = ReturnRequest.objects.filter(
+            customer=request.user,
+            order=order,
+            order_item=order_item,
+            status__in=['pending', 'approved', 'received'],
+        ).exists()
+        if duplicate:
+            messages.error(request, 'There is already an open request for this item.')
+            return redirect('my_orders')
+
+        ReturnRequest.objects.create(
+            customer=request.user,
+            order=order,
+            order_item=order_item,
+            request_type=request_type,
+            reason=reason,
+        )
+        messages.success(request, 'Your return or exchange request was sent to the shop.')
+        return redirect('my_orders')
+
+    return render(request, 'orders/request_return.html', {'order': order})

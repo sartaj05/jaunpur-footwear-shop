@@ -142,6 +142,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_DELIVERY_FEE = '50.00'
+RETURN_WINDOW_DAYS = 7
 
 EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
