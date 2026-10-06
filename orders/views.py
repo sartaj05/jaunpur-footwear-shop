@@ -350,7 +350,7 @@ def checkout(request):
                 seller_order = seller_orders[seller_order_key]
                 seller_order.subtotal += unit_price * item.quantity
                 seller_order.save(update_fields=['subtotal'])
-                OrderItem.objects.create(
+                order_item = OrderItem.objects.create(
                     order=order,
                     seller_order=seller_order,
                     product_name=item.product.name,
@@ -364,6 +364,9 @@ def checkout(request):
                 )
 
                 stock_owner = item.variant if item.variant_id else item.product
+                stock_owner._stock_change_reason = 'order_sale'
+                stock_owner._stock_change_reference = f'order-item:{order_item.pk}'
+                stock_owner._stock_change_actor = request.user
                 stock_owner.stock -= item.quantity
                 stock_owner.save(update_fields=['stock'])
 

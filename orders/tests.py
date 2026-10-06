@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from products.models import Brand, Category, Product
+from products.models import InventoryMovement
 
 from .models import CartItem, Order, OrderItem
 
@@ -47,6 +48,11 @@ class CheckoutFlowTests(TestCase):
         self.assertEqual(OrderItem.objects.get(order=order).quantity, 2)
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock, 1)
+        movement = InventoryMovement.objects.get(reason="order_sale")
+        self.assertEqual(movement.delta, -2)
+        self.assertEqual(movement.stock_after, 1)
+        self.assertEqual(movement.reference, f"order-item:{OrderItem.objects.get(order=order).pk}")
+        self.assertEqual(movement.actor, self.user)
         self.assertFalse(CartItem.objects.filter(user=self.user).exists())
         send_confirmation.assert_called_once_with(order.pk)
 

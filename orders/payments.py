@@ -69,6 +69,9 @@ def release_order_inventory(order):
         if item.variant_id:
             variant = ProductVariant.objects.select_for_update().filter(pk=item.variant_id).first()
             if variant:
+                variant._stock_change_reason = 'reservation_release'
+                variant._stock_change_reference = f'order:{order.pk}'
+                variant._stock_change_actor = order.user
                 variant.stock += item.quantity
                 variant.save(update_fields=['stock'])
         elif item.used_variant and item.product_id:
@@ -77,11 +80,17 @@ def release_order_inventory(order):
                 size=item.size,
                 color=item.color,
             )
+            variant._stock_change_reason = 'reservation_release'
+            variant._stock_change_reference = f'order:{order.pk}'
+            variant._stock_change_actor = order.user
             variant.stock += item.quantity
             variant.save(update_fields=['stock'])
         elif item.product_id:
             product = Product.objects.select_for_update().filter(pk=item.product_id).first()
             if product:
+                product._stock_change_reason = 'reservation_release'
+                product._stock_change_reference = f'order:{order.pk}'
+                product._stock_change_actor = order.user
                 product.stock += item.quantity
                 product.save(update_fields=['stock'])
     order.stock_released = True

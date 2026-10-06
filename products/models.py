@@ -163,3 +163,21 @@ class ProductReview(models.Model):
 
     def __str__(self):
         return f'{self.rating}/5 review for {self.product}'
+
+
+class InventoryMovement(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='inventory_movements')
+    variant = models.ForeignKey(ProductVariant, on_delete=models.PROTECT, blank=True, null=True, related_name='inventory_movements')
+    delta = models.IntegerField()
+    stock_after = models.PositiveIntegerField()
+    reason = models.CharField(max_length=40, default='stock_update')
+    reference = models.CharField(max_length=120, blank=True)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='inventory_movements')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [models.Index(fields=['product', '-created_at'], name='inventory_product_created_idx')]
+
+    def __str__(self):
+        return f'{self.product.name} {self.delta:+d} ({self.reason})'

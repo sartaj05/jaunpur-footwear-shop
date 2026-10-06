@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Brand, Category, Product, ProductReview, ProductVariant, WishlistItem
+from .models import Brand, Category, InventoryMovement, Product, ProductReview, ProductVariant, WishlistItem
 
 
 class ProductVariantInline(admin.TabularInline):
@@ -49,3 +49,20 @@ class ProductReviewAdmin(admin.ModelAdmin):
     list_display = ['product', 'user', 'rating', 'created_at']
     list_filter = ['rating', 'created_at']
     search_fields = ['product__name', 'user__username', 'title', 'body']
+
+
+@admin.register(InventoryMovement)
+class InventoryMovementAdmin(admin.ModelAdmin):
+    list_display = ['product', 'variant', 'delta', 'stock_after', 'reason', 'reference', 'actor', 'created_at']
+    list_filter = ['reason', 'created_at']
+    search_fields = ['product__name', 'product__seller_sku', 'reference']
+    readonly_fields = ['product', 'variant', 'delta', 'stock_after', 'reason', 'reference', 'actor', 'created_at']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
