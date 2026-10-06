@@ -1,4 +1,5 @@
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
@@ -7,8 +8,9 @@ from django.utils import timezone
 from datetime import timedelta
 
 from products.models import Product, Brand, Category
-from orders.models import Order, OrderItem, OrderTrackingEvent
+from orders.models import Order, OrderItem, OrderTrackingEvent, PaymentAttempt
 from orders.notifications import send_order_status_update
+from orders.payments import release_order_inventory
 from django.db import transaction
 
 
@@ -195,7 +197,13 @@ def update_order_status(request, pk):
     if request.method == 'POST':
         new_status = request.POST.get('status')
         valid_statuses = dict(Order.STATUS_CHOICES)
+        if new_status == 'cancelled' and order.payment_status == 'paid':
+            messages.error(request, 'Refund the captured payment before cancelling this paid order.')
+            return redirect('dashboard_orders')
         if new_status in valid_statuses and new_status != order.status:
+            if new_status == 'cancelled':
+                release_order_inventory(order)
+                PaymentAttempt.objects.filter(order=order, status='created').update(status='failed')
             order.status = new_status
             order.save(update_fields=['status'])
             OrderTrackingEvent.objects.create(

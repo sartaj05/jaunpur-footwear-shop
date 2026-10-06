@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="page-banner">
+    <h1>Pay for order #{{ order.id }}</h1>
+    <p>Complete payment securely with Razorpay.</p>
+</section>
+
+<section class="checkout-page">
+    <div class="checkout-form-card">
+        <p>Amount due: <strong>₹{{ order.total_amount }}</strong></p>
+        <button id="payWithRazorpay" class="primary-btn" type="button">Pay with Razorpay</button>
+        <p><a href="{% url 'my_orders' %}">Return to my orders</a></p>
+    </div>
+</section>
+
+<form id="verifyPaymentForm" method="post" action="{% url 'verify_razorpay_payment' %}" hidden>
+    {% csrf_token %}
+    <input name="razorpay_order_id" value="">
+    <input name="razorpay_payment_id" value="">
+    <input name="razorpay_signature" value="">
+</form>
+<form id="failedPaymentForm" method="post" action="{% url 'fail_razorpay_payment' attempt.id %}" hidden>
+    {% csrf_token %}
+</form>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    const paymentOptions = {
+        key: '{{ key_id|escapejs }}',
+        amount: {{ attempt.amount_subunits }},
+        currency: '{{ attempt.currency }}',
+        name: 'Jaunpur Footwear',
+        description: 'Order #{{ order.id }}',
+        order_id: '{{ attempt.gateway_order_id|escapejs }}',
+        handler: function (response) {
+            const form = document.getElementById('verifyPaymentForm');
+            form.elements.razorpay_order_id.value = response.razorpay_order_id;
+            form.elements.razorpay_payment_id.value = response.razorpay_payment_id;
+            form.elements.razorpay_signature.value = response.razorpay_signature;
+            form.submit();
+        },
+        prefill: {
+            name: '{{ order.full_name|escapejs }}',
+            email: '{{ request.user.email|escapejs }}',
+            contact: '{{ order.mobile|escapejs }}'
+        },
+        theme: { color: '#173f35' }
+    };
+    const razorpayCheckout = new Razorpay(paymentOptions);
+    razorpayCheckout.on('payment.failed', function () {
+        document.getElementById('failedPaymentForm').submit();
+    });
+    document.getElementById('payWithRazorpay').addEventListener('click', function () {
+        razorpayCheckout.open();
+    });
+</script>
+{% endblock %}

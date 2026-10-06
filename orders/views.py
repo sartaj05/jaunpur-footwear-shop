@@ -2,14 +2,23 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from datetime import timedelta
 from django.conf import settings
 from decimal import Decimal
 import re
+import uuid
 from products.models import Product, ProductVariant
-from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent, ReturnRequest
+from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest
 from .notifications import send_order_confirmation
+from .payments import (
+    PaymentGatewayError,
+    create_razorpay_order,
+    fetch_razorpay_payment,
+    release_order_inventory,
+    verify_razorpay_signature,
+)
 
 
 def delivery_fee_for(pincode, subtotal):
@@ -136,6 +145,14 @@ def checkout(request):
         return redirect('checkout')
 
     if request.method == 'POST':
+        payment_method_choice = request.POST.get('payment_method', 'cod')
+        if payment_method_choice not in ('cod', 'razorpay'):
+            messages.error(request, 'Choose a valid payment method.')
+            return redirect('checkout')
+        if payment_method_choice == 'razorpay' and not (settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET):
+            messages.error(request, 'Online payments are not configured yet. Please choose Cash on Delivery.')
+            return redirect('checkout')
+
         pincode = request.POST.get('pincode', '').strip()
         if not re.fullmatch(r'[1-9][0-9]{5}', pincode):
             messages.error(request, 'Enter a valid 6-digit Indian PIN code before placing the order.')
@@ -175,6 +192,8 @@ def checkout(request):
                 total_amount=locked_subtotal - locked_discount + locked_shipping,
                 discount_amount=locked_discount,
                 coupon_code=locked_coupon.code if locked_coupon else '',
+                payment_method='Razorpay' if payment_method_choice == 'razorpay' else 'Cash on Delivery',
+                payment_status='pending' if payment_method_choice == 'razorpay' else 'unpaid',
             )
             OrderTrackingEvent.objects.create(
                 order=order,
@@ -192,22 +211,62 @@ def checkout(request):
                     color=item.color,
                     quantity=item.quantity,
                     price=unit_price,
+                    product=item.product,
+                    variant=item.variant,
+                    used_variant=bool(item.variant_id),
                 )
 
                 stock_owner = item.variant if item.variant_id else item.product
                 stock_owner.stock -= item.quantity
                 stock_owner.save(update_fields=['stock'])
 
-            if locked_coupon:
+            if locked_coupon and payment_method_choice == 'cod':
                 locked_coupon.used_count += 1
                 locked_coupon.save(update_fields=['used_count'])
 
-            CartItem.objects.filter(user=request.user).delete()
+            if payment_method_choice == 'cod':
+                CartItem.objects.filter(user=request.user).delete()
 
-        request.session.pop('coupon_code', None)
-        request.session.pop('delivery_pincode', None)
-        transaction.on_commit(lambda order_id=order.pk: send_order_confirmation(order_id))
-        return redirect('my_orders')
+        if payment_method_choice == 'cod':
+            request.session.pop('coupon_code', None)
+            request.session.pop('delivery_pincode', None)
+            transaction.on_commit(lambda order_id=order.pk: send_order_confirmation(order_id))
+            return redirect('my_orders')
+
+        attempt = PaymentAttempt.objects.create(
+            order=order,
+            amount_subunits=int((order.total_amount * Decimal('100')).quantize(Decimal('1'))),
+            currency='INR',
+        )
+        try:
+            attempt.gateway_order_id = create_razorpay_order(
+                attempt,
+                receipt=f'shop{order.pk}{uuid.uuid4().hex[:24]}',
+            )
+            attempt.save(update_fields=['gateway_order_id'])
+        except (PaymentGatewayError, KeyError):
+            with transaction.atomic():
+                failed_order = Order.objects.select_for_update().get(pk=order.pk)
+                release_order_inventory(failed_order)
+                failed_order.status = 'cancelled'
+                failed_order.payment_status = 'failed'
+                failed_order.save(update_fields=['status', 'payment_status'])
+                attempt.status = 'failed'
+                attempt.save(update_fields=['status'])
+                OrderTrackingEvent.objects.create(
+                    order=failed_order,
+                    status='cancelled',
+                    note='Online payment could not be started',
+                    created_by=request.user,
+                )
+            messages.error(request, 'The payment provider could not start checkout. Your stock has been released; try again.')
+            return redirect('checkout')
+
+        return render(request, 'orders/payment.html', {
+            'order': order,
+            'attempt': attempt,
+            'key_id': settings.RAZORPAY_KEY_ID,
+        })
 
     return render(request, 'orders/checkout.html', {
         'items': items,
@@ -239,9 +298,123 @@ def apply_coupon(request):
 
 
 @login_required
+def verify_razorpay_payment(request):
+    if request.method != 'POST':
+        return redirect('my_orders')
+    gateway_order_id = request.POST.get('razorpay_order_id', '')
+    payment_id = request.POST.get('razorpay_payment_id', '')
+    signature = request.POST.get('razorpay_signature', '')
+    attempt = get_object_or_404(
+        PaymentAttempt,
+        gateway_order_id=gateway_order_id,
+        order__user=request.user,
+    )
+    if attempt.status == 'paid':
+        return redirect('my_orders')
+    if attempt.status != 'created':
+        messages.error(request, 'This payment attempt is no longer active.')
+        return redirect('my_orders')
+    if not verify_razorpay_signature(attempt.gateway_order_id, payment_id, signature):
+        messages.error(request, 'We could not verify this payment response.')
+        return redirect('my_orders')
+
+    try:
+        payment = fetch_razorpay_payment(payment_id)
+    except PaymentGatewayError:
+        messages.error(request, 'Payment status could not be checked. Contact the shop before placing a duplicate order.')
+        return redirect('my_orders')
+
+    if (
+        payment.get('order_id') != attempt.gateway_order_id
+        or payment.get('amount') != attempt.amount_subunits
+        or payment.get('currency') != attempt.currency
+        or payment.get('status') != 'captured'
+    ):
+        messages.error(request, 'The payment is not captured yet. Your order remains pending.')
+        return redirect('my_orders')
+
+    with transaction.atomic():
+        attempt = PaymentAttempt.objects.select_for_update().select_related('order').get(pk=attempt.pk)
+        if attempt.status == 'paid':
+            return redirect('my_orders')
+        if attempt.status != 'created':
+            messages.error(request, 'This payment attempt is no longer active.')
+            return redirect('my_orders')
+        order = Order.objects.select_for_update().get(pk=attempt.order_id)
+        if order.stock_released:
+            messages.error(request, 'The order reservation expired. Contact the shop before making another payment.')
+            return redirect('my_orders')
+        attempt.status = 'paid'
+        attempt.gateway_payment_id = payment_id
+        attempt.paid_at = timezone.now()
+        attempt.save(update_fields=['status', 'gateway_payment_id', 'paid_at'])
+        order.payment_status = 'paid'
+        order.status = 'confirmed'
+        order.save(update_fields=['payment_status', 'status'])
+        OrderTrackingEvent.objects.create(
+            order=order,
+            status='confirmed',
+            note='Payment captured; order confirmed',
+            created_by=request.user,
+        )
+        if order.coupon_code:
+            Coupon.objects.filter(code=order.coupon_code).update(used_count=F('used_count') + 1)
+        CartItem.objects.filter(user=request.user).delete()
+
+    request.session.pop('coupon_code', None)
+    request.session.pop('delivery_pincode', None)
+    transaction.on_commit(lambda order_id=order.pk: send_order_confirmation(order_id))
+    messages.success(request, 'Payment received and your order is confirmed.')
+    return redirect('my_orders')
+
+
+@login_required
+def fail_razorpay_payment(request, attempt_id):
+    if request.method == 'POST':
+        with transaction.atomic():
+            attempt = get_object_or_404(
+                PaymentAttempt.objects.select_for_update().select_related('order'),
+                pk=attempt_id,
+                order__user=request.user,
+            )
+            if attempt.status == 'created':
+                order = Order.objects.select_for_update().get(pk=attempt.order_id)
+                attempt.status = 'failed'
+                attempt.save(update_fields=['status'])
+                order.status = 'cancelled'
+                order.payment_status = 'failed'
+                release_order_inventory(order)
+                order.save(update_fields=['status', 'payment_status'])
+                OrderTrackingEvent.objects.create(
+                    order=order,
+                    status='cancelled',
+                    note='Online payment was not completed',
+                    created_by=request.user,
+                )
+    messages.info(request, 'Payment was not completed. Your cart is still available for another attempt.')
+    return redirect('my_orders')
+
+
+@login_required
 def my_orders(request):
-    orders = Order.objects.filter(user=request.user).prefetch_related('tracking_events', 'return_requests').order_by('-created_at')
+    orders = Order.objects.filter(user=request.user).prefetch_related(
+        'tracking_events', 'return_requests', 'payment_attempts'
+    ).order_by('-created_at')
     return render(request, 'orders/my_orders.html', {'orders': orders})
+
+
+@login_required
+def resume_razorpay_payment(request, order_id):
+    order = get_object_or_404(Order, pk=order_id, user=request.user, payment_status='pending')
+    attempt = order.payment_attempts.filter(status='created', gateway_order_id__isnull=False).first()
+    if not attempt:
+        messages.error(request, 'There is no active payment attempt for this order.')
+        return redirect('my_orders')
+    return render(request, 'orders/payment.html', {
+        'order': order,
+        'attempt': attempt,
+        'key_id': settings.RAZORPAY_KEY_ID,
+    })
 
 
 @login_required

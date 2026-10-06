@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent, ReturnRequest
+from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest
 
 
 class OrderItemInline(admin.TabularInline):
@@ -15,8 +15,8 @@ class OrderTrackingEventInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'mobile', 'total_amount', 'status', 'created_at']
-    list_filter = ['status', 'created_at']
+    list_display = ['id', 'user', 'mobile', 'total_amount', 'status', 'payment_status', 'payment_method', 'created_at']
+    list_filter = ['status', 'payment_status', 'payment_method', 'created_at']
     search_fields = ['user__username', 'mobile']
     inlines = [OrderItemInline, OrderTrackingEventInline]
 
@@ -43,3 +43,10 @@ class ReturnRequestAdmin(admin.ModelAdmin):
     list_display = ['id', 'order', 'customer', 'request_type', 'status', 'requested_at']
     list_filter = ['request_type', 'status', 'requested_at']
     search_fields = ['order__id', 'customer__username', 'reason']
+
+
+@admin.register(PaymentAttempt)
+class PaymentAttemptAdmin(admin.ModelAdmin):
+    list_display = ['order', 'provider', 'amount_subunits', 'currency', 'status', 'created_at', 'paid_at']
+    list_filter = ['provider', 'status', 'created_at']
+    search_fields = ['gateway_order_id', 'gateway_payment_id', 'order__id']

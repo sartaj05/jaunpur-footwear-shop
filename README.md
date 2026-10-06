@@ -11,8 +11,14 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 - Brand/category/size filter
 - Product detail page
 - Add to cart
-- Checkout
+- Size/color inventory variants
+- Wishlist
+- Coupon discounts and PIN-code delivery fees
+- Cash on Delivery and Razorpay online checkout
+- Customer product ratings and reviews
 - My orders
+- Order tracking timeline and email updates
+- Return and exchange requests
 - Customer login/register
 - Shoe size finder
 - WhatsApp order support
@@ -25,6 +31,7 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 - View customers
 - Low stock alert
 - Featured products
+- Sales reports
 
 ## Tech Stack
 
@@ -49,3 +56,18 @@ python manage.py migrate
 
 python manage.py createsuperuser
 python manage.py runserver
+```
+
+## Razorpay Setup
+
+Online checkout is available after setting Razorpay API keys in the environment. Use test keys while developing; never commit your secret key.
+
+PowerShell:
+
+```powershell
+$env:RAZORPAY_KEY_ID = "rzp_test_your_key_id"
+$env:RAZORPAY_KEY_SECRET = "your_test_key_secret"
+python manage.py runserver
+```
+
+Without these keys, Cash on Delivery remains available and online checkout is disabled.

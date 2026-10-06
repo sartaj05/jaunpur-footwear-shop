@@ -30,6 +30,14 @@
             <p><strong>Total:</strong> ₹{{ order.total_amount }}</p>
             {% if order.coupon_code %}<p><strong>Coupon:</strong> {{ order.coupon_code }} (saved ₹{{ order.discount_amount }})</p>{% endif %}
             <p><strong>Payment:</strong> {{ order.payment_method }}</p>
+            <p><strong>Payment status:</strong> {{ order.get_payment_status_display }}</p>
+            {% if order.payment_status == 'pending' %}
+            {% for attempt in order.payment_attempts.all %}
+                {% if attempt.status == 'created' and attempt.gateway_order_id %}
+                <a class="secondary-btn" href="{% url 'resume_razorpay_payment' order.id %}">Resume online payment</a>
+                {% endif %}
+            {% endfor %}
+            {% endif %}
         </div>
 
         <div class="order-items">

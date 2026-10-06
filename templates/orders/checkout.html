@@ -47,12 +47,18 @@
                 <input id="deliveryPincode" type="text" name="pincode" value="{{ pincode }}" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" placeholder="6-digit PIN code" required>
             </div>
 
+            <fieldset class="payment-methods">
+                <legend>Payment method</legend>
+                <label><input type="radio" name="payment_method" value="cod" checked> Cash on Delivery</label>
+                <label><input type="radio" name="payment_method" value="razorpay"> Pay online with Razorpay</label>
+            </fieldset>
+
             <button class="secondary-btn" type="submit" name="action" value="estimate_delivery" formnovalidate>
                 Recalculate delivery fee
             </button>
 
             <button class="auth-btn">
-                Place Order - Cash on Delivery
+                Place order or continue to payment
             </button>
         </form>
     </div>

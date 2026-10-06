@@ -22,6 +22,12 @@ class CartItem(models.Model):
 
 
 class Order(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('unpaid', 'Unpaid'),
+        ('pending', 'Payment pending'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+    ]
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
@@ -44,6 +50,8 @@ class Order(models.Model):
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_method = models.CharField(max_length=50, default='Cash on Delivery')
+    payment_status = models.CharField(max_length=12, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
+    stock_released = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -72,6 +80,30 @@ class OrderItem(models.Model):
     color = models.CharField(max_length=40, blank=True, default='')
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, blank=True, null=True, related_name='order_items')
+    variant = models.ForeignKey(ProductVariant, on_delete=models.SET_NULL, blank=True, null=True, related_name='order_items')
+    used_variant = models.BooleanField(default=False)
+
+
+class PaymentAttempt(models.Model):
+    STATUS_CHOICES = [
+        ('created', 'Created'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+    ]
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payment_attempts')
+    provider = models.CharField(max_length=20, default='razorpay')
+    gateway_order_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    gateway_payment_id = models.CharField(max_length=100, blank=True)
+    amount_subunits = models.PositiveBigIntegerField()
+    currency = models.CharField(max_length=3, default='INR')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='created')
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
 
 class Coupon(models.Model):
