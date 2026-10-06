@@ -45,9 +45,9 @@ class DeliveryRateAdmin(admin.ModelAdmin):
 
 @admin.register(ReturnRequest)
 class ReturnRequestAdmin(admin.ModelAdmin):
-    list_display = ['id', 'order', 'customer', 'request_type', 'status', 'requested_at']
-    list_filter = ['request_type', 'status', 'requested_at']
-    search_fields = ['order__id', 'customer__username', 'reason']
+    list_display = ['id', 'order', 'customer', 'request_type', 'status', 'refund_status', 'pickup_scheduled_at', 'requested_at']
+    list_filter = ['request_type', 'status', 'refund_status', 'pickup_required', 'requested_at']
+    search_fields = ['order__id', 'customer__username', 'reason', 'refund_reference']
 
 
 @admin.register(PaymentAttempt)

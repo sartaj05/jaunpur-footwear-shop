@@ -1,37 +1,21 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<section class="page-banner">
-    <h1>Return or exchange order #{{ order.id }}</h1>
-    <p>Requests are accepted within 7 days of delivery.</p>
-</section>
-
-<section class="checkout-page">
-    <div class="checkout-form-card">
-        <form method="post">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="orderItem">Item</label>
-                <select id="orderItem" name="order_item">
-                    <option value="">All items in this order</option>
-                    {% for item in order.items.all %}
-                    <option value="{{ item.id }}">{{ item.product_name }} — size {{ item.size }}{% if item.color %} / {{ item.color }}{% endif %}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="requestType">Request type</label>
-                <select id="requestType" name="request_type" required>
-                    <option value="return">Return</option>
-                    <option value="exchange">Exchange</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="returnReason">Reason</label>
-                <textarea id="returnReason" name="reason" required></textarea>
-            </div>
-            <button class="auth-btn" type="submit">Send request</button>
-        </form>
-    </div>
-</section>
+<section class="page-banner"><h1>Return or exchange order #{{ order.id }}</h1><p>Requests are accepted within {{ RETURN_WINDOW_DAYS|default:'7' }} days of delivery.</p></section>
+<section class="checkout-page"><div class="checkout-form-card"><form method="post">{% csrf_token %}
+    <div class="form-group"><label for="orderItem">Choose the item</label><select id="orderItem" name="order_item" required><option value="">Select one item</option>{% for item in order.items.all %}<option value="{{ item.id }}">{{ item.product_name }} · size {{ item.size }}{% if item.color %} / {{ item.color }}{% endif %} · quantity {{ item.quantity }}</option>{% endfor %}</select></div>
+    <div class="form-group"><label for="requestType">Request type</label><select id="requestType" name="request_type" required><option value="return">Return</option><option value="exchange">Exchange size</option></select></div>
+    <div class="form-group" id="exchangeSizeGroup"><label for="exchangeSize">Requested size</label><input id="exchangeSize" name="exchange_size" maxlength="10" placeholder="Enter an available size"></div>
+    <div class="form-group"><label for="returnReason">Reason</label><textarea id="returnReason" name="reason" required></textarea></div>
+    <label class="form-group"><input type="checkbox" name="pickup_required" checked> I need local pickup from my Jaunpur delivery address</label>
+    <button class="auth-btn" type="submit">Send request</button>
+</form></div></section>
+<script>
+(() => {
+  const type = document.getElementById('requestType');
+  const size = document.getElementById('exchangeSize');
+  const group = document.getElementById('exchangeSizeGroup');
+  const update = () => { const exchange = type.value === 'exchange'; group.hidden = !exchange; size.required = exchange; };
+  type.addEventListener('change', update); update();
+})();
+</script>
 {% endblock %}

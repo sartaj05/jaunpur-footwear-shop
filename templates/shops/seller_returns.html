@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Returns and exchanges</h1><p>Review requests for {{ shop.name }}, schedule local pickups, and record refund references.</p></section>
+<section class="featured-section">
+    {% for return_request in return_requests %}
+    <article class="checkout-form-card"><h2>Order #{{ return_request.order_id }} · {{ return_request.get_request_type_display }}</h2>
+        <p>{{ return_request.customer.username }} · {{ return_request.customer.customerprofile.mobile }}</p>
+        {% if return_request.order_item %}<p>{{ return_request.order_item.product_name }} · size {{ return_request.order_item.size }}{% if return_request.order_item.color %} / {{ return_request.order_item.color }}{% endif %}{% if return_request.exchange_size %} · requested size {{ return_request.exchange_size }}{% endif %}</p>{% endif %}
+        <p>{{ return_request.reason }}</p><p>Pickup requested: {{ return_request.pickup_required|yesno:'Yes,No' }} · {{ return_request.get_status_display }} · {{ return_request.get_refund_status_display }}</p>
+        <form method="post">{% csrf_token %}<input type="hidden" name="return_request_id" value="{{ return_request.id }}">
+            <div class="form-group"><label>Request status</label><select name="status">{% for value,label in status_choices %}<option value="{{ value }}" {% if return_request.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+            <div class="form-group"><label>Pickup date/time (Jaunpur local time)</label><input type="datetime-local" name="pickup_scheduled_at" value="{{ return_request.pickup_scheduled_at|date:'Y-m-d\TH:i' }}"></div>
+            <div class="form-group"><label>Refund status</label><select name="refund_status">{% for value,label in refund_choices %}<option value="{{ value }}" {% if return_request.refund_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+            <div class="form-group"><label>Refund transaction reference</label><input name="refund_reference" maxlength="120" value="{{ return_request.refund_reference }}"></div>
+            <div class="form-group"><label>Note for customer</label><textarea name="staff_note">{{ return_request.staff_note }}</textarea></div>
+            <button class="auth-btn">Save request</button>
+        </form>
+    </article>
+    {% empty %}<p>No return or exchange requests for your shop.</p>{% endfor %}
+</section>
+<p class="featured-section">The refund field records a refund you already sent; it does not initiate a Razorpay or bank transfer.</p>
+{% endblock %}

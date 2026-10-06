@@ -12,6 +12,7 @@ urlpatterns = [
     path('seller/promotions/', views.manage_promotions, name='manage_promotions'),
     path('seller/promotions/<int:promotion_id>/close/', views.deactivate_promotion, name='deactivate_promotion'),
     path('seller/orders/', views.seller_orders, name='seller_orders'),
+    path('seller/returns/', views.seller_return_requests, name='seller_return_requests'),
     path('seller/payouts/', views.seller_payout_ledger, name='seller_payout_ledger'),
     path('seller/orders/<int:seller_order_id>/status/', views.update_seller_order_status, name='update_seller_order_status'),
     path('seller/products/add/', views.seller_product_form, name='seller_add_product'),

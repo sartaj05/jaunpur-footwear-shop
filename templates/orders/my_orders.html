@@ -82,7 +82,7 @@
 
         {% for return_request in order.return_requests.all %}
         <p class="return-request-status">
-            {{ return_request.get_request_type_display }} request: {{ return_request.get_status_display }}
+            {{ return_request.get_request_type_display }}{% if return_request.exchange_size %} · requested size {{ return_request.exchange_size }}{% endif %} request: {{ return_request.get_status_display }} · Refund: {{ return_request.get_refund_status_display }}{% if return_request.pickup_scheduled_at %} · pickup {{ return_request.pickup_scheduled_at }}{% endif %}{% if return_request.staff_note %} · {{ return_request.staff_note }}{% endif %}
         </p>
         {% endfor %}
         {% if order.status == 'delivered' %}

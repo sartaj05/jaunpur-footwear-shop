@@ -589,20 +589,35 @@ def resume_razorpay_payment(request, order_id):
 def request_return(request, order_id):
     order = get_object_or_404(Order, pk=order_id, user=request.user)
     return_window = timedelta(days=getattr(settings, 'RETURN_WINDOW_DAYS', 7))
-    if order.status != 'delivered' or timezone.now() - order.created_at > return_window:
+    delivered_event = order.tracking_events.filter(status='delivered').order_by('-created_at').first()
+    delivered_at = delivered_event.created_at if delivered_event else order.created_at
+    if order.status != 'delivered' or timezone.now() - delivered_at > return_window:
         messages.error(request, 'Returns and exchanges are available for delivered orders within 7 days.')
         return redirect('my_orders')
 
     if request.method == 'POST':
         request_type = request.POST.get('request_type')
         reason = request.POST.get('reason', '').strip()
-        item_id = request.POST.get('order_item')
-        order_item = None
-        if item_id:
-            order_item = get_object_or_404(OrderItem, pk=item_id, order=order)
-        if request_type not in dict(ReturnRequest.REQUEST_TYPES) or not reason:
-            messages.error(request, 'Choose return or exchange and enter a reason.')
+        try:
+            item_id = int(request.POST.get('order_item', ''))
+        except (TypeError, ValueError):
+            item_id = 0
+        order_item = OrderItem.objects.filter(pk=item_id, order=order).select_related('product').first()
+        exchange_size = request.POST.get('exchange_size', '').strip()
+        if request_type not in dict(ReturnRequest.REQUEST_TYPES) or not reason or not order_item:
+            messages.error(request, 'Choose one item, return or exchange, and enter a reason.')
             return render(request, 'orders/request_return.html', {'order': order})
+        if request_type == 'exchange':
+            if not order_item.product_id:
+                messages.error(request, 'This item no longer has a catalog listing for size exchange.')
+                return render(request, 'orders/request_return.html', {'order': order})
+            if order_item.product.variants.filter(is_active=True).exists():
+                available_sizes = set(order_item.product.variants.filter(is_active=True, stock__gt=0).values_list('size', flat=True))
+            else:
+                available_sizes = {size.strip() for size in order_item.product.available_sizes.split(',') if size.strip()}
+            if not exchange_size or exchange_size not in available_sizes:
+                messages.error(request, 'Choose a size listed as available for this shoe.')
+                return render(request, 'orders/request_return.html', {'order': order})
 
         duplicate = ReturnRequest.objects.filter(
             customer=request.user,
@@ -619,7 +634,10 @@ def request_return(request, order_id):
             order=order,
             order_item=order_item,
             request_type=request_type,
+            exchange_size=exchange_size if request_type == 'exchange' else '',
             reason=reason,
+            pickup_required=request.POST.get('pickup_required') == 'on',
+            refund_status='pending' if order.payment_status == 'paid' and request_type == 'return' else 'not_applicable',
         )
         messages.success(request, 'Your return or exchange request was sent to the shop.')
         return redirect('my_orders')

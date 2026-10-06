@@ -16,7 +16,7 @@ from django.db.models import Q, Sum
 from django.db import transaction
 
 from products.models import Brand, Category, Product, ProductVariant
-from orders.models import Coupon, OrderTrackingEvent, SellerOrder
+from orders.models import Coupon, OrderTrackingEvent, ReturnRequest, SellerOrder
 from orders.notifications import send_order_status_update
 from accounts.models import ReferralReward
 
@@ -209,6 +209,53 @@ def seller_orders(request):
         'shop': shop,
         'seller_orders': orders,
         'status_choices': SellerOrder.STATUS_CHOICES,
+    })
+
+
+@login_required
+def seller_return_requests(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    requests_for_shop = ReturnRequest.objects.filter(
+        order_item__product__shop=shop,
+    ).select_related('customer', 'order', 'order_item__product').order_by('-requested_at')
+    error = ''
+    if request.method == 'POST':
+        try:
+            request_id = int(request.POST.get('return_request_id', ''))
+        except (TypeError, ValueError):
+            request_id = 0
+        return_request = requests_for_shop.filter(pk=request_id).first()
+        status = request.POST.get('status', '')
+        refund_status = request.POST.get('refund_status', '')
+        refund_reference = request.POST.get('refund_reference', '').strip()
+        pickup_text = request.POST.get('pickup_scheduled_at', '').strip()
+        try:
+            pickup_scheduled_at = _parse_local_datetime(pickup_text)
+        except ValueError:
+            pickup_scheduled_at = None
+            error = 'Enter a valid pickup date and time.'
+        if not error and (not return_request or status not in dict(ReturnRequest.STATUS_CHOICES) or refund_status not in dict(ReturnRequest.REFUND_STATUS_CHOICES)):
+            error = 'Choose a valid request status and refund status.'
+        if not error and refund_status == 'processed' and not refund_reference:
+            error = 'Add the payment reference after you have actually sent the refund.'
+        if error:
+            messages.error(request, error)
+        else:
+            return_request.status = status
+            return_request.refund_status = refund_status
+            return_request.refund_reference = refund_reference
+            return_request.pickup_scheduled_at = pickup_scheduled_at
+            return_request.staff_note = request.POST.get('staff_note', '').strip()
+            return_request.save(update_fields=[
+                'status', 'refund_status', 'refund_reference', 'pickup_scheduled_at', 'staff_note', 'updated_at',
+            ])
+            messages.success(request, 'Return or exchange request updated. Refunds must be sent through the payment provider separately.')
+            return redirect('seller_return_requests')
+    return render(request, 'shops/seller_returns.html', {
+        'shop': shop,
+        'return_requests': requests_for_shop,
+        'status_choices': ReturnRequest.STATUS_CHOICES,
+        'refund_choices': ReturnRequest.REFUND_STATUS_CHOICES,
     })
 
 

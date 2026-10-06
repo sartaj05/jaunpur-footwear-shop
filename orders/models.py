@@ -258,13 +258,23 @@ class ReturnRequest(models.Model):
         ('received', 'Item received'),
         ('completed', 'Completed'),
     ]
+    REFUND_STATUS_CHOICES = [
+        ('not_applicable', 'Not applicable'),
+        ('pending', 'Refund pending'),
+        ('processed', 'Refund recorded as sent'),
+    ]
 
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='return_requests')
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='return_requests')
     order_item = models.ForeignKey(OrderItem, on_delete=models.SET_NULL, blank=True, null=True, related_name='return_requests')
     request_type = models.CharField(max_length=10, choices=REQUEST_TYPES)
+    exchange_size = models.CharField(max_length=10, blank=True)
     reason = models.TextField()
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='pending')
+    pickup_required = models.BooleanField(default=True)
+    pickup_scheduled_at = models.DateTimeField(blank=True, null=True)
+    refund_status = models.CharField(max_length=16, choices=REFUND_STATUS_CHOICES, default='not_applicable')
+    refund_reference = models.CharField(max_length=120, blank=True)
     staff_note = models.TextField(blank=True)
     requested_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
