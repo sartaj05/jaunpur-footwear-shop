@@ -1,5 +1,7 @@
 import re
 import csv
+import io
+import os
 from decimal import Decimal, InvalidOperation
 from datetime import time, timedelta, datetime
 
@@ -11,6 +13,7 @@ from django.utils import timezone
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Q, Sum
+from django.db import transaction
 
 from products.models import Brand, Category, Product, ProductVariant
 from orders.models import Coupon, OrderTrackingEvent, SellerOrder
@@ -323,6 +326,124 @@ def seller_product_form(request, product_id=None):
         'gender_choices': Product.GENDER_CHOICES,
         'has_variants': product.variants.exists() if product else False,
     })
+
+
+@login_required
+def import_seller_catalog(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    imported_count = 0
+    errors = []
+    if request.method == 'POST':
+        catalog_file = request.FILES.get('catalog_file')
+        image_files = request.FILES.getlist('images')
+        allowed_extensions = {'.jpg', '.jpeg', '.png', '.webp'}
+        uploaded_images = {}
+        total_upload_size = catalog_file.size if catalog_file else 0
+        for image in image_files:
+            total_upload_size += image.size
+            filename = image.name.replace('\\', '/').split('/')[-1]
+            if filename != image.name or os.path.splitext(filename)[1].lower() not in allowed_extensions:
+                errors.append(f'{image.name}: use an image filename with JPG, PNG, or WEBP extension.')
+                continue
+            uploaded_images[filename.casefold()] = image
+
+        if not catalog_file or not catalog_file.name.lower().endswith('.csv'):
+            errors.append('Choose a CSV catalog file.')
+        elif total_upload_size > 30 * 1024 * 1024 or catalog_file.size > 3 * 1024 * 1024:
+            errors.append('Keep the CSV under 3 MB and the whole upload under 30 MB.')
+        else:
+            try:
+                csv_content = catalog_file.read().decode('utf-8-sig')
+                reader = csv.DictReader(io.StringIO(csv_content))
+                required_columns = {'name', 'brand', 'category', 'description', 'price', 'available_sizes', 'image_filename'}
+                headers = [field.strip().lower() for field in reader.fieldnames or []]
+                if not headers or not required_columns.issubset(set(headers)):
+                    errors.append('CSV needs these headers: name, brand, category, description, price, available_sizes, image_filename.')
+                else:
+                    reader.fieldnames = headers
+                    for row_number, raw_row in enumerate(reader, start=2):
+                        row = {str(key or '').strip().lower(): str(value or '').strip() for key, value in raw_row.items()}
+                        try:
+                            name = row.get('name', '')
+                            description = row.get('description', '')
+                            brand = Brand.objects.filter(name__iexact=row.get('brand', '')).first()
+                            category = Category.objects.filter(name__iexact=row.get('category', '')).first()
+                            price = Decimal(row.get('price', ''))
+                            discount_text = row.get('discount_price', '')
+                            discount_price = Decimal(discount_text) if discount_text else None
+                            stock = int(row.get('stock', '0') or '0')
+                            image_name = row.get('image_filename', '')
+                            image = uploaded_images.get(image_name.casefold())
+                            gender = row.get('gender', 'unisex').lower() or 'unisex'
+                            variants = []
+                            variant_text = row.get('variants', '')
+                            if variant_text:
+                                seen_variants = set()
+                                for spec in variant_text.split(';'):
+                                    pieces = [piece.strip() for piece in spec.split('|')]
+                                    if len(pieces) not in (3, 4):
+                                        raise ValueError('variants must use size|color|stock[|price], separated by semicolons')
+                                    size, color = pieces[0], pieces[1]
+                                    variant_stock = int(pieces[2])
+                                    variant_price = Decimal(pieces[3]) if len(pieces) == 4 and pieces[3] else None
+                                    if not size or not color or variant_stock < 0 or (variant_price is not None and variant_price <= 0):
+                                        raise ValueError('each variant needs a size, color, non-negative stock, and positive optional price')
+                                    if (size, color.casefold()) in seen_variants:
+                                        raise ValueError('duplicate size and color variant')
+                                    seen_variants.add((size, color.casefold()))
+                                    variants.append((size, color, variant_stock, variant_price))
+                            sizes = row.get('available_sizes', '') or ','.join(dict.fromkeys(item[0] for item in variants))
+                            if not name or not description or not brand or not category or price <= 0 or stock < 0 or not image or not sizes:
+                                raise ValueError('check name, existing brand/category, description, positive price, sizes, stock, and uploaded image filename')
+                            from PIL import Image
+
+                            image.seek(0)
+                            with Image.open(image) as opened_image:
+                                opened_image.verify()
+                            image.seek(0)
+                            if gender not in dict(Product.GENDER_CHOICES):
+                                raise ValueError('gender must be men, women, kids, or unisex')
+                            if discount_price is not None and (discount_price <= 0 or discount_price > price):
+                                raise ValueError('discount_price must be positive and no higher than price')
+                            with transaction.atomic():
+                                product = Product.objects.create(
+                                    shop=shop,
+                                    name=name,
+                                    name_hi=row.get('name_hi', ''),
+                                    brand=brand,
+                                    category=category,
+                                    gender=gender,
+                                    description=description,
+                                    description_hi=row.get('description_hi', ''),
+                                    price=price,
+                                    discount_price=discount_price,
+                                    stock=stock if not variants else 0,
+                                    available_sizes=sizes,
+                                    is_active=True,
+                                )
+                                image.seek(0)
+                                product.image.save(os.path.basename(image.name), image, save=True)
+                                for size, color, variant_stock, variant_price in variants:
+                                    ProductVariant.objects.create(
+                                        product=product,
+                                        size=size,
+                                        color=color,
+                                        stock=variant_stock,
+                                        price_override=variant_price,
+                                    )
+                            imported_count += 1
+                        except (InvalidOperation, TypeError, ValueError) as exc:
+                            errors.append(f'Row {row_number}: {exc}')
+                        except (OSError, ValueError) as exc:
+                            errors.append(f'Row {row_number}: could not import ({exc.__class__.__name__}).')
+            except (UnicodeDecodeError, csv.Error, OSError) as exc:
+                errors.append(f'Could not read the CSV file: {exc.__class__.__name__}. Save it as UTF-8 CSV and try again.')
+            if imported_count:
+                messages.success(request, f'Imported {imported_count} product row(s).')
+            for error in errors[:10]:
+                messages.error(request, error)
+            return redirect('import_seller_catalog')
+    return render(request, 'shops/catalog_import.html', {'shop': shop, 'errors': errors})
 
 
 @login_required

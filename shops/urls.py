@@ -15,6 +15,7 @@ urlpatterns = [
     path('seller/payouts/', views.seller_payout_ledger, name='seller_payout_ledger'),
     path('seller/orders/<int:seller_order_id>/status/', views.update_seller_order_status, name='update_seller_order_status'),
     path('seller/products/add/', views.seller_product_form, name='seller_add_product'),
+    path('seller/products/import/', views.import_seller_catalog, name='import_seller_catalog'),
     path('seller/products/<int:product_id>/edit/', views.seller_product_form, name='seller_edit_product'),
     path('seller/products/<int:product_id>/delete/', views.seller_delete_product, name='seller_delete_product'),
     path('seller/products/<int:product_id>/variants/', views.seller_manage_variants, name='seller_manage_variants'),

@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<section class="page-banner"><h1>Bulk catalog import</h1><p>Upload a UTF-8 CSV, plus matching product photos, to add products to {{ shop.name }}.</p></section>
+<section class="checkout-page">
+    <form method="post" enctype="multipart/form-data" class="checkout-form-card">{% csrf_token %}
+        <p><a href="{% static 'samples/jaunpur_catalog_template.csv' %}" download>Download sample CSV</a></p>
+        <div class="form-group"><label>Catalog CSV (maximum 3 MB)</label><input type="file" name="catalog_file" accept=".csv,text/csv" required></div>
+        <div class="form-group"><label>Product photos (JPG, PNG, or WEBP; match each CSV image_filename)</label><input type="file" name="images" accept="image/jpeg,image/png,image/webp" multiple required></div>
+        <button class="auth-btn">Import products</button>
+    </form>
+    <aside class="checkout-form-card"><h2>CSV fields</h2><p>Required: name, brand, category, description, price, available_sizes, image_filename. Brand and category must already exist in the catalog.</p><p>Optional: name_hi, description_hi, gender, discount_price, stock, variants.</p><p>For variants, use <code>size|color|stock|price</code> entries separated by semicolons. Example: <code>7|Black|5|799;8|Black|3|799</code>. Leave the price blank to use the product price.</p><p>Each row creates a new listing. Invalid rows are reported; valid rows can still import.</p></aside>
+</section>
+{% endblock %}
