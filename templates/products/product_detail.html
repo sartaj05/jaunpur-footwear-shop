@@ -39,8 +39,8 @@
         <p class="detail-description">{% if is_hindi and product.description_hi %}{{ product.description_hi }}{% else %}{{ product.description }}{% endif %}</p>
 
         <div class="product-rating-summary">
-            <strong>Customer rating:</strong>
-            {% if average_rating %}{{ average_rating|floatformat:1 }} / 5{% else %}No ratings yet{% endif %}
+            <strong>{% if is_hindi %}ग्राहक रेटिंग:{% else %}Customer rating:{% endif %}</strong>
+            {% if average_rating %}{{ average_rating|floatformat:1 }} / 5{% else %}{% if is_hindi %}अभी रेटिंग नहीं{% else %}No ratings yet{% endif %}{% endif %}
             <span>({{ reviews|length }} reviews)</span>
         </div>
 

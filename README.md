@@ -33,6 +33,7 @@ The feature list below describes the current repository scope. Some workflows re
 - Home page
 - Product listing
 - Product search
+- English/Hindi shoe-name search synonyms across translated names and descriptions
 - Brand/category/size filter
 - Product detail page
 - Add to cart

@@ -3,19 +3,19 @@
 {% block content %}
 
 <section class="page-banner">
-    <h1>All Footwear Products</h1>
-    <p>Search and filter shoes, slippers, sandals and more</p>
+    <h1>{% if is_hindi %}सभी जूते और फुटवियर{% else %}All Footwear Products{% endif %}</h1>
+    <p>{% if is_hindi %}जौनपुर की दुकानों के जूते, चप्पल और सैंडल खोजें{% else %}Search and filter shoes, slippers, sandals and more{% endif %}</p>
 </section>
 
 <section class="shop-layout">
     <aside class="filter-panel">
-        <h3>Filter Products</h3>
+        <h3>{% if is_hindi %}उत्पाद फ़िल्टर करें{% else %}Filter Products{% endif %}</h3>
 
         <form method="get" id="filterForm">
-            <label>Search</label>
-            <input type="text" name="search" placeholder="Search products..." value="{{ request.GET.search }}">
+            <label>{% if is_hindi %}खोजें{% else %}Search{% endif %}</label>
+            <input type="text" name="search" placeholder="{% if is_hindi %}जूते, चप्पल या सैंडल खोजें{% else %}Search products...{% endif %}" value="{{ search }}">
 
-            <label>Brand</label>
+            <label>{% if is_hindi %}ब्रांड{% else %}Brand{% endif %}</label>
             <select name="brand">
                 <option value="">All Brands</option>
                 {% for brand in brands %}
@@ -23,7 +23,7 @@
                 {% endfor %}
             </select>
 
-            <label>Category</label>
+            <label>{% if is_hindi %}श्रेणी{% else %}Category{% endif %}</label>
             <select name="category">
                 <option value="">All Categories</option>
                 {% for category in categories %}
@@ -31,7 +31,7 @@
                 {% endfor %}
             </select>
 
-            <label>Size</label>
+            <label>{% if is_hindi %}साइज़{% else %}Size{% endif %}</label>
             <select name="size">
                 <option value="">Any Size</option>
                 <option value="5">Size 5</option>
@@ -43,18 +43,18 @@
                 <option value="11">Size 11</option>
             </select>
 
-            <label>Jaunpur PIN code</label>
+            <label>{% if is_hindi %}जौनपुर पिन कोड{% else %}Jaunpur PIN code{% endif %}</label>
             <input type="text" name="pincode" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" placeholder="Filter by local delivery" value="{{ pincode }}">
 
-            <button class="primary-btn full-btn">Apply Filter</button>
-            <a href="{% url 'product_list' %}" class="clear-btn">Clear Filter</a>
+            <button class="primary-btn full-btn">{% if is_hindi %}फ़िल्टर लागू करें{% else %}Apply Filter{% endif %}</button>
+            <a href="{% url 'product_list' %}" class="clear-btn">{% if is_hindi %}फ़िल्टर हटाएँ{% else %}Clear Filter{% endif %}</a>
         </form>
     </aside>
 
     <div class="products-area">
         <div class="products-top">
-            <h2>Products</h2>
-            <p>{{ products|length }} item found</p>
+            <h2>{% if is_hindi %}उत्पाद{% else %}Products{% endif %}</h2>
+            <p>{{ products|length }} {% if is_hindi %}उत्पाद मिले{% else %}items found{% endif %}</p>
         </div>
 
         <div class="product-grid">
@@ -63,7 +63,7 @@
                 <div class="product-img-wrap">
                     <img src="{{ product.image.url }}" alt="{{ product.name }}">
                     {% if product.stock <= 5 %}
-                    <span class="stock-badge">Low Stock</span>
+                    <span class="stock-badge">{% if is_hindi %}कम स्टॉक{% else %}Low Stock{% endif %}</span>
                     {% endif %}
                 </div>
 
@@ -86,8 +86,8 @@
             </div>
             {% empty %}
             <div class="empty-box">
-                <h3>No product found</h3>
-                <p>Try another brand, size or category.</p>
+                <h3>{% if is_hindi %}कोई उत्पाद नहीं मिला{% else %}No product found{% endif %}</h3>
+                <p>{% if is_hindi %}दूसरा ब्रांड, साइज़ या श्रेणी आज़माएँ।{% else %}Try another brand, size or category.{% endif %}</p>
             </div>
             {% endfor %}
         </div>

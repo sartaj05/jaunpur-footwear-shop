@@ -3,8 +3,8 @@
 {% block content %}
 
 <section class="page-banner">
-    <h1>Checkout</h1>
-    <p>Confirm your delivery details</p>
+    <h1>{% if is_hindi %}ऑर्डर पूरा करें{% else %}Checkout{% endif %}</h1>
+    <p>{% if is_hindi %}डिलीवरी की जानकारी की पुष्टि करें{% else %}Confirm your delivery details{% endif %}</p>
 </section>
 
 <section class="checkout-page">
@@ -22,38 +22,38 @@
     </div>
 
     <div class="checkout-form-card">
-        <h2>Delivery Details</h2>
+        <h2>{% if is_hindi %}डिलीवरी विवरण{% else %}Delivery Details{% endif %}</h2>
 
         <form method="post">
             {% csrf_token %}
 
             <div class="form-group">
-                <label>Full Name</label>
+                <label>{% if is_hindi %}पूरा नाम{% else %}Full Name{% endif %}</label>
                 <input type="text" name="full_name" placeholder="Enter full name" required>
             </div>
 
             <div class="form-group">
-                <label>Mobile Number</label>
+                <label>{% if is_hindi %}मोबाइल नंबर{% else %}Mobile Number{% endif %}</label>
                 <input type="text" name="mobile" placeholder="Enter mobile number" required>
             </div>
 
             <div class="form-group">
-                <label>Full Address</label>
+                <label>{% if is_hindi %}पूरा पता{% else %}Full Address{% endif %}</label>
                 <textarea name="address" placeholder="House no, area, landmark, Jaunpur" required></textarea>
             </div>
 
             <div class="form-group">
-                <label for="deliveryPincode">PIN code</label>
+                <label for="deliveryPincode">{% if is_hindi %}पिन कोड{% else %}PIN code{% endif %}</label>
                 <input id="deliveryPincode" type="text" name="pincode" value="{{ pincode }}" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" placeholder="6-digit PIN code" required>
             </div>
 
             <section class="checkout-form-card fulfillment-options">
-                <h2>Delivery or pickup by shop</h2>
+                <h2>{% if is_hindi %}दुकान से डिलीवरी या पिकअप{% else %}Delivery or pickup by shop{% endif %}</h2>
                 {% for seller in checkout_sellers %}
                 <div class="seller-fulfillment" data-seller="{{ seller.key }}">
                     <h3>{{ seller.shop.name|default:'Jaunpur Footwear' }}</h3>
-                    {% if seller.delivery_available and pincode %}<p>Estimated delivery: {{ seller.delivery_eta_start }} – {{ seller.delivery_eta_end }}</p>{% endif %}
-                    <label>How would you like to receive these items?</label>
+                    {% if seller.delivery_available and pincode %}<p>{% if is_hindi %}अनुमानित डिलीवरी{% else %}Estimated delivery{% endif %}: {{ seller.delivery_eta_start }} – {{ seller.delivery_eta_end }}</p>{% endif %}
+                    <label>{% if is_hindi %}आप सामान कैसे पाना चाहेंगे?{% else %}How would you like to receive these items?{% endif %}</label>
                     <select name="fulfillment_{{ seller.key }}" class="fulfillment-method" required>
                         {% if seller.delivery_available %}<option value="delivery" {% if seller.default_method == 'delivery' %}selected{% endif %}>Local delivery</option>{% endif %}
                         {% if seller.pickup_available %}<option value="pickup" {% if seller.default_method == 'pickup' %}selected{% endif %}>Pick up from shop</option>{% endif %}
@@ -72,9 +72,9 @@
             </section>
 
             <fieldset class="payment-methods">
-                <legend>Payment method</legend>
-                <label><input type="radio" name="payment_method" value="cod" checked> Cash on Delivery</label>
-                <label><input type="radio" name="payment_method" value="razorpay"> Pay online with Razorpay</label>
+                <legend>{% if is_hindi %}भुगतान का तरीका{% else %}Payment method{% endif %}</legend>
+                <label><input type="radio" name="payment_method" value="cod" checked> {% if is_hindi %}कैश ऑन डिलीवरी{% else %}Cash on Delivery{% endif %}</label>
+                <label><input type="radio" name="payment_method" value="razorpay"> {% if is_hindi %}Razorpay से ऑनलाइन भुगतान{% else %}Pay online with Razorpay{% endif %}</label>
             </fieldset>
 
             <button class="secondary-btn" type="submit" name="action" value="estimate_delivery" formnovalidate>
@@ -102,7 +102,7 @@
         <div class="summary-row"><span>Coupon ({{ coupon_code }})</span><strong>-₹{{ discount }}</strong></div>
         {% endif %}
         <div class="summary-row total">
-            <span>Subtotal</span>
+            <span>{% if is_hindi %}उप-योग{% else %}Subtotal{% endif %}</span>
             <strong>₹{{ total }}</strong>
         </div>
         <div class="summary-row total"><span>Total</span><strong id="grandTotal" data-base-total="{{ base_total }}">₹{{ grand_total }}</strong></div>

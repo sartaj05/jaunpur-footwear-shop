@@ -7,6 +7,7 @@ from django.db.models import Avg
 from django.db.models import Q
 import re
 from .models import Product, Brand, Category, ProductReview, WishlistItem
+from .search import product_search_query
 
 
 def home(request):
@@ -36,7 +37,7 @@ def product_list(request):
     brands = Brand.objects.all()
     categories = Category.objects.all()
 
-    search = request.GET.get('search')
+    search = request.GET.get('search', '').strip()
     brand = request.GET.get('brand')
     category = request.GET.get('category')
     size = request.GET.get('size')
@@ -45,7 +46,7 @@ def product_list(request):
         pincode = getattr(getattr(request.user, 'customerprofile', None), 'pincode', '')
 
     if search:
-        products = products.filter(name__icontains=search)
+        products = products.filter(product_search_query(search))
 
     if brand:
         products = products.filter(brand_id=brand)
@@ -74,6 +75,7 @@ def product_list(request):
         'brands': brands,
         'categories': categories,
         'pincode': pincode,
+        'search': search,
     })
 
 
