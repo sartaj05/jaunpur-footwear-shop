@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
+from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, PaymentWebhookEvent, ReturnRequest, SellerOrder
 
 
 class OrderItemInline(admin.TabularInline):
@@ -27,6 +27,20 @@ class OrderAdmin(admin.ModelAdmin):
 
 
 admin.site.register(CartItem)
+
+
+@admin.register(PaymentWebhookEvent)
+class PaymentWebhookEventAdmin(admin.ModelAdmin):
+    list_display = ['event_id', 'event_type', 'status', 'received_at', 'processed_at']
+    list_filter = ['status', 'event_type', 'received_at']
+    search_fields = ['event_id', 'event_type', 'error_summary']
+    readonly_fields = ['event_id', 'event_type', 'status', 'error_summary', 'received_at', 'processed_at']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Coupon)

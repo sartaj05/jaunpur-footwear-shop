@@ -104,6 +104,8 @@ GitHub Actions runs Django checks, migration drift checks, and the automated tes
 
 Online checkout is available after setting Razorpay API keys in the environment. Use test keys while developing; never commit your secret key.
 
+Register `https://your-domain.example/orders/payments/razorpay/webhook/` in Razorpay for `payment.captured` events and set `RAZORPAY_WEBHOOK_SECRET` to the webhook secret (this is separate from the API key secret). The endpoint verifies Razorpay's HMAC signature, checks the captured amount/currency against the stored attempt, and ignores duplicate event IDs. Failed or mismatched events are visible in the staff admin for review.
+
 PowerShell:
 
 ```powershell

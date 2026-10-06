@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .webhooks import razorpay_webhook
 
 urlpatterns = [
     path('cart/', views.cart_view, name='cart'),
@@ -13,4 +14,5 @@ urlpatterns = [
     path('payments/razorpay/verify/', views.verify_razorpay_payment, name='verify_razorpay_payment'),
     path('payments/razorpay/fail/<int:attempt_id>/', views.fail_razorpay_payment, name='fail_razorpay_payment'),
     path('payments/razorpay/resume/<int:order_id>/', views.resume_razorpay_payment, name='resume_razorpay_payment'),
+    path('payments/razorpay/webhook/', razorpay_webhook, name='razorpay_webhook'),
 ]

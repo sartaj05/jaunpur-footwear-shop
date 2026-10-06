@@ -197,6 +197,21 @@ class PaymentAttempt(models.Model):
         ordering = ['-created_at']
 
 
+class PaymentWebhookEvent(models.Model):
+    event_id = models.CharField(max_length=160, unique=True)
+    event_type = models.CharField(max_length=100)
+    status = models.CharField(max_length=12, choices=[('received', 'Received'), ('processed', 'Processed'), ('failed', 'Failed')], default='received')
+    error_summary = models.CharField(max_length=240, blank=True)
+    received_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-received_at']
+
+    def __str__(self):
+        return f'{self.event_type} · {self.event_id}'
+
+
 class Coupon(models.Model):
     DISCOUNT_TYPES = [
         ('percent', 'Percentage'),
