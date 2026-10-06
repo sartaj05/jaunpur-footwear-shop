@@ -233,6 +233,29 @@ LOGOUT_REDIRECT_URL = 'home'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": "{asctime} {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        },
+    },
+    "root": {"handlers": ["console"], "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO")},
+    "loggers": {
+        "django.request": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "orders": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "shops": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
+
 MEDIA_STORAGE_BACKEND = os.environ.get(
     "DJANGO_MEDIA_STORAGE", "s3" if IS_PRODUCTION else "local"
 ).strip().lower()
