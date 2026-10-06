@@ -14,6 +14,8 @@ urlpatterns = [
     path('seller/products/<int:product_id>/variants/', views.seller_manage_variants, name='seller_manage_variants'),
     path('coverage/', views.manage_shop_coverage, name='manage_shop_coverage'),
     path('coverage/<int:coverage_id>/remove/', views.remove_shop_coverage, name='remove_shop_coverage'),
+    path('seller/fulfillment-slots/', views.manage_fulfillment_slots, name='manage_fulfillment_slots'),
+    path('seller/fulfillment-slots/<int:slot_id>/remove/', views.remove_fulfillment_slot, name='remove_fulfillment_slot'),
     path('', views.shop_directory, name='shop_directory'),
     path('<slug:slug>/', views.shop_page, name='shop_page'),
 ]

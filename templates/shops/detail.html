@@ -8,6 +8,7 @@
     <p>{{ shop.address }}{% if shop.opening_hours %} · Hours: {{ shop.opening_hours }}{% endif %}</p>
     <p>Call <a href="tel:{{ shop.phone }}">{{ shop.phone }}</a></p>
     {% if coverage_areas %}<h3>Delivery areas</h3><ul>{% for area in coverage_areas %}<li>{{ area.area_name|default:area.pincode }} · delivery ₹{{ area.delivery_fee }}</li>{% endfor %}</ul>{% endif %}
+    {% if fulfillment_slots %}<h3>Pickup and delivery hours</h3><ul>{% for slot in fulfillment_slots %}<li>{{ slot.get_weekday_display }} · {{ slot.get_mode_display }} · {{ slot.start_time|time:'g:i A' }}–{{ slot.end_time|time:'g:i A' }}</li>{% endfor %}</ul>{% endif %}
     <h2>Products from {{ shop.name }}</h2>
     <div class="product-grid">
         {% for product in products %}<article class="product-card"><img src="{{ product.image.url }}" alt="{{ product.name }}"><div class="product-info"><p>{{ product.brand.name }}</p><h3>{{ product.name }}</h3><p>Sizes: {{ product.available_sizes }}</p><strong>₹{{ product.final_price }}</strong><a class="card-btn" href="{% url 'product_detail' product.id %}">View details</a></div></article>

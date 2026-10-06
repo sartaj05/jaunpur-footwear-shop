@@ -1,5 +1,6 @@
 import re
 from decimal import Decimal, InvalidOperation
+from datetime import time
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -9,7 +10,7 @@ from products.models import Brand, Category, Product, ProductVariant
 from orders.models import OrderTrackingEvent, SellerOrder
 from orders.notifications import send_order_status_update
 
-from .models import Shop, ShopCoverage
+from .models import Shop, ShopCoverage, ShopFulfillmentSlot
 
 
 @login_required
@@ -66,6 +67,7 @@ def shop_page(request, slug):
         'shop': shop,
         'products': products,
         'coverage_areas': shop.coverage_areas.filter(is_active=True),
+        'fulfillment_slots': shop.fulfillment_slots.filter(is_active=True),
     })
 
 
@@ -104,6 +106,53 @@ def remove_shop_coverage(request, coverage_id):
         coverage.delete()
         messages.success(request, 'Delivery coverage removed.')
     return redirect('manage_shop_coverage')
+
+
+@login_required
+def manage_fulfillment_slots(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    if request.method == 'POST':
+        mode = request.POST.get('mode')
+        try:
+            weekday = int(request.POST.get('weekday', '-1'))
+            start_time = time.fromisoformat(request.POST.get('start_time', ''))
+            end_time = time.fromisoformat(request.POST.get('end_time', ''))
+            max_orders = int(request.POST.get('max_orders', '20'))
+        except (TypeError, ValueError):
+            weekday, start_time, end_time, max_orders = -1, None, None, 0
+        if mode not in ('delivery', 'pickup') or weekday not in range(7) or not start_time or not end_time or end_time <= start_time or max_orders < 1:
+            messages.error(request, 'Choose a mode, weekday, valid opening hours, and capacity of at least one.')
+        else:
+            ShopFulfillmentSlot.objects.create(
+                shop=shop,
+                mode=mode,
+                weekday=weekday,
+                start_time=start_time,
+                end_time=end_time,
+                max_orders=max_orders,
+            )
+            messages.success(request, 'Fulfillment time slot added.')
+            return redirect('manage_fulfillment_slots')
+    return render(request, 'shops/fulfillment_slots.html', {
+        'shop': shop,
+        'slots': shop.fulfillment_slots.all(),
+        'weekdays': ShopFulfillmentSlot.WEEKDAY_CHOICES,
+        'modes': ShopFulfillmentSlot.MODE_CHOICES,
+    })
+
+
+@login_required
+def remove_fulfillment_slot(request, slot_id):
+    slot = get_object_or_404(ShopFulfillmentSlot, pk=slot_id, shop__owner=request.user, shop__status='approved')
+    if request.method == 'POST':
+        if slot.seller_orders.exists():
+            slot.is_active = False
+            slot.save(update_fields=['is_active'])
+            messages.success(request, 'The slot was closed for new orders; existing bookings keep their schedule.')
+        else:
+            slot.delete()
+            messages.success(request, 'Fulfillment time slot removed.')
+    return redirect('manage_fulfillment_slots')
 
 
 @login_required

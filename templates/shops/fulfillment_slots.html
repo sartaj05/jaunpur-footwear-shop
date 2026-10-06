@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>{{ shop.name }} delivery and pickup slots</h1><p>Set weekly hours customers can choose at checkout.</p></section>
+<section class="checkout-page"><form method="post" class="checkout-form-card">{% csrf_token %}
+    <div class="form-group"><label>Service</label><select name="mode">{% for value,label in modes %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+    <div class="form-group"><label>Weekday</label><select name="weekday">{% for value,label in weekdays %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+    <div class="form-group"><label>Opens</label><input type="time" name="start_time" required></div>
+    <div class="form-group"><label>Closes</label><input type="time" name="end_time" required></div>
+    <div class="form-group"><label>Maximum orders in this window</label><input type="number" name="max_orders" min="1" max="500" value="20" required></div>
+    <button class="auth-btn">Add time slot</button>
+</form><div class="checkout-form-card"><h2>Weekly schedule</h2>
+    {% for slot in slots %}<div><p>{{ slot.get_weekday_display }} · {{ slot.get_mode_display }} · {{ slot.start_time|time:'g:i A' }}–{{ slot.end_time|time:'g:i A' }} · up to {{ slot.max_orders }} orders</p><form method="post" action="{% url 'remove_fulfillment_slot' slot.id %}">{% csrf_token %}<button class="secondary-btn">Remove</button></form></div>{% empty %}<p>No delivery or pickup hours have been added.</p>{% endfor %}
+</div></section>
+{% endblock %}

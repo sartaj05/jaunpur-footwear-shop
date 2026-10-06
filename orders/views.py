@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
-from datetime import timedelta
+from datetime import date, timedelta
 from django.conf import settings
 from decimal import Decimal
 import re
@@ -19,6 +19,7 @@ from .payments import (
     release_order_inventory,
     verify_razorpay_signature,
 )
+from shops.models import ShopCoverage, ShopFulfillmentSlot
 
 
 def delivery_fee_for(pincode, subtotal):
@@ -30,6 +31,113 @@ def delivery_fee_for(pincode, subtotal):
             return Decimal('0.00')
         return rate.fee
     return Decimal(str(getattr(settings, 'DEFAULT_DELIVERY_FEE', '50.00')))
+
+
+def checkout_seller_groups(items, pincode=''):
+    groups = {}
+    for item in items:
+        shop = item.product.shop if item.product.shop_id else None
+        key = shop.pk if shop else None
+        if key not in groups:
+            groups[key] = {'key': str(key) if key else 'platform', 'shop': shop, 'subtotal': Decimal('0.00')}
+        unit_price = item.variant.final_price() if item.variant_id else item.product.final_price()
+        groups[key]['subtotal'] += unit_price * item.quantity
+    result = []
+    for group in groups.values():
+        shop = group['shop']
+        coverage = ShopCoverage.objects.filter(shop=shop, pincode=pincode, is_active=True).first() if shop and pincode else None
+        slots = list(shop.fulfillment_slots.filter(is_active=True)) if shop else []
+        group['coverage'] = coverage
+        group['slots'] = slots
+        has_delivery_slot = any(slot.mode == 'delivery' for slot in slots)
+        group['delivery_available'] = (coverage is not None and has_delivery_slot) if pincode else (
+            bool(shop.coverage_areas.filter(is_active=True).exists()) and has_delivery_slot if shop else True
+        )
+        group['pickup_available'] = any(slot.mode == 'pickup' for slot in slots)
+        group['default_method'] = 'delivery' if group['delivery_available'] else 'pickup' if group['pickup_available'] else 'delivery'
+        if pincode:
+            if shop and coverage:
+                if coverage.free_delivery_minimum is not None and group['subtotal'] >= coverage.free_delivery_minimum:
+                    group['delivery_fee_preview'] = Decimal('0.00')
+                else:
+                    group['delivery_fee_preview'] = coverage.delivery_fee
+            elif not shop:
+                group['delivery_fee_preview'] = delivery_fee_for(pincode, group['subtotal'])
+            else:
+                group['delivery_fee_preview'] = Decimal('0.00')
+        else:
+            group['delivery_fee_preview'] = Decimal('0.00')
+        group['shipping_preview'] = group['delivery_fee_preview'] if group['default_method'] == 'delivery' else Decimal('0.00')
+        result.append(group)
+    return result
+
+
+def resolve_checkout_fulfillment(items, pincode, post_data):
+    selections = {}
+    groups = {}
+    for item in items:
+        shop = item.product.shop if item.product.shop_id else None
+        key = shop.pk if shop else None
+        if key not in groups:
+            groups[key] = {'shop': shop, 'subtotal': Decimal('0.00')}
+        unit_price = item.variant.final_price() if item.variant_id else item.product.final_price()
+        groups[key]['subtotal'] += unit_price * item.quantity
+
+    for key, group in groups.items():
+        shop = group['shop']
+        form_key = str(key) if key else 'platform'
+        method = post_data.get(f'fulfillment_{form_key}', 'delivery')
+        subtotal = group['subtotal']
+        if not shop:
+            if method != 'delivery':
+                return None, None, 'Choose delivery for the Jaunpur Footwear catalog items.'
+            selections[key] = {
+                'method': 'delivery',
+                'date': None,
+                'slot': None,
+                'shipping': delivery_fee_for(pincode, subtotal),
+            }
+            continue
+
+        if method not in ('delivery', 'pickup'):
+            return None, None, f'Choose delivery or pickup for {shop.name}.'
+        try:
+            selected_date = date.fromisoformat(post_data.get(f'fulfillment_date_{form_key}', ''))
+        except (TypeError, ValueError):
+            return None, None, f'Choose a date for {shop.name}.'
+        if selected_date < timezone.localdate():
+            return None, None, 'Choose today or a future fulfillment date.'
+        try:
+            slot_id = int(post_data.get(f'fulfillment_slot_{form_key}', ''))
+        except (TypeError, ValueError):
+            return None, None, f'Choose a time slot for {shop.name}.'
+        slot = ShopFulfillmentSlot.objects.select_for_update().filter(
+            pk=slot_id,
+            shop=shop,
+            mode=method,
+            weekday=selected_date.weekday(),
+            is_active=True,
+        ).first()
+        if not slot:
+            return None, None, f'That time slot is not available for {shop.name} on the selected date.'
+        reserved_count = slot.seller_orders.filter(fulfillment_date=selected_date).exclude(order__status='cancelled').count()
+        if reserved_count >= slot.max_orders:
+            return None, None, f'That {shop.name} time slot is full. Choose another slot.'
+        shipping = Decimal('0.00')
+        if method == 'delivery':
+            coverage = ShopCoverage.objects.filter(shop=shop, pincode=pincode, is_active=True).first()
+            if not coverage:
+                return None, None, f'{shop.name} does not deliver to PIN code {pincode}; choose pickup instead.'
+            shipping = coverage.delivery_fee
+            if coverage.free_delivery_minimum is not None and subtotal >= coverage.free_delivery_minimum:
+                shipping = Decimal('0.00')
+        selections[key] = {
+            'method': method,
+            'date': selected_date,
+            'slot': slot,
+            'shipping': shipping,
+        }
+    return selections, sum((item['shipping'] for item in selections.values()), Decimal('0.00')), None
 
 
 @login_required
@@ -115,7 +223,7 @@ def remove_cart_item(request, item_id):
 
 @login_required
 def checkout(request):
-    items = CartItem.objects.filter(user=request.user)
+    items = CartItem.objects.filter(user=request.user).select_related('product__shop', 'variant')
 
     if not items.exists():
         return redirect('cart')
@@ -133,7 +241,8 @@ def checkout(request):
             messages.warning(request, 'The applied coupon is no longer valid.')
 
     pincode = request.session.get('delivery_pincode', '')
-    shipping_amount = delivery_fee_for(pincode, total) if pincode else Decimal('0.00')
+    checkout_sellers = checkout_seller_groups(items, pincode)
+    shipping_amount = sum((seller['shipping_preview'] for seller in checkout_sellers), Decimal('0.00'))
 
     if request.method == 'POST' and request.POST.get('action') == 'estimate_delivery':
         submitted_pincode = request.POST.get('pincode', '').strip()
@@ -162,9 +271,12 @@ def checkout(request):
             locked_items = list(
                 CartItem.objects.select_for_update()
                 .filter(user=request.user)
-                .select_related('product', 'variant')
+                .select_related('product__shop', 'variant')
             )
             for item in locked_items:
+                if not item.product.is_active or (item.product.shop_id and item.product.shop.status != 'approved'):
+                    messages.error(request, f'{item.product.name} is no longer available in the Jaunpur catalog.')
+                    return redirect('cart')
                 stock_owner = item.variant if item.variant_id else item.product
                 if item.quantity > stock_owner.stock:
                     messages.error(request, f'{item.product.name} no longer has enough stock for your cart.')
@@ -180,7 +292,14 @@ def checkout(request):
             else:
                 locked_coupon = None
                 locked_discount = 0
-            locked_shipping = delivery_fee_for(pincode, locked_subtotal)
+            locked_fulfillment, locked_shipping, fulfillment_error = resolve_checkout_fulfillment(
+                locked_items,
+                pincode,
+                request.POST,
+            )
+            if fulfillment_error:
+                messages.error(request, fulfillment_error)
+                return redirect('checkout')
 
             order = Order.objects.create(
                 user=request.user,
@@ -207,10 +326,15 @@ def checkout(request):
                 unit_price = item.variant.final_price() if item.variant_id else item.product.final_price()
                 seller_order_key = item.product.shop_id
                 if seller_order_key not in seller_orders:
+                    fulfillment = locked_fulfillment[seller_order_key]
                     seller_orders[seller_order_key] = SellerOrder.objects.create(
                         order=order,
                         shop_id=seller_order_key,
                         subtotal=Decimal('0.00'),
+                        shipping_amount=fulfillment['shipping'],
+                        fulfillment_method=fulfillment['method'],
+                        fulfillment_date=fulfillment['date'],
+                        fulfillment_slot=fulfillment['slot'],
                     )
                 seller_order = seller_orders[seller_order_key]
                 seller_order.subtotal += unit_price * item.quantity
@@ -288,6 +412,10 @@ def checkout(request):
         'coupon_code': coupon_code,
         'pincode': pincode,
         'shipping_amount': shipping_amount,
+        'base_total': total - discount,
+        'checkout_sellers': checkout_sellers,
+        'tomorrow': (timezone.localdate() + timedelta(days=1)).isoformat(),
+        'today': timezone.localdate().isoformat(),
     })
 
 

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Shop, ShopCoverage
+from .models import Shop, ShopCoverage, ShopFulfillmentSlot
 
 
 @admin.register(Shop)
@@ -25,3 +25,10 @@ class ShopCoverageAdmin(admin.ModelAdmin):
     list_display = ['shop', 'area_name', 'pincode', 'delivery_fee', 'is_active']
     list_filter = ['is_active', 'pincode']
     search_fields = ['shop__name', 'area_name', 'pincode']
+
+
+@admin.register(ShopFulfillmentSlot)
+class ShopFulfillmentSlotAdmin(admin.ModelAdmin):
+    list_display = ['shop', 'mode', 'weekday', 'start_time', 'end_time', 'is_active']
+    list_filter = ['mode', 'weekday', 'is_active']
+    search_fields = ['shop__name']

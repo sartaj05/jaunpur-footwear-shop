@@ -2,7 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from products.models import Product, ProductVariant
-from shops.models import Shop
+from shops.models import Shop, ShopFulfillmentSlot
 from decimal import Decimal
 
 
@@ -87,6 +87,10 @@ class SellerOrder(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='seller_orders')
     shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, blank=True, null=True, related_name='seller_orders')
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    shipping_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    fulfillment_method = models.CharField(max_length=10, choices=[('delivery', 'Local delivery'), ('pickup', 'Shop pickup')], default='delivery')
+    fulfillment_date = models.DateField(blank=True, null=True)
+    fulfillment_slot = models.ForeignKey(ShopFulfillmentSlot, on_delete=models.SET_NULL, blank=True, null=True, related_name='seller_orders')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 

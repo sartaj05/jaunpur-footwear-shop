@@ -47,6 +47,29 @@
                 <input id="deliveryPincode" type="text" name="pincode" value="{{ pincode }}" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" placeholder="6-digit PIN code" required>
             </div>
 
+            <section class="checkout-form-card fulfillment-options">
+                <h2>Delivery or pickup by shop</h2>
+                {% for seller in checkout_sellers %}
+                <div class="seller-fulfillment" data-seller="{{ seller.key }}">
+                    <h3>{{ seller.shop.name|default:'Jaunpur Footwear' }}</h3>
+                    <label>How would you like to receive these items?</label>
+                    <select name="fulfillment_{{ seller.key }}" class="fulfillment-method" required>
+                        {% if seller.delivery_available %}<option value="delivery" {% if seller.default_method == 'delivery' %}selected{% endif %}>Local delivery</option>{% endif %}
+                        {% if seller.pickup_available %}<option value="pickup" {% if seller.default_method == 'pickup' %}selected{% endif %}>Pick up from shop</option>{% endif %}
+                    </select>
+                    {% if seller.shop %}
+                    <label>Preferred date</label>
+                    <input type="date" name="fulfillment_date_{{ seller.key }}" class="fulfillment-date" min="{{ today }}" value="{{ tomorrow }}" required>
+                    <label>Available time</label>
+                    <select name="fulfillment_slot_{{ seller.key }}" class="fulfillment-slot" required>
+                        <option value="">Choose a day and time</option>
+                        {% for slot in seller.slots %}<option value="{{ slot.id }}" data-mode="{{ slot.mode }}" data-weekday="{{ slot.weekday }}">{{ slot.get_weekday_display }} · {{ slot.get_mode_display }} · {{ slot.start_time|time:'g:i A' }}–{{ slot.end_time|time:'g:i A' }}</option>{% endfor %}
+                    </select>
+                    {% else %}<p>Local delivery for these catalog items.</p>{% endif %}
+                </div>
+                {% empty %}<p>No shop groups in this cart.</p>{% endfor %}
+            </section>
+
             <fieldset class="payment-methods">
                 <legend>Payment method</legend>
                 <label><input type="radio" name="payment_method" value="cod" checked> Cash on Delivery</label>
@@ -73,7 +96,7 @@
         </div>
         {% endfor %}
 
-        <div class="summary-row"><span>Delivery</span><strong>&#8377;{{ shipping_amount }}</strong></div>
+        {% for seller in checkout_sellers %}<div class="summary-row"><span>{{ seller.shop.name|default:'Jaunpur Footwear' }} delivery</span><strong id="shipping-{{ seller.key }}" data-delivery-fee="{{ seller.delivery_fee_preview }}">₹{{ seller.shipping_preview }}</strong></div>{% endfor %}
         {% if coupon_code %}
         <div class="summary-row"><span>Coupon ({{ coupon_code }})</span><strong>-₹{{ discount }}</strong></div>
         {% endif %}
@@ -81,9 +104,51 @@
             <span>Subtotal</span>
             <strong>₹{{ total }}</strong>
         </div>
-        <div class="summary-row total"><span>Total</span><strong>₹{{ grand_total }}</strong></div>
+        <div class="summary-row total"><span>Total</span><strong id="grandTotal" data-base-total="{{ base_total }}">₹{{ grand_total }}</strong></div>
     </div>
 
 </section>
+
+<script>
+    const grandTotal = document.getElementById('grandTotal');
+    function updateGrandTotal() {
+        let shippingTotal = 0;
+        document.querySelectorAll('.seller-fulfillment').forEach(function (sellerSection) {
+            const method = sellerSection.querySelector('.fulfillment-method');
+            const fee = document.getElementById('shipping-' + sellerSection.dataset.seller);
+            if (fee && (!method || method.value === 'delivery')) shippingTotal += Number(fee.dataset.deliveryFee || 0);
+        });
+        grandTotal.textContent = '₹' + (Number(grandTotal.dataset.baseTotal) + shippingTotal).toFixed(2);
+    }
+    document.querySelectorAll('.seller-fulfillment').forEach(function (sellerSection) {
+        const method = sellerSection.querySelector('.fulfillment-method');
+        const date = sellerSection.querySelector('.fulfillment-date');
+        const slot = sellerSection.querySelector('.fulfillment-slot');
+        const shipping = document.getElementById('shipping-' + sellerSection.dataset.seller);
+        if (method && shipping) {
+            method.addEventListener('change', function () {
+                const fee = method.value === 'delivery' ? shipping.dataset.deliveryFee : '0.00';
+                shipping.textContent = '₹' + fee;
+                updateGrandTotal();
+            });
+        }
+        if (!method || !date || !slot) return;
+        function updateSlots() {
+            const selectedDate = date.value ? new Date(date.value + 'T00:00:00') : null;
+            const weekday = selectedDate ? String((selectedDate.getDay() + 6) % 7) : '';
+            Array.from(slot.options).forEach(function (option) {
+                if (!option.value) return;
+                const available = option.dataset.mode === method.value && option.dataset.weekday === weekday;
+                option.hidden = !available;
+                option.disabled = !available;
+            });
+            if (slot.selectedOptions.length && slot.selectedOptions[0].disabled) slot.value = '';
+        }
+        method.addEventListener('change', updateSlots);
+        date.addEventListener('change', updateSlots);
+        updateSlots();
+    });
+    updateGrandTotal();
+</script>
 
 {% endblock %}

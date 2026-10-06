@@ -59,3 +59,29 @@ class ShopCoverage(models.Model):
 
     def __str__(self):
         return f'{self.shop.name} - {self.area_name or self.pincode}'
+
+
+class ShopFulfillmentSlot(models.Model):
+    MODE_CHOICES = [('delivery', 'Local delivery'), ('pickup', 'Shop pickup')]
+    WEEKDAY_CHOICES = [
+        (0, 'Monday'), (1, 'Tuesday'), (2, 'Wednesday'), (3, 'Thursday'),
+        (4, 'Friday'), (5, 'Saturday'), (6, 'Sunday'),
+    ]
+
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='fulfillment_slots')
+    mode = models.CharField(max_length=10, choices=MODE_CHOICES)
+    weekday = models.PositiveSmallIntegerField(choices=WEEKDAY_CHOICES)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    max_orders = models.PositiveSmallIntegerField(default=20)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['weekday', 'start_time']
+        constraints = [
+            models.CheckConstraint(condition=models.Q(end_time__gt=models.F('start_time')), name='shop_slot_end_after_start'),
+            models.CheckConstraint(condition=models.Q(max_orders__gte=1), name='shop_slot_min_capacity_one'),
+        ]
+
+    def __str__(self):
+        return f'{self.shop.name} · {self.get_weekday_display()} {self.start_time}-{self.end_time}'
