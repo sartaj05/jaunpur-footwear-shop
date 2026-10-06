@@ -94,6 +94,8 @@ See Django's [deployment checklist](https://docs.djangoproject.com/en/5.2/howto/
 
 The marketplace OAuth/API flows are gated on provider approval, app credentials, and each seller's authorization. WhatsApp requires Meta configuration and customer opt-in. ONDC currently stores participant onboarding details and exports a catalog snapshot; it does not sync live ONDC inventory or orders.
 
+GitHub Actions runs Django checks, migration drift checks, and the automated test suite for pushes and pull requests to `main` and `sartaj`.
+
 ## Razorpay Setup
 
 Online checkout is available after setting Razorpay API keys in the environment. Use test keys while developing; never commit your secret key.
