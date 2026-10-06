@@ -24,6 +24,18 @@
             {% endif %}
         </div>
 
+        {% if user.is_authenticated %}
+            {% if is_wishlisted %}
+            <form method="post" action="{% url 'remove_from_wishlist' product.id %}">
+                {% csrf_token %}<button class="secondary-btn" type="submit">Remove from Wishlist</button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'add_to_wishlist' product.id %}">
+                {% csrf_token %}<button class="secondary-btn" type="submit">Save to Wishlist</button>
+            </form>
+            {% endif %}
+        {% endif %}
+
         <p class="detail-description">{{ product.description }}</p>
 
         <form method="post" action="{% url 'add_to_cart' product.id %}" class="cart-form">

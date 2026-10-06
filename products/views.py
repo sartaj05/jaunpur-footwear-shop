@@ -1,5 +1,9 @@
 from django.shortcuts import render, get_object_or_404
-from .models import Product, Brand, Category
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+from django.views.decorators.http import require_POST
+from .models import Product, Brand, Category, WishlistItem
 
 
 def home(request):
@@ -52,7 +56,37 @@ def product_detail(request, pk):
         'product': product,
         'sizes': sizes,
         'variants': variants,
+        'is_wishlisted': (
+            request.user.is_authenticated
+            and WishlistItem.objects.filter(user=request.user, product=product).exists()
+        ),
     })
+
+
+@login_required
+def wishlist_view(request):
+    items = WishlistItem.objects.filter(user=request.user).select_related(
+        'product', 'product__brand', 'product__category'
+    )
+    return render(request, 'products/wishlist.html', {'wishlist_items': items})
+
+
+@login_required
+@require_POST
+def add_to_wishlist(request, product_id):
+    product = get_object_or_404(Product, pk=product_id, is_active=True)
+    _, created = WishlistItem.objects.get_or_create(user=request.user, product=product)
+    if created:
+        messages.success(request, f'{product.name} was saved to your wishlist.')
+    return redirect('product_detail', pk=product.pk)
+
+
+@login_required
+@require_POST
+def remove_from_wishlist(request, product_id):
+    WishlistItem.objects.filter(user=request.user, product_id=product_id).delete()
+    messages.success(request, 'Product removed from your wishlist.')
+    return redirect('wishlist')
 
 
 def size_finder(request):

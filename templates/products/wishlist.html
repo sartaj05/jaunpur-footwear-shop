@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="page-banner">
+    <h1>My Wishlist</h1>
+    <p>Footwear you saved for later</p>
+</section>
+
+<section class="products-area wishlist-page">
+    <div class="product-grid">
+        {% for item in wishlist_items %}
+        <article class="product-card">
+            <div class="product-img-wrap">
+                {% if item.product.image %}<img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">{% endif %}
+            </div>
+            <div class="product-info">
+                <p class="brand-name">{{ item.product.brand.name }}</p>
+                <h3>{{ item.product.name }}</h3>
+                <p class="price"><strong>₹{{ item.product.final_price }}</strong></p>
+                <a href="{% url 'product_detail' item.product.id %}" class="card-btn">View Details</a>
+                <form method="post" action="{% url 'remove_from_wishlist' item.product.id %}">
+                    {% csrf_token %}<button class="remove-btn" type="submit">Remove</button>
+                </form>
+            </div>
+        </article>
+        {% empty %}
+        <div class="empty-box">
+            <h3>Your wishlist is empty</h3>
+            <p>Save a product from its details page to find it here.</p>
+            <a href="{% url 'product_list' %}" class="primary-btn">Browse footwear</a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

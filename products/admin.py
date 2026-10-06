@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Brand, Category, Product, ProductVariant
+from .models import Brand, Category, Product, ProductVariant, WishlistItem
 
 
 class ProductVariantInline(admin.TabularInline):
@@ -35,3 +35,9 @@ class ProductAdmin(admin.ModelAdmin):
 
     list_filter = ['brand', 'category', 'gender', 'is_active', 'is_featured']
     search_fields = ['name', 'brand__name', 'category__name']
+
+
+@admin.register(WishlistItem)
+class WishlistItemAdmin(admin.ModelAdmin):
+    list_display = ['user', 'product', 'created_at']
+    search_fields = ['user__username', 'product__name']
