@@ -2,11 +2,14 @@ import re
 import csv
 import io
 import os
+import secrets
 from decimal import Decimal, InvalidOperation
 from datetime import time, timedelta, datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.core import signing
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,6 +17,8 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Q, Sum
 from django.db import transaction
+from django.views.decorators.http import require_GET, require_POST
+from urllib.parse import urlencode
 
 from products.models import Brand, Category, Product, ProductVariant
 from orders.models import Coupon, OrderTrackingEvent, ReturnRequest, SellerOrder
@@ -22,6 +27,12 @@ from accounts.models import ReferralReward
 from accounts.services import award_loyalty_for_order
 
 from .models import MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
+from .marketplace_auth import (
+    MarketplaceAuthorizationError,
+    encrypt_marketplace_token,
+    exchange_flipkart_code,
+    marketplace_encryption_is_configured,
+)
 
 
 def customer_delivery_pincode(request):
@@ -576,6 +587,100 @@ def marketplace_hub(request):
             'connection': shop.marketplace_connections.filter(channel=channel).first(),
         })
     return render(request, 'shops/marketplaces.html', {'shop': shop, 'channel_rows': channel_rows})
+
+
+@login_required
+@require_POST
+def start_flipkart_authorization(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    connection = get_object_or_404(MarketplaceConnection, shop=shop, channel='flipkart', status='approved')
+    if not all((settings.FLIPKART_CLIENT_ID, settings.FLIPKART_CLIENT_SECRET, settings.FLIPKART_REDIRECT_URI)):
+        messages.error(request, 'Flipkart developer app credentials and callback URL are not configured yet.')
+        return redirect('marketplace_hub')
+    if not marketplace_encryption_is_configured():
+        messages.error(request, 'Set a valid marketplace token encryption key before connecting a seller account.')
+        return redirect('marketplace_hub')
+
+    state = signing.dumps({
+        'connection_id': connection.pk,
+        'owner_id': request.user.pk,
+        'nonce': secrets.token_urlsafe(24),
+    }, salt='marketplace-flipkart-oauth', compress=True)
+    request.session['flipkart_oauth_state'] = state
+    query = urlencode({
+        'client_id': settings.FLIPKART_CLIENT_ID,
+        'redirect_uri': settings.FLIPKART_REDIRECT_URI,
+        'response_type': 'code',
+        'scope': 'Seller_Api',
+        'state': state,
+    })
+    return redirect(f'{settings.FLIPKART_AUTHORIZATION_URL}?{query}')
+
+
+@login_required
+@require_GET
+def flipkart_authorization_callback(request):
+    state = request.GET.get('state', '')
+    expected_state = request.session.pop('flipkart_oauth_state', '')
+    if not state or state != expected_state:
+        messages.error(request, 'Flipkart authorization could not be verified. Start the connection again.')
+        return redirect('marketplace_hub')
+    try:
+        state_data = signing.loads(state, salt='marketplace-flipkart-oauth', max_age=900)
+    except signing.BadSignature:
+        messages.error(request, 'Flipkart authorization expired. Start the connection again.')
+        return redirect('marketplace_hub')
+    if state_data.get('owner_id') != request.user.pk:
+        messages.error(request, 'This Flipkart authorization belongs to a different seller account.')
+        return redirect('marketplace_hub')
+    connection = MarketplaceConnection.objects.filter(
+        pk=state_data.get('connection_id'), shop__owner=request.user, channel='flipkart', status='approved',
+    ).first()
+    if not connection:
+        messages.error(request, 'The approved Flipkart seller setup could not be found.')
+        return redirect('marketplace_hub')
+    if request.GET.get('error'):
+        messages.error(request, 'Flipkart seller authorization was declined or cancelled.')
+        return redirect('marketplace_hub')
+    code = request.GET.get('code', '').strip()
+    if not code:
+        messages.error(request, 'Flipkart did not return an authorization code.')
+        return redirect('marketplace_hub')
+    try:
+        token_data = exchange_flipkart_code(code)
+        expires_in = max(0, int(token_data.get('expires_in', 0)))
+        connection.encrypted_access_token = encrypt_marketplace_token(token_data['access_token'])
+        connection.encrypted_refresh_token = encrypt_marketplace_token(token_data.get('refresh_token', ''))
+    except (MarketplaceAuthorizationError, TypeError, ValueError):
+        messages.error(request, 'Flipkart connection failed. Check the app setup and try again.')
+        return redirect('marketplace_hub')
+    connection.token_expires_at = timezone.now() + timedelta(seconds=expires_in) if expires_in else None
+    connection.authorization_status = 'connected'
+    connection.authorized_at = timezone.now()
+    connection.save(update_fields=[
+        'encrypted_access_token', 'encrypted_refresh_token', 'token_expires_at',
+        'authorization_status', 'authorized_at', 'updated_at',
+    ])
+    messages.success(request, 'The Flipkart seller account authorized this shop. Product, stock, and order synchronization is the next setup step.')
+    return redirect('marketplace_hub')
+
+
+@login_required
+@require_POST
+def disconnect_flipkart(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    connection = get_object_or_404(MarketplaceConnection, shop=shop, channel='flipkart', status='approved')
+    connection.encrypted_access_token = ''
+    connection.encrypted_refresh_token = ''
+    connection.token_expires_at = None
+    connection.authorized_at = None
+    connection.authorization_status = 'not_connected'
+    connection.save(update_fields=[
+        'encrypted_access_token', 'encrypted_refresh_token', 'token_expires_at',
+        'authorized_at', 'authorization_status', 'updated_at',
+    ])
+    messages.success(request, 'The Flipkart authorization was removed from this Jaunpur shop.')
+    return redirect('marketplace_hub')
 
 
 @login_required

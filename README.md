@@ -15,6 +15,7 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 - One checkout split into shop-specific seller orders with separate progress
 - Shop pickup and local delivery appointments with weekly time slots
 - Amazon/Flipkart seller setup requests and catalog preparation CSV exports
+- Flipkart seller OAuth authorization with encrypted token storage
 - ONDC Seller Network Participant onboarding tracker for Jaunpur shops
 - Per-shop commission statements and staff-recorded payout ledger
 - PIN-code-targeted shop promotions
@@ -65,7 +66,7 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 python -m venv venv
 venv\Scripts\activate
 
-pip install django pillow
+pip install django pillow cryptography
 
 python manage.py makemigrations
 python manage.py migrate
@@ -87,6 +88,25 @@ python manage.py runserver
 ```
 
 Without these keys, Cash on Delivery remains available and online checkout is disabled.
+
+## Flipkart Seller Authorization
+
+After the Jaunpur Footwear admin approves a shop's Flipkart setup request, the shop owner can authorize that seller account from **Amazon and Flipkart setup**. Configure a registered Flipkart partner app and use this exact callback URL for the app and `FLIPKART_REDIRECT_URI`:
+
+```text
+https://your-domain.example/seller/marketplaces/flipkart/callback/
+```
+
+Set these environment values on the server:
+
+```text
+FLIPKART_CLIENT_ID
+FLIPKART_CLIENT_SECRET
+FLIPKART_REDIRECT_URI
+MARKETPLACE_TOKEN_ENCRYPTION_KEY
+```
+
+Generate a Fernet key once with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Keep the same key in a secret manager across deploys and back it up securely; changing it makes previously stored marketplace tokens unreadable. Seller tokens are encrypted before they are stored. Flipkart partner app access and each seller's authorization are required. This connection implements seller authorization and token storage; catalog and order API sync is a separate workflow. See the [Flipkart Seller API documentation](https://seller.flipkart.com/api-docs/FMSAPI.html).
 
 ## WhatsApp Order Updates
 

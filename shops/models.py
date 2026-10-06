@@ -118,6 +118,11 @@ class MarketplaceConnection(models.Model):
         ('pending', 'Request pending'),
         ('approved', 'Seller setup approved'),
     ]
+    AUTHORIZATION_STATUS_CHOICES = [
+        ('not_connected', 'Not connected'),
+        ('connected', 'Seller authorized'),
+        ('reauthorization_required', 'Reauthorization required'),
+    ]
 
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='marketplace_connections')
     channel = models.CharField(max_length=12, choices=CHANNEL_CHOICES)
@@ -125,6 +130,11 @@ class MarketplaceConnection(models.Model):
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='not_requested')
     staff_note = models.TextField(blank=True)
     requested_at = models.DateTimeField(blank=True, null=True)
+    authorization_status = models.CharField(max_length=24, choices=AUTHORIZATION_STATUS_CHOICES, default='not_connected')
+    encrypted_access_token = models.TextField(blank=True)
+    encrypted_refresh_token = models.TextField(blank=True)
+    token_expires_at = models.DateTimeField(blank=True, null=True)
+    authorized_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
