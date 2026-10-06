@@ -1,5 +1,7 @@
 # Jaunpur Footwear Shop
 
+Copy `.env.example` to `.env` for local configuration. Production mode is enabled with `DJANGO_ENV=production`; it requires `DJANGO_SECRET_KEY` and `DJANGO_ALLOWED_HOSTS`, disables debug mode, and enables secure cookies, HTTPS redirect, and HSTS. Review the [Django deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/) before launch.
+
 A Jaunpur-focused, multi-seller footwear marketplace built with Django. Customers can browse local shop catalogs, check size/color stock, place orders, and track delivery. Local sellers can manage their storefronts, products, fulfillment, and connected marketplace workflows.
 
 This repository currently documents **46 feature areas**: 38 customer and seller areas plus 8 admin areas. Some features require an approved provider account or human review. In particular, Amazon/Flipkart API work needs authorized seller accounts, marketplace fees and settlements are entered manually, and ONDC is an onboarding handoff rather than a live network connection.
