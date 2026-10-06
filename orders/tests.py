@@ -4,9 +4,13 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from datetime import time, timedelta
+from django.utils import timezone
 
 from products.models import Brand, Category, Product
 from products.models import InventoryMovement
+from shops.models import Shop, ShopCoverage, ShopFulfillmentSlot
+from .views import checkout_seller_groups
 
 from .models import CartItem, Order, OrderItem
 
@@ -82,3 +86,25 @@ class CheckoutFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertTrue(CartItem.objects.filter(pk=item.pk).exists())
+
+    def test_seller_delivery_eta_is_shown_for_covered_pin(self):
+        shop = Shop.objects.create(
+            owner=self.user, name="Jaunpur Runner Shop", phone="9000000000",
+            address="Jaunpur", pincode="222001", status="approved",
+        )
+        ShopCoverage.objects.create(
+            shop=shop, pincode="222001", min_delivery_days=2, max_delivery_days=4,
+        )
+        ShopFulfillmentSlot.objects.create(
+            shop=shop, mode="delivery", weekday=0,
+            start_time=time(10, 0), end_time=time(12, 0), max_orders=3,
+        )
+        self.product.shop = shop
+        self.product.save(update_fields=["shop"])
+        cart_item = CartItem.objects.create(user=self.user, product=self.product, size="8", quantity=1)
+
+        seller = checkout_seller_groups([cart_item], "222001")[0]
+
+        self.assertTrue(seller["delivery_available"])
+        self.assertEqual(seller["delivery_eta_start"], (timezone.localdate() + timedelta(days=2)).isoformat())
+        self.assertEqual(seller["delivery_eta_end"], (timezone.localdate() + timedelta(days=4)).isoformat())

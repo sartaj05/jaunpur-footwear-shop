@@ -33,7 +33,7 @@ class ShopAdmin(admin.ModelAdmin):
 
 @admin.register(ShopCoverage)
 class ShopCoverageAdmin(admin.ModelAdmin):
-    list_display = ['shop', 'area_name', 'pincode', 'delivery_fee', 'is_active']
+    list_display = ['shop', 'area_name', 'pincode', 'delivery_fee', 'min_delivery_days', 'max_delivery_days', 'is_active']
     list_filter = ['is_active', 'pincode']
     search_fields = ['shop__name', 'area_name', 'pincode']
 

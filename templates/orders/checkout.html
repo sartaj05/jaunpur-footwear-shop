@@ -52,6 +52,7 @@
                 {% for seller in checkout_sellers %}
                 <div class="seller-fulfillment" data-seller="{{ seller.key }}">
                     <h3>{{ seller.shop.name|default:'Jaunpur Footwear' }}</h3>
+                    {% if seller.delivery_available and pincode %}<p>Estimated delivery: {{ seller.delivery_eta_start }} – {{ seller.delivery_eta_end }}</p>{% endif %}
                     <label>How would you like to receive these items?</label>
                     <select name="fulfillment_{{ seller.key }}" class="fulfillment-method" required>
                         {% if seller.delivery_available %}<option value="delivery" {% if seller.default_method == 'delivery' %}selected{% endif %}>Local delivery</option>{% endif %}

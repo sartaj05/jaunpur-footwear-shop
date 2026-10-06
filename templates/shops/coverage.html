@@ -6,6 +6,7 @@
         <div class="form-group"><label>PIN code</label><input name="pincode" pattern="[1-9][0-9]{5}" maxlength="6" inputmode="numeric" required></div>
         <div class="form-group"><label>Area name (optional)</label><input name="area_name" placeholder="Town, block, or locality"></div>
         <div class="form-group"><label>Delivery fee (₹)</label><input type="number" name="delivery_fee" min="0" step="0.01" value="50.00" required></div>
+        <div class="form-group"><label>Estimated delivery window (days)</label><div class="form-row"><input type="number" name="min_delivery_days" min="0" max="30" value="1" required aria-label="Minimum delivery days"><input type="number" name="max_delivery_days" min="0" max="30" value="3" required aria-label="Maximum delivery days"></div></div>
         <button class="auth-btn">Save coverage</button>
     </form>
     <div class="checkout-form-card"><h2>Covered PIN codes</h2>

@@ -73,12 +73,16 @@ class ShopCoverage(models.Model):
     area_name = models.CharField(max_length=100, blank=True)
     delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default='50.00')
     free_delivery_minimum = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    min_delivery_days = models.PositiveSmallIntegerField(default=1)
+    max_delivery_days = models.PositiveSmallIntegerField(default=3)
     is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['pincode']
         constraints = [
-            models.UniqueConstraint(fields=['shop', 'pincode'], name='unique_shop_coverage_pincode')
+            models.UniqueConstraint(fields=['shop', 'pincode'], name='unique_shop_coverage_pincode'),
+            models.CheckConstraint(condition=models.Q(max_delivery_days__gte=models.F('min_delivery_days')), name='shop_coverage_eta_range_valid'),
+            models.CheckConstraint(condition=models.Q(max_delivery_days__lte=30), name='shop_coverage_eta_max_30_days'),
         ]
 
     def __str__(self):

@@ -52,6 +52,10 @@ def checkout_seller_groups(items, pincode=''):
         coverage = ShopCoverage.objects.filter(shop=shop, pincode=pincode, is_active=True).first() if shop and pincode else None
         slots = list(shop.fulfillment_slots.filter(is_active=True)) if shop else []
         group['coverage'] = coverage
+        min_delivery_days = coverage.min_delivery_days if coverage else getattr(settings, 'DEFAULT_DELIVERY_MIN_DAYS', 1)
+        max_delivery_days = coverage.max_delivery_days if coverage else getattr(settings, 'DEFAULT_DELIVERY_MAX_DAYS', 3)
+        group['delivery_eta_start'] = (timezone.localdate() + timedelta(days=min_delivery_days)).isoformat()
+        group['delivery_eta_end'] = (timezone.localdate() + timedelta(days=max_delivery_days)).isoformat()
         group['slots'] = slots
         has_delivery_slot = any(slot.mode == 'delivery' for slot in slots)
         group['delivery_available'] = (coverage is not None and has_delivery_slot) if pincode else (

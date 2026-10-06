@@ -130,18 +130,31 @@ def manage_shop_coverage(request):
         pincode = request.POST.get('pincode', '').strip()
         area_name = request.POST.get('area_name', '').strip()
         try:
+            min_days = int(request.POST.get('min_delivery_days', '1'))
+            max_days = int(request.POST.get('max_delivery_days', '3'))
+            if min_days < 0 or max_days < min_days or max_days > 30:
+                raise ValueError
+        except (TypeError, ValueError):
+            min_days, max_days = None, None
+        try:
             fee = Decimal(request.POST.get('delivery_fee', '50'))
             if fee < 0:
                 raise InvalidOperation
         except (InvalidOperation, TypeError, ValueError):
             fee = None
-        if not re.fullmatch(r'[1-9][0-9]{5}', pincode) or fee is None:
-            messages.error(request, 'Enter a valid six-digit PIN code and a delivery fee of zero or more.')
+        if not re.fullmatch(r'[1-9][0-9]{5}', pincode) or fee is None or min_days is None:
+            messages.error(request, 'Enter a valid six-digit PIN code, delivery fee, and ETA range from 0 to 30 days.')
         else:
             ShopCoverage.objects.update_or_create(
                 shop=shop,
                 pincode=pincode,
-                defaults={'area_name': area_name, 'delivery_fee': fee, 'is_active': True},
+                defaults={
+                    'area_name': area_name,
+                    'delivery_fee': fee,
+                    'min_delivery_days': min_days,
+                    'max_delivery_days': max_days,
+                    'is_active': True,
+                },
             )
             messages.success(request, 'Delivery coverage saved for this PIN code.')
             return redirect('manage_shop_coverage')
