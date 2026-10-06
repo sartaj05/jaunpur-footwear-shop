@@ -7,6 +7,7 @@ urlpatterns = [
     path('apply/', views.apply_for_shop, name='shop_application'),
     path('seller/', views.seller_dashboard, name='seller_dashboard'),
     path('seller/orders/', views.seller_orders, name='seller_orders'),
+    path('seller/payouts/', views.seller_payout_ledger, name='seller_payout_ledger'),
     path('seller/orders/<int:seller_order_id>/status/', views.update_seller_order_status, name='update_seller_order_status'),
     path('seller/products/add/', views.seller_product_form, name='seller_add_product'),
     path('seller/products/<int:product_id>/edit/', views.seller_product_form, name='seller_edit_product'),

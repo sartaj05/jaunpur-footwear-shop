@@ -75,6 +75,7 @@ class OrderTrackingEvent(models.Model):
 
 
 class SellerOrder(models.Model):
+    PAYOUT_STATUS_CHOICES = [('pending', 'Pending payout'), ('paid', 'Paid out')]
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
@@ -87,6 +88,13 @@ class SellerOrder(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='seller_orders')
     shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, blank=True, null=True, related_name='seller_orders')
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    sales_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+    commission_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    net_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    payout_status = models.CharField(max_length=10, choices=PAYOUT_STATUS_CHOICES, default='pending')
+    payout_reference = models.CharField(max_length=120, blank=True)
+    paid_out_at = models.DateTimeField(blank=True, null=True)
     shipping_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     fulfillment_method = models.CharField(max_length=10, choices=[('delivery', 'Local delivery'), ('pickup', 'Shop pickup')], default='delivery')
     fulfillment_date = models.DateField(blank=True, null=True)

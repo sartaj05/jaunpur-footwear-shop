@@ -2,13 +2,13 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from datetime import timedelta
 
 from products.models import Product, Brand, Category
-from orders.models import Order, OrderItem, OrderTrackingEvent, PaymentAttempt
+from orders.models import Order, OrderItem, OrderTrackingEvent, PaymentAttempt, SellerOrder
 from orders.notifications import send_order_status_update
 from orders.payments import release_order_inventory
 from django.db import transaction
@@ -251,4 +251,45 @@ def sales_reports(request):
         'average_order_value': average_order_value,
         'sales_by_day': sales_by_day,
         'top_products': top_products,
+    })
+
+
+@staff_member_required
+def seller_payouts(request):
+    eligible = SellerOrder.objects.filter(
+        status='delivered',
+        payout_status='pending',
+        shop__isnull=False,
+    ).exclude(
+        order__status='cancelled',
+    ).filter(Q(order__payment_status='paid') | Q(order__payment_method='Cash on Delivery'))
+    if request.method == 'POST':
+        reference = request.POST.get('payout_reference', '').strip()
+        if not reference:
+            messages.error(request, 'Enter the bank or UPI transfer reference before recording a payout.')
+        else:
+            with transaction.atomic():
+                seller_order = get_object_or_404(
+                    SellerOrder.objects.select_for_update().select_related('order'),
+                    pk=request.POST.get('seller_order_id'),
+                )
+                payment_is_ready = (
+                    seller_order.order.payment_status == 'paid'
+                    or seller_order.order.payment_method == 'Cash on Delivery'
+                )
+                if seller_order.status != 'delivered' or seller_order.payout_status != 'pending' or not payment_is_ready:
+                    messages.error(request, 'This shop order is not eligible for payout yet.')
+                else:
+                    seller_order.payout_status = 'paid'
+                    seller_order.payout_reference = reference
+                    seller_order.paid_out_at = timezone.now()
+                    seller_order.save(update_fields=['payout_status', 'payout_reference', 'paid_out_at'])
+                    messages.success(request, 'Payout marked as sent. Confirm the transfer in your bank or UPI account.')
+        return redirect('seller_payouts')
+
+    paid = SellerOrder.objects.filter(payout_status='paid').select_related('shop', 'order').order_by('-paid_out_at')[:100]
+    return render(request, 'dashboard/payouts.html', {
+        'eligible_orders': eligible.select_related('shop', 'order').order_by('created_at'),
+        'paid_orders': paid,
+        'eligible_total': eligible.aggregate(total=Sum('net_amount'))['total'] or 0,
     })

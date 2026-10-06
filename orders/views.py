@@ -356,6 +356,27 @@ def checkout(request):
                 stock_owner.stock -= item.quantity
                 stock_owner.save(update_fields=['stock'])
 
+            seller_order_rows = list(seller_orders.values())
+            remaining_discount = Decimal(locked_discount)
+            for index, seller_order in enumerate(seller_order_rows):
+                if index == len(seller_order_rows) - 1:
+                    seller_discount = remaining_discount
+                elif locked_subtotal:
+                    seller_discount = (Decimal(locked_discount) * seller_order.subtotal / locked_subtotal).quantize(Decimal('0.01'))
+                    seller_discount = min(seller_discount, remaining_discount)
+                else:
+                    seller_discount = Decimal('0.00')
+                remaining_discount -= seller_discount
+                seller_order.sales_amount = max(Decimal('0.00'), seller_order.subtotal - seller_discount)
+                seller_order.commission_rate = seller_order.shop.commission_rate if seller_order.shop_id else Decimal('0.00')
+                seller_order.commission_amount = (
+                    seller_order.sales_amount * seller_order.commission_rate / Decimal('100')
+                ).quantize(Decimal('0.01'))
+                seller_order.net_amount = seller_order.sales_amount - seller_order.commission_amount
+                seller_order.save(update_fields=[
+                    'sales_amount', 'commission_rate', 'commission_amount', 'net_amount'
+                ])
+
             if locked_coupon and payment_method_choice == 'cod':
                 locked_coupon.used_count += 1
                 locked_coupon.save(update_fields=['used_count'])

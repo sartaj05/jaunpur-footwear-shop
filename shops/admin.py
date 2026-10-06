@@ -5,7 +5,7 @@ from .models import MarketplaceConnection, ONDCEnrollment, Shop, ShopCoverage, S
 
 @admin.register(Shop)
 class ShopAdmin(admin.ModelAdmin):
-    list_display = ['name', 'owner', 'city', 'pincode', 'status', 'is_featured', 'created_at']
+    list_display = ['name', 'owner', 'city', 'pincode', 'status', 'commission_rate', 'is_featured', 'created_at']
     list_filter = ['status', 'city', 'is_featured', 'created_at']
     search_fields = ['name', 'owner__username', 'phone', 'pincode']
     readonly_fields = ['created_at', 'updated_at']

@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.db.models import Q, Sum
 
 from products.models import Brand, Category, Product, ProductVariant
 from orders.models import OrderTrackingEvent, SellerOrder
@@ -162,7 +163,16 @@ def remove_fulfillment_slot(request, slot_id):
 def seller_dashboard(request):
     shop = get_object_or_404(Shop, owner=request.user)
     products = shop.products.select_related('brand', 'category').order_by('-created_at')
-    return render(request, 'shops/seller_dashboard.html', {'shop': shop, 'products': products})
+    ready_payouts = shop.seller_orders.filter(status='delivered', payout_status='pending').filter(
+        Q(order__payment_status='paid') | Q(order__payment_method='Cash on Delivery')
+    ).exclude(order__status='cancelled')
+    paid_payouts = shop.seller_orders.filter(payout_status='paid')
+    return render(request, 'shops/seller_dashboard.html', {
+        'shop': shop,
+        'products': products,
+        'pending_payout_total': ready_payouts.aggregate(total=Sum('net_amount'))['total'] or Decimal('0.00'),
+        'paid_payout_total': paid_payouts.aggregate(total=Sum('net_amount'))['total'] or Decimal('0.00'),
+    })
 
 
 @login_required
@@ -174,6 +184,13 @@ def seller_orders(request):
         'seller_orders': orders,
         'status_choices': SellerOrder.STATUS_CHOICES,
     })
+
+
+@login_required
+def seller_payout_ledger(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    seller_orders = shop.seller_orders.select_related('order').order_by('-created_at')
+    return render(request, 'shops/payout_ledger.html', {'shop': shop, 'seller_orders': seller_orders})
 
 
 @login_required

@@ -1,0 +1,15 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block content %}
+<h1>Jaunpur shop payouts</h1>
+<p>Eligible net payouts total ₹{{ eligible_total }}. Mark a row paid only after transferring the amount outside this app.</p>
+<h2>Ready to pay</h2>
+{% for seller_order in eligible_orders %}<article class="form-card">
+    <h3>{{ seller_order.shop.name }} · customer order #{{ seller_order.order_id }}</h3>
+    <p>Delivered · {{ seller_order.order.payment_method }} · gross ₹{{ seller_order.sales_amount }} · commission ₹{{ seller_order.commission_amount }} · net ₹{{ seller_order.net_amount }}</p>
+    <form method="post">{% csrf_token %}<input type="hidden" name="seller_order_id" value="{{ seller_order.id }}"><label>Bank / UPI transaction reference</label><input name="payout_reference" required maxlength="120"><button class="btn">Record payout sent</button></form>
+</article>{% empty %}<p>No shop orders are ready for payout.</p>{% endfor %}
+<h2>Recently paid</h2>
+<table><thead><tr><th>Shop</th><th>Order</th><th>Net paid</th><th>Reference</th><th>Paid at</th></tr></thead><tbody>
+{% for seller_order in paid_orders %}<tr><td>{{ seller_order.shop.name|default:'Jaunpur Footwear' }}</td><td>#{{ seller_order.order_id }}</td><td>₹{{ seller_order.net_amount }}</td><td>{{ seller_order.payout_reference }}</td><td>{{ seller_order.paid_out_at }}</td></tr>{% empty %}<tr><td colspan="5">No payouts recorded.</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

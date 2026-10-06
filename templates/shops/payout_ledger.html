@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>{{ shop.name }} payout ledger</h1><p>Settlements are calculated after the shop-specific order reaches delivered status.</p></section>
+<section class="orders-page">{% for seller_order in seller_orders %}<article class="order-card">
+    <h2>Customer order #{{ seller_order.order_id }}</h2>
+    <p>Status: {{ seller_order.get_status_display }} · Payout: {{ seller_order.get_payout_status_display }}</p>
+    <p>Sales after coupon: ₹{{ seller_order.sales_amount }} · Commission {{ seller_order.commission_rate }}%: ₹{{ seller_order.commission_amount }} · Net: ₹{{ seller_order.net_amount }}</p>
+    {% if seller_order.payout_reference %}<p>Reference: {{ seller_order.payout_reference }} · Paid {{ seller_order.paid_out_at }}</p>{% endif %}
+</article>{% empty %}<p>No shop orders yet.</p>{% endfor %}</section>
+{% endblock %}

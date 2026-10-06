@@ -6,7 +6,7 @@
     <p>{{ seller_order.order.full_name }} · {{ seller_order.order.mobile }}</p>
     {% if seller_order.fulfillment_method == 'delivery' %}<p>Deliver to: {{ seller_order.order.address }}, {{ seller_order.order.delivery_pincode }}</p>{% else %}<p>Customer pickup from {{ shop.address }} · {{ shop.phone }}</p>{% endif %}
     <p>Fulfillment: {{ seller_order.get_fulfillment_method_display }}{% if seller_order.fulfillment_date %} · {{ seller_order.fulfillment_date }}{% endif %}{% if seller_order.fulfillment_slot %} · {{ seller_order.fulfillment_slot.start_time|time:'g:i A' }}–{{ seller_order.fulfillment_slot.end_time|time:'g:i A' }}{% endif %}</p>
-    <p>Online payment: {{ seller_order.order.get_payment_status_display }} · Your items: ₹{{ seller_order.subtotal }}</p>
+    <p>Online payment: {{ seller_order.order.get_payment_status_display }} · Gross after coupon: ₹{{ seller_order.sales_amount }} · Commission ({{ seller_order.commission_rate }}%): ₹{{ seller_order.commission_amount }} · Your net: ₹{{ seller_order.net_amount }} · {{ seller_order.get_payout_status_display }}</p>
     <ul>{% for item in seller_order.items.all %}<li>{{ item.product_name }} · size {{ item.size }}{% if item.color %}, {{ item.color }}{% endif %} · qty {{ item.quantity }}</li>{% endfor %}</ul>
     <form method="post" action="{% url 'update_seller_order_status' seller_order.id %}">{% csrf_token %}<select name="status">{% for value,label in status_choices %}<option value="{{ value }}" {% if seller_order.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><input name="note" placeholder="Customer update (optional)"><button class="secondary-btn">Update status</button></form>
 </article>{% empty %}<p>No orders yet.</p>{% endfor %}</section>

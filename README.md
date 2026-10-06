@@ -13,6 +13,7 @@ A Django template-based footwear e-commerce project for shoes, slippers, sandals
 - Shop pickup and local delivery appointments with weekly time slots
 - Amazon/Flipkart seller setup requests and catalog preparation CSV exports
 - ONDC Seller Network Participant onboarding tracker for Jaunpur shops
+- Per-shop commission statements and staff-recorded payout ledger
 - Home page
 - Product listing
 - Product search

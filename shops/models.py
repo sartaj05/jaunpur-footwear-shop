@@ -1,4 +1,6 @@
 from django.conf import settings
+from decimal import Decimal
+
 from django.db import models
 from django.utils.text import slugify
 
@@ -24,6 +26,15 @@ class Shop(models.Model):
     logo = models.ImageField(upload_to='shops/logos/', blank=True, null=True)
     banner = models.ImageField(upload_to='shops/banners/', blank=True, null=True)
     is_featured = models.BooleanField(default=False)
+    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'))
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(commission_rate__gte=0) & models.Q(commission_rate__lte=100),
+                name='shop_commission_between_zero_and_hundred',
+            ),
+        ]
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
