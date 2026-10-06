@@ -15,6 +15,9 @@ from footwear.task_dispatch import dispatch_background_task
 from orders.payments import release_order_inventory
 from accounts.services import award_loyalty_for_order
 from django.db import transaction
+from django.http import HttpResponse
+import csv
+from decimal import Decimal
 
 
 @staff_member_required
@@ -237,6 +240,22 @@ def sales_reports(request):
     start_date = timezone.now() - timedelta(days=periods[selected_period])
     orders = Order.objects.filter(created_at__gte=start_date).exclude(status='cancelled')
 
+    if request.GET.get('format') == 'csv':
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="jaunpur-sales-{selected_period}-days.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Order ID', 'Created at', 'Status', 'Payment method', 'Payment status', 'Items total INR', 'Discount INR', 'Delivery INR', 'Order total INR'])
+        export_orders = orders.annotate(
+            items_total=Sum(ExpressionWrapper(F('items__price') * F('items__quantity'), output_field=DecimalField(max_digits=12, decimal_places=2)))
+        ).order_by('created_at', 'id')
+        for order in export_orders:
+            writer.writerow([
+                order.pk, order.created_at.isoformat(), order.status, order.payment_method,
+                order.payment_status, order.items_total or Decimal('0.00'), order.discount_amount,
+                order.shipping_amount, order.total_amount,
+            ])
+        return response
+
     summary = orders.aggregate(order_count=Count('id'), total_revenue=Sum('total_amount'))
     order_count = summary['order_count'] or 0
     total_revenue = summary['total_revenue'] or 0
@@ -361,4 +380,3 @@ def delivery_dispatch(request):
         'today': timezone.localdate().isoformat(),
         'error': error,
     })
-

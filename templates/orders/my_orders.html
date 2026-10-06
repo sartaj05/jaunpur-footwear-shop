@@ -31,6 +31,7 @@
             {% if order.coupon_code %}<p><strong>Coupon:</strong> {{ order.coupon_code }} (saved ₹{{ order.discount_amount }})</p>{% endif %}
             <p><strong>Payment:</strong> {{ order.payment_method }}</p>
             <p><strong>Payment status:</strong> {{ order.get_payment_status_display }}</p>
+            <a class="secondary-btn" href="{% url 'order_invoice' order.id %}">Download order receipt (PDF)</a>
             {% if order.payment_status == 'pending' %}
             {% for attempt in order.payment_attempts.all %}
                 {% if attempt.status == 'created' and attempt.gateway_order_id %}

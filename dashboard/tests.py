@@ -7,6 +7,8 @@ from django.urls import reverse
 from .models import StaffActionAudit
 from footwear.task_dispatch import dispatch_background_task
 from .models import BackgroundJobRun
+from orders.models import Order
+from decimal import Decimal
 
 
 class StaffActionAuditTests(TestCase):
@@ -35,3 +37,17 @@ class BackgroundDispatchTests(TestCase):
         self.assertIsInstance(run, BackgroundJobRun)
         self.assertEqual(run.status, "pending")
         task.apply_async.assert_called_once_with(args=(123, run.pk), task_id=str(run.pk))
+
+    def test_staff_can_download_period_sales_csv(self):
+        staff = User.objects.create_user(username="report-staff", password="test-password", is_staff=True)
+        Order.objects.create(
+            user=staff, full_name="Report Buyer", mobile="9000000000", address="Jaunpur",
+            total_amount=Decimal("100.00"),
+        )
+        self.client.force_login(staff)
+
+        response = self.client.get(reverse("sales_reports"), {"days": "30", "format": "csv"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response["Content-Type"])
+        self.assertIn(b"Order ID,Created at", response.content)

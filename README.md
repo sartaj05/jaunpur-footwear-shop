@@ -4,7 +4,7 @@ Copy `.env.example` to `.env` for local configuration. Production mode is enable
 
 A Jaunpur-focused, multi-seller footwear marketplace built with Django. Customers can browse local shop catalogs, check size/color stock, place orders, and track delivery. Local sellers can manage their storefronts, products, fulfillment, and connected marketplace workflows.
 
-This repository currently documents **49 feature areas**: 41 customer and seller areas plus 8 admin areas. Some features require an approved provider account or human review. In particular, Amazon/Flipkart API work needs authorized seller accounts, marketplace fees and settlements are entered manually, and ONDC is an onboarding handoff rather than a live network connection.
+This repository currently documents **50 feature areas**: 42 customer and seller areas plus 8 admin areas. Some features require an approved provider account or human review. In particular, Amazon/Flipkart API work needs authorized seller accounts, marketplace fees and settlements are entered manually, and ONDC is an onboarding handoff rather than a live network connection.
 
 ## Features
 
@@ -44,6 +44,7 @@ This repository currently documents **49 feature areas**: 41 customer and seller
 - Customer product ratings and reviews
 - My orders
 - Order tracking timeline and email updates
+- Customer-owned downloadable order receipt PDF
 - Opt-in English or Hindi WhatsApp order updates (Meta Cloud API configuration required)
 - Return and exchange requests
 - Staff-queued Razorpay refunds for received, paid online returns, with duplicate protection and stock restoration after provider acceptance
@@ -60,6 +61,7 @@ This repository currently documents **49 feature areas**: 41 customer and seller
 - Low stock alert
 - Featured products
 - Sales reports
+- Staff-only sales CSV exports
 
 ## Tech Stack
 
@@ -68,6 +70,7 @@ This repository currently documents **49 feature areas**: 41 customer and seller
 - Django ORM, migrations, authentication, sessions, and admin
 - SQLite for local development
 - Pillow for product and shop image fields
+- ReportLab for downloadable PDF order receipts
 - cryptography/Fernet for encrypted marketplace OAuth tokens
 - Python standard library HTTP clients for Razorpay, email, WhatsApp, Amazon, and Flipkart integrations
 

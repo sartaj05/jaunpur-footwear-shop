@@ -12,6 +12,7 @@
             <option value="365" {% if selected_period == '365' %}selected{% endif %}>Last 12 months</option>
         </select>
         <button type="submit" class="small-btn">Update report</button>
+        <a class="secondary-btn" href="?days={{ selected_period }}&format=csv">Download order report (CSV)</a>
     </form>
 
     <div class="stats-grid">
