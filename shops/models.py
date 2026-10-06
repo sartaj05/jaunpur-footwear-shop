@@ -325,6 +325,42 @@ class MarketplaceChannelOrder(models.Model):
         return f'{self.connection.get_channel_display()} order {self.external_order_id}'
 
 
+class MarketplaceSettlementImport(models.Model):
+    connection = models.ForeignKey(MarketplaceConnection, on_delete=models.PROTECT, related_name='settlement_imports')
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='marketplace_settlement_imports')
+    source_filename = models.CharField(max_length=180)
+    rows_seen = models.PositiveIntegerField(default=0)
+    rows_updated = models.PositiveIntegerField(default=0)
+    rows_failed = models.PositiveIntegerField(default=0)
+    error_summary = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f'{self.connection.get_channel_display()} settlement import · {self.created_at:%Y-%m-%d}'
+
+
+class MarketplaceSettlementLine(models.Model):
+    STATUS_CHOICES = [('matched', 'Order matched'), ('missing_order', 'Order not found'), ('invalid', 'Invalid row')]
+    settlement_import = models.ForeignKey(MarketplaceSettlementImport, on_delete=models.CASCADE, related_name='lines')
+    order = models.ForeignKey(MarketplaceChannelOrder, on_delete=models.SET_NULL, blank=True, null=True, related_name='settlement_lines')
+    external_order_id = models.CharField(max_length=160, blank=True)
+    marketplace_fee = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    settlement_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    settlement_reference = models.CharField(max_length=160, blank=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES)
+    error_summary = models.CharField(max_length=240, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return f'{self.external_order_id or "Unknown order"} · {self.get_status_display()}'
+
+
 class MarketplaceChannelOrderItem(models.Model):
     INVENTORY_CHOICES = [
         ('pending', 'Pending inventory reservation'),

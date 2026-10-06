@@ -4,7 +4,7 @@ Copy `.env.example` to `.env` for local configuration. Production mode is enable
 
 A Jaunpur-focused, multi-seller footwear marketplace built with Django. Customers can browse local shop catalogs, check size/color stock, place orders, and track delivery. Local sellers can manage their storefronts, products, fulfillment, and connected marketplace workflows.
 
-The feature list below describes the current repository scope. Some workflows require an approved provider account or human review. Amazon/Flipkart API work needs authorized seller accounts, marketplace fees and settlements are entered manually, and ONDC remains an onboarding handoff rather than a live network connection.
+The feature list below describes the current repository scope. Some workflows require an approved provider account or human review. Amazon/Flipkart API work needs authorized seller accounts; settlement data can be reconciled from a seller-uploaded CSV statement. ONDC remains an onboarding handoff rather than a live network connection.
 
 ## Features
 
@@ -25,7 +25,7 @@ The feature list below describes the current repository scope. Some workflows re
 - Amazon seller consent and LWA authorization-code exchange
 - Shared stock reservations across the Jaunpur shop and authorized marketplace channels
 - Unified Jaunpur, Amazon, and Flipkart seller order inbox
-- Manual marketplace fee and settlement reconciliation records
+- Marketplace settlement CSV imports with seller-scoped order matching and row-level review history
 - ONDC Seller Network Participant onboarding tracker for Jaunpur shops
 - Per-shop commission statements and staff-recorded payout ledger
 - PIN-code-targeted shop promotions
@@ -170,7 +170,7 @@ python manage.py sync_marketplace_channels
 python manage.py sync_marketplace_channels --shop-id 12 --channel amazon
 ```
 
-Set `AMAZON_SP_API_ENDPOINT` for the seller's SP-API region. The default points at Amazon's EU endpoint used for Jaunpur's India marketplace. `FLIPKART_API_BASE_URL` defaults to `https://api.flipkart.net/sellers`. Seller API access and approval are required. The order inbox stores no Amazon or Flipkart buyer contact/address fields. Fees and settlements are entered from marketplace statements in the inbox; this release does not import settlement reports automatically. The Amazon order importer uses the current [Orders API v2026-01-01](https://developer-docs.amazon.com/sp-api/reference/searchorders) and the Flipkart [seller order API](https://seller.flipkart.com/api-docs/order-api-docs/OMAPIRef.html).
+Set `AMAZON_SP_API_ENDPOINT` for the seller's SP-API region. The default points at Amazon's EU endpoint used for Jaunpur's India marketplace. `FLIPKART_API_BASE_URL` defaults to `https://api.flipkart.net/sellers`. Seller API access and approval are required. The order inbox stores no Amazon or Flipkart buyer contact/address fields. Sellers can upload a UTF-8 CSV settlement statement for the connected account or reconcile a single order manually. The importer accepts `external_order_id`, `marketplace_fee`, `settlement_amount`, and `settlement_reference`; it records matched and rejected rows for review and only updates orders belonging to the selected seller connection. Download the template from the order inbox. This is seller initiated statement import; the app does not fetch settlement reports automatically. The Amazon order importer uses the current [Orders API v2026-01-01](https://developer-docs.amazon.com/sp-api/reference/searchorders) and the Flipkart [seller order API](https://seller.flipkart.com/api-docs/order-api-docs/OMAPIRef.html).
 
 ## WhatsApp Order Updates
 

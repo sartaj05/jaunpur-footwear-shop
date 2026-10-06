@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import admin
 
-from .models import MarketplaceChannelOrder, MarketplaceChannelOrderItem, MarketplaceConnection, MarketplaceProductMapping, MarketplaceSyncRun, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion, ShopReview
+from .models import MarketplaceChannelOrder, MarketplaceChannelOrderItem, MarketplaceConnection, MarketplaceProductMapping, MarketplaceSettlementImport, MarketplaceSettlementLine, MarketplaceSyncRun, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion, ShopReview
 
 
 @admin.register(Shop)
@@ -123,6 +123,22 @@ class MarketplaceChannelOrderAdmin(admin.ModelAdmin):
     search_fields = ['external_order_id', 'settlement_reference', 'connection__shop__name']
     readonly_fields = ['connection', 'external_order_id', 'marketplace_id', 'external_status', 'purchased_at', 'currency', 'total_amount', 'created_at', 'last_synced_at']
     inlines = [MarketplaceChannelOrderItemInline]
+
+
+class MarketplaceSettlementLineInline(admin.TabularInline):
+    model = MarketplaceSettlementLine
+    extra = 0
+    can_delete = False
+    readonly_fields = ['order', 'external_order_id', 'marketplace_fee', 'settlement_amount', 'settlement_reference', 'status', 'error_summary', 'created_at']
+
+
+@admin.register(MarketplaceSettlementImport)
+class MarketplaceSettlementImportAdmin(admin.ModelAdmin):
+    list_display = ['connection', 'source_filename', 'rows_seen', 'rows_updated', 'rows_failed', 'uploaded_by', 'created_at']
+    list_filter = ['connection__channel', 'created_at']
+    search_fields = ['source_filename', 'connection__shop__name', 'error_summary']
+    readonly_fields = ['connection', 'uploaded_by', 'source_filename', 'rows_seen', 'rows_updated', 'rows_failed', 'error_summary', 'created_at']
+    inlines = [MarketplaceSettlementLineInline]
 
 
 @admin.register(ShopReview)

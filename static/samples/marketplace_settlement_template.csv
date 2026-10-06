@@ -1,0 +1,2 @@
+external_order_id,marketplace_fee,settlement_amount,settlement_reference
+REPLACE-WITH-MARKETPLACE-ORDER-ID,125.00,1875.00,REPLACE-WITH-SETTLEMENT-REFERENCE

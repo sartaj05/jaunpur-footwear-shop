@@ -28,8 +28,9 @@ from footwear.task_dispatch import dispatch_background_task
 from accounts.models import ReferralReward
 from accounts.services import award_loyalty_for_order
 
-from .models import MarketplaceChannelOrder, MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion, ShopReview
+from .models import MarketplaceChannelOrder, MarketplaceConnection, MarketplaceProductMapping, MarketplaceSettlementImport, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion, ShopReview
 from .inventory import local_available_stock, update_mapping_allocation
+from .settlements import import_settlement_statement
 from .marketplace_auth import (
     MarketplaceAuthorizationError,
     encrypt_marketplace_token,
@@ -711,6 +712,29 @@ def run_marketplace_sync(request, connection_id):
 def marketplace_channel_orders(request):
     shop = get_object_or_404(Shop, owner=request.user, status='approved')
     if request.method == 'POST':
+        if request.POST.get('action') == 'import_settlement_csv':
+            connection = get_object_or_404(
+                MarketplaceConnection,
+                pk=request.POST.get('connection_id'),
+                shop=shop,
+                status='approved',
+                authorization_status='connected',
+            )
+            uploaded_file = request.FILES.get('settlement_file')
+            if not uploaded_file:
+                messages.error(request, 'Choose the marketplace CSV settlement statement to import.')
+                return redirect('marketplace_channel_orders')
+            try:
+                batch = import_settlement_statement(connection, uploaded_file, request.user)
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            else:
+                if batch.rows_updated:
+                    messages.success(request, f'Settlement import processed: {batch.rows_updated} matched, {batch.rows_failed} need review.')
+                else:
+                    messages.warning(request, f'Settlement import saved with {batch.rows_failed} row(s) needing review. Check the import history below.')
+            return redirect('marketplace_channel_orders')
+
         channel_order = get_object_or_404(
             MarketplaceChannelOrder,
             pk=request.POST.get('order_id'),
@@ -745,10 +769,18 @@ def marketplace_channel_orders(request):
         connection__shop=shop,
     ).select_related('connection').prefetch_related('items').order_by('-purchased_at', '-created_at')[:100]
     local_orders = SellerOrder.objects.filter(shop=shop).select_related('order').prefetch_related('items').order_by('-created_at')[:100]
+    settlement_imports = MarketplaceSettlementImport.objects.filter(
+        connection__shop=shop,
+    ).select_related('connection', 'uploaded_by').prefetch_related('lines')[:10]
+    settlement_connections = MarketplaceConnection.objects.filter(
+        shop=shop, status='approved', authorization_status='connected',
+    ).order_by('channel')
     return render(request, 'shops/marketplace_orders.html', {
         'shop': shop,
         'orders': orders,
         'local_orders': local_orders,
+        'settlement_imports': settlement_imports,
+        'settlement_connections': settlement_connections,
     })
 
 
