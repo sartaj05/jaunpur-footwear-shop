@@ -34,6 +34,8 @@ class Order(models.Model):
     full_name = models.CharField(max_length=150)
     mobile = models.CharField(max_length=15)
     address = models.TextField()
+    delivery_pincode = models.CharField(max_length=10, blank=True)
+    shipping_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     coupon_code = models.CharField(max_length=30, blank=True)
@@ -91,3 +93,13 @@ class Coupon(models.Model):
 
     def __str__(self):
         return self.code
+
+
+class DeliveryRate(models.Model):
+    pincode_prefix = models.CharField(max_length=10, unique=True)
+    fee = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal('0.00'))
+    free_delivery_minimum = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f'{self.pincode_prefix} - {self.fee}'

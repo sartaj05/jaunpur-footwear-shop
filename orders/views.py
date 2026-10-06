@@ -2,8 +2,22 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.conf import settings
+from decimal import Decimal
+import re
 from products.models import Product, ProductVariant
-from .models import CartItem, Coupon, Order, OrderItem
+from .models import CartItem, Coupon, DeliveryRate, Order, OrderItem
+
+
+def delivery_fee_for(pincode, subtotal):
+    rates = DeliveryRate.objects.filter(is_active=True)
+    matching_rates = [rate for rate in rates if pincode.startswith(rate.pincode_prefix)]
+    if matching_rates:
+        rate = max(matching_rates, key=lambda item: len(item.pincode_prefix))
+        if rate.free_delivery_minimum is not None and subtotal >= rate.free_delivery_minimum:
+            return Decimal('0.00')
+        return rate.fee
+    return Decimal(str(getattr(settings, 'DEFAULT_DELIVERY_FEE', '50.00')))
 
 
 @login_required
@@ -106,7 +120,24 @@ def checkout(request):
             coupon_code = ''
             messages.warning(request, 'The applied coupon is no longer valid.')
 
+    pincode = request.session.get('delivery_pincode', '')
+    shipping_amount = delivery_fee_for(pincode, total) if pincode else Decimal('0.00')
+
+    if request.method == 'POST' and request.POST.get('action') == 'estimate_delivery':
+        submitted_pincode = request.POST.get('pincode', '').strip()
+        if not re.fullmatch(r'[1-9][0-9]{5}', submitted_pincode):
+            messages.error(request, 'Enter a valid 6-digit Indian PIN code.')
+        else:
+            request.session['delivery_pincode'] = submitted_pincode
+            messages.success(request, 'Delivery fee updated for your PIN code.')
+        return redirect('checkout')
+
     if request.method == 'POST':
+        pincode = request.POST.get('pincode', '').strip()
+        if not re.fullmatch(r'[1-9][0-9]{5}', pincode):
+            messages.error(request, 'Enter a valid 6-digit Indian PIN code before placing the order.')
+            return redirect('checkout')
+        request.session['delivery_pincode'] = pincode
         with transaction.atomic():
             locked_items = list(
                 CartItem.objects.select_for_update()
@@ -129,13 +160,16 @@ def checkout(request):
             else:
                 locked_coupon = None
                 locked_discount = 0
+            locked_shipping = delivery_fee_for(pincode, locked_subtotal)
 
             order = Order.objects.create(
                 user=request.user,
                 full_name=request.POST.get('full_name'),
                 mobile=request.POST.get('mobile'),
                 address=request.POST.get('address'),
-                total_amount=locked_subtotal - locked_discount,
+                delivery_pincode=pincode,
+                shipping_amount=locked_shipping,
+                total_amount=locked_subtotal - locked_discount + locked_shipping,
                 discount_amount=locked_discount,
                 coupon_code=locked_coupon.code if locked_coupon else '',
             )
@@ -162,14 +196,17 @@ def checkout(request):
             CartItem.objects.filter(user=request.user).delete()
 
         request.session.pop('coupon_code', None)
+        request.session.pop('delivery_pincode', None)
         return redirect('my_orders')
 
     return render(request, 'orders/checkout.html', {
         'items': items,
         'total': total,
         'discount': discount,
-        'grand_total': total - discount,
+        'grand_total': total - discount + shipping_amount,
         'coupon_code': coupon_code,
+        'pincode': pincode,
+        'shipping_amount': shipping_amount,
     })
 
 

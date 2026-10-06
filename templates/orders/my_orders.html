@@ -26,6 +26,7 @@
             <p><strong>Name:</strong> {{ order.full_name }}</p>
             <p><strong>Mobile:</strong> {{ order.mobile }}</p>
             <p><strong>Address:</strong> {{ order.address }}</p>
+            {% if order.delivery_pincode %}<p><strong>PIN code:</strong> {{ order.delivery_pincode }}</p>{% endif %}
             <p><strong>Total:</strong> ₹{{ order.total_amount }}</p>
             {% if order.coupon_code %}<p><strong>Coupon:</strong> {{ order.coupon_code }} (saved ₹{{ order.discount_amount }})</p>{% endif %}
             <p><strong>Payment:</strong> {{ order.payment_method }}</p>
