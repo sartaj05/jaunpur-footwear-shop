@@ -29,6 +29,17 @@
         <form method="post" action="{% url 'add_to_cart' product.id %}" class="cart-form">
             {% csrf_token %}
 
+            {% if variants %}
+            <label for="variantChoice">Size and color</label>
+            <select name="variant_id" id="variantChoice" required>
+                <option value="">Choose a size and color</option>
+                {% for variant in variants %}
+                <option value="{{ variant.id }}" {% if variant.stock < 1 %}disabled{% endif %}>
+                    {{ variant.size }} / {{ variant.color }}{% if variant.stock < 1 %} — Out of stock{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+            {% else %}
             <label>Select Size</label>
             <div class="size-options">
                 {% for size in sizes %}
@@ -38,6 +49,7 @@
                 </label>
                 {% endfor %}
             </div>
+            {% endif %}
 
             <label>Quantity</label>
             <div class="qty-box">

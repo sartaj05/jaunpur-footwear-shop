@@ -1,16 +1,19 @@
 from django.db import models
 from django.contrib.auth.models import User
-from products.models import Product
+from products.models import Product, ProductVariant
 
 
 class CartItem(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     size = models.CharField(max_length=10)
+    color = models.CharField(max_length=40, blank=True, default='')
+    variant = models.ForeignKey(ProductVariant, on_delete=models.SET_NULL, blank=True, null=True)
     quantity = models.PositiveIntegerField(default=1)
 
     def total_price(self):
-        return self.product.final_price() * self.quantity
+        unit_price = self.variant.final_price() if self.variant_id else self.product.final_price()
+        return unit_price * self.quantity
 
     def __str__(self):
         return f"{self.user.username} - {self.product.name}"
@@ -44,5 +47,6 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product_name = models.CharField(max_length=200)
     size = models.CharField(max_length=10)
+    color = models.CharField(max_length=40, blank=True, default='')
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)

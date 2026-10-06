@@ -55,3 +55,24 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ProductVariant(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants')
+    size = models.CharField(max_length=10)
+    color = models.CharField(max_length=40)
+    stock = models.PositiveIntegerField(default=0)
+    price_override = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['size', 'color']
+        constraints = [
+            models.UniqueConstraint(fields=['product', 'size', 'color'], name='unique_product_size_color')
+        ]
+
+    def final_price(self):
+        return self.price_override if self.price_override is not None else self.product.final_price()
+
+    def __str__(self):
+        return f'{self.product.name} - {self.size} / {self.color}'
