@@ -75,6 +75,26 @@ class ProductVariant(models.Model):
     def final_price(self):
         return self.price_override if self.price_override is not None else self.product.final_price()
 
+    @classmethod
+    def sync_product_stock(cls, product_id):
+        total = cls.objects.filter(product_id=product_id).aggregate(total=models.Sum('stock'))['total'] or 0
+        Product.objects.filter(pk=product_id).update(stock=total)
+
+    def save(self, *args, **kwargs):
+        previous_product_id = None
+        if self.pk:
+            previous_product_id = type(self).objects.filter(pk=self.pk).values_list('product_id', flat=True).first()
+        super().save(*args, **kwargs)
+        self.sync_product_stock(self.product_id)
+        if previous_product_id and previous_product_id != self.product_id:
+            self.sync_product_stock(previous_product_id)
+
+    def delete(self, *args, **kwargs):
+        product_id = self.product_id
+        result = super().delete(*args, **kwargs)
+        self.sync_product_stock(product_id)
+        return result
+
     def __str__(self):
         return f'{self.product.name} - {self.size} / {self.color}'
 
