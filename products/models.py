@@ -30,6 +30,7 @@ class Product(models.Model):
 
     name = models.CharField(max_length=200)
     name_hi = models.CharField(max_length=200, blank=True)
+    seller_sku = models.CharField(max_length=64, unique=True, blank=True, null=True)
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
 
@@ -51,6 +52,13 @@ class Product(models.Model):
     is_featured = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if is_new and self.shop_id and not self.seller_sku:
+            self.seller_sku = f'JFW-S{self.shop_id}-P{self.pk}'
+            type(self).objects.filter(pk=self.pk).update(seller_sku=self.seller_sku)
 
     def final_price(self):
         base_price = self.discount_price if self.discount_price else self.price
@@ -76,6 +84,7 @@ class Product(models.Model):
 
 class ProductVariant(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants')
+    seller_sku = models.CharField(max_length=120, unique=True, blank=True, null=True)
     size = models.CharField(max_length=10)
     color = models.CharField(max_length=40)
     stock = models.PositiveIntegerField(default=0)
@@ -103,6 +112,10 @@ class ProductVariant(models.Model):
         if self.pk:
             previous_product_id = type(self).objects.filter(pk=self.pk).values_list('product_id', flat=True).first()
         super().save(*args, **kwargs)
+        if not self.seller_sku and self.product.shop_id and self.product.seller_sku:
+            safe_color = ''.join(character for character in self.color.upper() if character.isalnum())[:24] or 'COLOR'
+            self.seller_sku = f'{self.product.seller_sku}-{self.size}-{safe_color}-V{self.pk}'[:120]
+            type(self).objects.filter(pk=self.pk).update(seller_sku=self.seller_sku)
         self.sync_product_stock(self.product_id)
         if previous_product_id and previous_product_id != self.product_id:
             self.sync_product_stock(previous_product_id)
@@ -121,6 +134,7 @@ class WishlistItem(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wishlist_items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='wishlisted_by')
     created_at = models.DateTimeField(auto_now_add=True)
+
     shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, blank=True, null=True, related_name='products')
 
     class Meta:

@@ -20,7 +20,7 @@ from orders.models import Coupon, OrderTrackingEvent, SellerOrder
 from orders.notifications import send_order_status_update
 from accounts.models import ReferralReward
 
-from .models import MarketplaceConnection, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
+from .models import MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
 
 
 @login_required
@@ -509,6 +509,61 @@ def marketplace_hub(request):
 
 
 @login_required
+def manage_marketplace_catalog(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    connections = shop.marketplace_connections.filter(status='approved')
+    error = ''
+    if request.method == 'POST':
+        try:
+            connection_id = int(request.POST.get('connection_id', ''))
+            product_id = int(request.POST.get('product_id', ''))
+            variant_id = int(request.POST.get('variant_id')) if request.POST.get('variant_id', '').strip() else None
+        except (TypeError, ValueError):
+            connection_id, product_id, variant_id = 0, 0, None
+            error = 'Choose a valid marketplace product and variant.'
+        connection = connections.filter(pk=connection_id).first()
+        product = shop.products.filter(is_active=True, pk=product_id).first()
+        variant = None
+        if variant_id and product:
+            variant = product.variants.filter(is_active=True, pk=variant_id).first()
+        external_sku = request.POST.get('external_sku', '').strip()
+        category_path = request.POST.get('category_path', '').strip()
+        if error:
+            pass
+        elif not connection or not product or (variant_id and not variant) or not external_sku:
+            error = 'Choose an approved marketplace, one of your products, a matching variant, and an external SKU.'
+        else:
+            mapping = MarketplaceProductMapping.objects.filter(
+                connection=connection,
+                product=product,
+                variant=variant,
+            ).first()
+            duplicate_skus = MarketplaceProductMapping.objects.filter(connection=connection, external_sku=external_sku)
+            if mapping:
+                duplicate_skus = duplicate_skus.exclude(pk=mapping.pk)
+            duplicate_sku = duplicate_skus.exists()
+            if duplicate_sku:
+                error = 'That marketplace SKU is already mapped to another item in this seller account.'
+            else:
+                if mapping is None:
+                    mapping = MarketplaceProductMapping(connection=connection, product=product, variant=variant)
+                mapping.external_sku = external_sku
+                mapping.category_path = category_path
+                mapping.status = 'draft'
+                mapping.error_text = ''
+                mapping.save()
+                messages.success(request, f'Marketplace SKU mapping saved for {product.name}.')
+                return redirect('manage_marketplace_catalog')
+    return render(request, 'shops/marketplace_catalog.html', {
+        'shop': shop,
+        'connections': connections,
+        'products': shop.products.filter(is_active=True).prefetch_related('variants').order_by('name'),
+        'mappings': MarketplaceProductMapping.objects.filter(connection__shop=shop).select_related('connection', 'product', 'variant'),
+        'error': error,
+    })
+
+
+@login_required
 def request_marketplace_setup(request, channel):
     shop = get_object_or_404(Shop, owner=request.user, status='approved')
     if request.method == 'POST' and channel in dict(MarketplaceConnection.CHANNEL_CHOICES):
@@ -529,25 +584,27 @@ def export_marketplace_feed(request, channel):
     shop = get_object_or_404(Shop, owner=request.user, status='approved')
     if channel not in dict(MarketplaceConnection.CHANNEL_CHOICES):
         return redirect('marketplace_hub')
-    get_object_or_404(MarketplaceConnection, shop=shop, channel=channel, status='approved')
+    connection = get_object_or_404(MarketplaceConnection, shop=shop, channel=channel, status='approved')
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="jaunpur-{channel}-catalog.csv"'
     response.write('\ufeff')
     writer = csv.writer(response)
-    writer.writerow(['seller_sku', 'shop_name', 'product_name', 'brand', 'category', 'description', 'price_inr', 'quantity', 'size', 'color'])
+    writer.writerow(['seller_sku', 'marketplace_sku', 'marketplace_category', 'shop_name', 'product_name', 'brand', 'category', 'description', 'price_inr', 'quantity', 'size', 'color'])
     products = shop.products.filter(is_active=True).select_related('brand', 'category').prefetch_related('variants')
     for product in products:
         variants = list(product.variants.filter(is_active=True))
         if variants:
             for variant in variants:
+                mapping = MarketplaceProductMapping.objects.filter(connection=connection, product=product, variant=variant).first()
                 writer.writerow([
-                    f'JFW-S{shop.pk}-P{product.pk}-V{variant.pk}', shop.name, product.name,
+                    variant.seller_sku, mapping.external_sku if mapping else '', mapping.category_path if mapping else '', shop.name, product.name,
                     product.brand.name, product.category.name, product.description,
                     variant.final_price(), variant.stock, variant.size, variant.color,
                 ])
         else:
+            mapping = MarketplaceProductMapping.objects.filter(connection=connection, product=product, variant__isnull=True).first()
             writer.writerow([
-                f'JFW-S{shop.pk}-P{product.pk}-BASE', shop.name, product.name,
+                product.seller_sku, mapping.external_sku if mapping else '', mapping.category_path if mapping else '', shop.name, product.name,
                 product.brand.name, product.category.name, product.description,
                 product.final_price(), product.stock, '', '',
             ])

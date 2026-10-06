@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Marketplace product catalog</h1><p>Map your Jaunpur products and size/color SKUs before preparing channel listings.</p></section>
+<section class="checkout-page">
+    <form method="post" class="checkout-form-card">{% csrf_token %}
+        {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+        <div class="form-group"><label>Approved seller channel</label><select name="connection_id" required>{% for connection in connections %}<option value="{{ connection.id }}">{{ connection.get_channel_display }} · {{ connection.seller_account_id }}</option>{% empty %}<option value="">Request marketplace setup approval first</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Jaunpur product</label><select id="marketProduct" name="product_id" required>{% for product in products %}<option value="{{ product.id }}" data-sku="{{ product.seller_sku }}">{{ product.name }} · {{ product.seller_sku }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Size/color variant (optional)</label><select id="marketVariant" name="variant_id"><option value="">Base product</option>{% for product in products %}{% for variant in product.variants.all %}<option value="{{ variant.id }}" data-product="{{ product.id }}" data-sku="{{ variant.seller_sku }}">{{ product.name }} · {{ variant.size }} / {{ variant.color }} · {{ variant.seller_sku }}</option>{% endfor %}{% endfor %}</select></div>
+        <div class="form-group"><label>Marketplace SKU</label><input id="marketSku" name="external_sku" maxlength="120" required></div>
+        <div class="form-group"><label>Marketplace category path or product type</label><input name="category_path" maxlength="240" placeholder="Shoes > Sandals"></div>
+        <button class="auth-btn" {% if not connections or not products %}disabled{% endif %}>Save SKU mapping</button>
+    </form>
+    <section class="featured-section"><h2>Mapped products</h2>
+        {% for mapping in mappings %}<article class="checkout-form-card"><h3>{{ mapping.connection.get_channel_display }} · {{ mapping.external_sku }}</h3><p>{{ mapping.product.name }}{% if mapping.variant %} · {{ mapping.variant.size }} / {{ mapping.variant.color }}{% endif %}</p><p>Jaunpur SKU: {% if mapping.variant %}{{ mapping.variant.seller_sku }}{% else %}{{ mapping.product.seller_sku }}{% endif %} · {{ mapping.get_status_display }}</p>{% if mapping.category_path %}<p>Marketplace category: {{ mapping.category_path }}</p>{% endif %}{% if mapping.error_text %}<p class="error-box">{{ mapping.error_text }}</p>{% endif %}</article>{% empty %}<p>No marketplace SKU mappings yet.</p>{% endfor %}
+    </section>
+</section>
+<script>
+(() => {
+  const product = document.getElementById('marketProduct');
+  const variant = document.getElementById('marketVariant');
+  const sku = document.getElementById('marketSku');
+  const update = () => {
+    [...variant.options].forEach(option => { option.hidden = option.dataset.product && option.dataset.product !== product.value; });
+    const selectedVariant = variant.options[variant.selectedIndex];
+    if (selectedVariant && selectedVariant.hidden) variant.value = '';
+    const activeVariant = variant.options[variant.selectedIndex];
+    const selectedProduct = product.options[product.selectedIndex];
+    if (!sku.value || sku.dataset.generated === 'true') {
+      sku.value = activeVariant && activeVariant.value ? activeVariant.dataset.sku : (selectedProduct ? selectedProduct.dataset.sku : '');
+      sku.dataset.generated = 'true';
+    }
+  };
+  product.addEventListener('change', update);
+  variant.addEventListener('change', () => { sku.dataset.generated = 'true'; update(); });
+  sku.addEventListener('input', () => { sku.dataset.generated = 'false'; });
+  update();
+})();
+</script>
+{% endblock %}

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import MarketplaceConnection, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
+from .models import MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
 
 
 @admin.register(Shop)
@@ -66,3 +66,10 @@ class ShopPromotionAdmin(admin.ModelAdmin):
     list_filter = ['is_active', 'discount_type', 'starts_at', 'expires_at']
     search_fields = ['title', 'shop__name']
     filter_horizontal = ['products']
+
+
+@admin.register(MarketplaceProductMapping)
+class MarketplaceProductMappingAdmin(admin.ModelAdmin):
+    list_display = ['connection', 'external_sku', 'product', 'variant', 'status', 'last_synced_at']
+    list_filter = ['connection__channel', 'status']
+    search_fields = ['external_sku', 'product__name', 'connection__shop__name']

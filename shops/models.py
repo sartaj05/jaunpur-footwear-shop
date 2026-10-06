@@ -196,3 +196,35 @@ class ShopPromotion(models.Model):
 
     def __str__(self):
         return f'{self.title} · {self.shop.name}'
+
+
+class MarketplaceProductMapping(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft mapping'),
+        ('submitted', 'Submitted to marketplace'),
+        ('active', 'Active listing'),
+        ('needs_attention', 'Needs attention'),
+    ]
+
+    connection = models.ForeignKey(MarketplaceConnection, on_delete=models.CASCADE, related_name='product_mappings')
+    product = models.ForeignKey('products.Product', on_delete=models.CASCADE, related_name='marketplace_mappings')
+    variant = models.ForeignKey('products.ProductVariant', on_delete=models.CASCADE, blank=True, null=True, related_name='marketplace_mappings')
+    external_sku = models.CharField(max_length=120)
+    external_listing_id = models.CharField(max_length=160, blank=True)
+    category_path = models.CharField(max_length=240, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    error_text = models.TextField(blank=True)
+    last_synced_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['connection__channel', 'external_sku']
+        constraints = [
+            models.UniqueConstraint(fields=['connection', 'external_sku'], name='unique_channel_external_sku'),
+            models.UniqueConstraint(fields=['connection', 'product'], condition=models.Q(variant__isnull=True), name='unique_channel_product_base_mapping'),
+            models.UniqueConstraint(fields=['connection', 'product', 'variant'], condition=models.Q(variant__isnull=False), name='unique_channel_product_variant_mapping'),
+        ]
+
+    def __str__(self):
+        return f'{self.connection.get_channel_display()} · {self.external_sku}'

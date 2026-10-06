@@ -3,6 +3,7 @@
 <section class="page-banner"><h1>{% if product %}Edit{% else %}Add{% endif %} product</h1><p>Listing for {{ shop.name }}</p></section>
 <section class="checkout-page"><form method="post" enctype="multipart/form-data" class="checkout-form-card">{% csrf_token %}
     <div class="form-group"><label>Product name</label><input name="name" value="{{ product.name|default:'' }}" required></div>
+    <div class="form-group"><label>Seller SKU</label><input value="{{ product.seller_sku|default:'Generated after saving' }}" readonly></div>
     <div class="form-group"><label>Product name in Hindi (optional)</label><input name="name_hi" value="{{ product.name_hi|default:'' }}"></div>
     <div class="form-group"><label>Brand</label><select name="brand" required>{% for brand in brands %}<option value="{{ brand.id }}" {% if product.brand_id == brand.id %}selected{% endif %}>{{ brand.name }}</option>{% endfor %}</select></div>
     <div class="form-group"><label>Category</label><select name="category" required>{% for category in categories %}<option value="{{ category.id }}" {% if product.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></div>
