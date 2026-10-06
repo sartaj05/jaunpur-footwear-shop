@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Shop profile</h1><p>Give Jaunpur customers clear store details in English and Hindi.</p></section>
+<section class="checkout-page"><form method="post" enctype="multipart/form-data" class="checkout-form-card">{% csrf_token %}
+    <div class="form-group"><label>About your shop (English)</label><textarea name="description">{{ shop.description }}</textarea></div>
+    <div class="form-group"><label>About your shop (Hindi)</label><textarea name="description_hi">{{ shop.description_hi }}</textarea></div>
+    <div class="form-group"><label>Opening hours</label><input name="opening_hours" value="{{ shop.opening_hours }}" placeholder="Mon–Sat, 10 am–8 pm"></div>
+    <div class="form-group"><label>Shop logo</label><input type="file" name="logo" accept="image/*">{% if shop.logo %}<p>Current logo: {{ shop.logo.name }}</p>{% endif %}</div>
+    <div class="form-group"><label>Store banner</label><input type="file" name="banner" accept="image/*">{% if shop.banner %}<p>Current banner: {{ shop.banner.name }}</p>{% endif %}</div>
+    <button class="auth-btn">Save shop profile</button>
+</form></section>
+{% endblock %}

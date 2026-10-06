@@ -69,19 +69,19 @@
 
                 <div class="product-info">
                     <p class="brand-name">{{ product.brand.name }}</p>
-                    <h3>{{ product.name }}</h3>
-                    <p class="sizes">Sizes: {{ product.available_sizes }}</p>
+                    <h3>{% if is_hindi and product.name_hi %}{{ product.name_hi }}{% else %}{{ product.name }}{% endif %}</h3>
+                    <p class="sizes">{% if is_hindi %}साइज़{% else %}Sizes{% endif %}: {{ product.available_sizes }}</p>
 
                     <p class="price">
-                        {% if product.discount_price %}
+                        {% if product.final_price < product.price %}
                             <del>₹{{ product.price }}</del>
-                            <strong>₹{{ product.discount_price }}</strong>
+                            <strong>₹{{ product.final_price }}</strong>
                         {% else %}
-                            <strong>₹{{ product.price }}</strong>
+                            <strong>₹{{ product.final_price }}</strong>
                         {% endif %}
                     </p>
 
-                    <a href="{% url 'product_detail' product.id %}" class="card-btn">View Details</a>
+                    <a href="{% url 'product_detail' product.id %}" class="card-btn">{% if is_hindi %}विवरण देखें{% else %}View Details{% endif %}</a>
                 </div>
             </div>
             {% empty %}

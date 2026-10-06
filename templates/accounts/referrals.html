@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Invite friends to shop in Jaunpur</h1><p>Your friend gets ₹50 off; you earn a ₹100 coupon after their first order is delivered.</p></section>
+<section class="checkout-page"><div class="checkout-form-card"><label>Your referral code</label><input readonly value="{{ referral_code.code }}"><label>Share this link</label><input readonly value="{{ share_url }}"><button type="button" class="secondary-btn" onclick="navigator.clipboard.writeText('{{ share_url|escapejs }}')">Copy referral link</button></div>
+<div class="checkout-form-card"><h2>Your coupons</h2>{% for coupon in personal_coupons %}<p><strong>{{ coupon.code }}</strong> · ₹{{ coupon.discount_value }} off · valid until {{ coupon.expires_at|date:'M j, Y' }}</p>{% empty %}<p>Referral coupons for your account will appear here.</p>{% endfor %}</div>
+<div class="checkout-form-card"><h2>Referral rewards</h2>{% for referral in referrals %}<p>{{ referral.referred_user.username }} · {{ referral.get_status_display }}{% if referral.reward_coupon_code %} · Code: <strong>{{ referral.reward_coupon_code }}</strong>{% endif %}</p>{% empty %}<p>No referrals yet. Share your link with friends around Jaunpur.</p>{% endfor %}</div></section>
+{% endblock %}

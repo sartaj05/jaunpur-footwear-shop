@@ -1,20 +1,23 @@
 import re
 import csv
 from decimal import Decimal, InvalidOperation
-from datetime import time
+from datetime import time, timedelta, datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Q, Sum
 
 from products.models import Brand, Category, Product, ProductVariant
-from orders.models import OrderTrackingEvent, SellerOrder
+from orders.models import Coupon, OrderTrackingEvent, SellerOrder
 from orders.notifications import send_order_status_update
+from accounts.models import ReferralReward
 
-from .models import MarketplaceConnection, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot
+from .models import MarketplaceConnection, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
 
 
 @login_required
@@ -67,11 +70,16 @@ def shop_directory(request):
 def shop_page(request, slug):
     shop = get_object_or_404(Shop, slug=slug, status='approved')
     products = Product.objects.filter(shop=shop, is_active=True).select_related('brand', 'category')
+    now = timezone.now()
     return render(request, 'shops/detail.html', {
         'shop': shop,
         'products': products,
         'coverage_areas': shop.coverage_areas.filter(is_active=True),
         'fulfillment_slots': shop.fulfillment_slots.filter(is_active=True),
+        'promotions': shop.promotions.filter(is_active=True).filter(
+            Q(starts_at__isnull=True) | Q(starts_at__lte=now),
+            Q(expires_at__isnull=True) | Q(expires_at__gte=now),
+        ).prefetch_related('products'),
     })
 
 
@@ -217,8 +225,29 @@ def update_seller_order_status(request, seller_order_id):
             )
             statuses = set(seller_order.order.seller_orders.values_list('status', flat=True))
             if len(statuses) == 1:
-                seller_order.order.status = statuses.pop()
+                overall_status = statuses.pop()
+                seller_order.order.status = overall_status
                 seller_order.order.save(update_fields=['status'])
+                if overall_status == 'delivered':
+                    reward = ReferralReward.objects.filter(
+                        referred_user_id=seller_order.order.user_id,
+                        status='pending',
+                    ).first()
+                    if reward:
+                        coupon_code = f'JP-REF-{reward.pk}'
+                        Coupon.objects.create(
+                            code=coupon_code,
+                            discount_type='fixed',
+                            discount_value=reward.amount,
+                            usage_limit=1,
+                            reserved_for_id=reward.referrer_id,
+                            starts_at=timezone.now(),
+                            expires_at=timezone.now() + timedelta(days=90),
+                        )
+                        reward.status = 'earned'
+                        reward.reward_coupon_code = coupon_code
+                        reward.earned_at = timezone.now()
+                        reward.save(update_fields=['status', 'reward_coupon_code', 'earned_at'])
             send_order_status_update(seller_order.order_id)
             messages.success(request, 'Your part of the customer order was updated.')
     return redirect('seller_orders')
@@ -254,7 +283,9 @@ def seller_product_form(request, product_id=None):
             if product is None:
                 product = Product(shop=shop)
             product.name = name
+            product.name_hi = request.POST.get('name_hi', '').strip()
             product.description = description
+            product.description_hi = request.POST.get('description_hi', '').strip()
             product.brand = brand
             product.category = category
             product.gender = request.POST.get('gender', 'unisex')
@@ -410,3 +441,95 @@ def ondc_setup(request):
             messages.success(request, 'ONDC partner details were saved for admin review.')
             return redirect('ondc_setup')
     return render(request, 'shops/ondc_setup.html', {'shop': shop, 'enrollment': enrollment})
+
+
+def set_site_language(request, language):
+    if language in ('en', 'hi'):
+        request.session['site_language'] = language
+    next_url = request.GET.get('next', '/')
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        next_url = reverse('home')
+    return redirect(next_url)
+
+
+@login_required
+def seller_shop_profile(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    if request.method == 'POST':
+        shop.description = request.POST.get('description', '').strip()
+        shop.description_hi = request.POST.get('description_hi', '').strip()
+        shop.opening_hours = request.POST.get('opening_hours', '').strip()
+        if request.FILES.get('logo'):
+            shop.logo = request.FILES['logo']
+        if request.FILES.get('banner'):
+            shop.banner = request.FILES['banner']
+        shop.save(update_fields=['description', 'description_hi', 'opening_hours', 'logo', 'banner', 'updated_at'])
+        messages.success(request, 'Your bilingual shop profile was saved.')
+        return redirect('seller_shop_profile')
+    return render(request, 'shops/seller_profile.html', {'shop': shop})
+
+
+def _parse_local_datetime(value):
+    if not value:
+        return None
+    parsed = datetime.fromisoformat(value)
+    return timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
+
+
+@login_required
+def manage_promotions(request):
+    shop = get_object_or_404(Shop, owner=request.user, status='approved')
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        title_hi = request.POST.get('title_hi', '').strip()
+        description = request.POST.get('description', '').strip()
+        description_hi = request.POST.get('description_hi', '').strip()
+        discount_type = request.POST.get('discount_type', '')
+        try:
+            product_ids = [int(value) for value in request.POST.getlist('products')]
+        except (TypeError, ValueError):
+            product_ids = []
+        products = shop.products.filter(is_active=True, pk__in=product_ids)
+        try:
+            discount_value = Decimal(request.POST.get('discount_value', ''))
+            starts_at = _parse_local_datetime(request.POST.get('starts_at', ''))
+            expires_at = _parse_local_datetime(request.POST.get('expires_at', ''))
+        except (InvalidOperation, TypeError, ValueError):
+            discount_value, starts_at, expires_at = Decimal('0.00'), None, None
+            messages.error(request, 'Enter a valid discount and schedule.')
+        else:
+            valid_discount = discount_value > 0 and (discount_type != 'percent' or discount_value <= 100)
+            valid_schedule = starts_at is None or expires_at is None or expires_at > starts_at
+            if not title or discount_type not in ('percent', 'fixed') or not valid_discount or not valid_schedule or not product_ids or products.count() != len(set(product_ids)):
+                messages.error(request, 'Choose your products, a title, a positive discount, and a valid date range.')
+            else:
+                promotion = ShopPromotion.objects.create(
+                    shop=shop,
+                    title=title,
+                    title_hi=title_hi,
+                    description=description,
+                    description_hi=description_hi,
+                    discount_type=discount_type,
+                    discount_value=discount_value,
+                    starts_at=starts_at,
+                    expires_at=expires_at,
+                )
+                promotion.products.set(products)
+                messages.success(request, 'Jaunpur shop promotion published.')
+                return redirect('manage_promotions')
+    return render(request, 'shops/promotions.html', {
+        'shop': shop,
+        'products': shop.products.filter(is_active=True).order_by('name'),
+        'promotions': shop.promotions.prefetch_related('products').all(),
+        'discount_types': ShopPromotion.DISCOUNT_TYPES,
+    })
+
+
+@login_required
+def deactivate_promotion(request, promotion_id):
+    promotion = get_object_or_404(ShopPromotion, pk=promotion_id, shop__owner=request.user, shop__status='approved')
+    if request.method == 'POST':
+        promotion.is_active = False
+        promotion.save(update_fields=['is_active'])
+        messages.success(request, 'Promotion closed. Its prices no longer apply to new carts.')
+    return redirect('manage_promotions')

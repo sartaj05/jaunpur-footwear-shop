@@ -20,6 +20,7 @@ from .payments import (
     verify_razorpay_signature,
 )
 from shops.models import ShopCoverage, ShopFulfillmentSlot
+from accounts.models import ReferralReward
 
 
 def delivery_fee_for(pincode, subtotal):
@@ -231,7 +232,7 @@ def checkout(request):
     total = sum(item.total_price() for item in items)
     coupon_code = request.session.get('coupon_code', '')
     coupon = Coupon.objects.filter(code__iexact=coupon_code).first() if coupon_code else None
-    if coupon and coupon.is_valid_for(total):
+    if coupon and coupon.is_valid_for(total, user=request.user):
         discount = coupon.discount_for(total)
     else:
         discount = 0
@@ -287,7 +288,7 @@ def checkout(request):
                 for item in locked_items
             )
             locked_coupon = Coupon.objects.select_for_update().filter(code__iexact=coupon_code).first() if coupon_code else None
-            if locked_coupon and locked_coupon.is_valid_for(locked_subtotal):
+            if locked_coupon and locked_coupon.is_valid_for(locked_subtotal, user=request.user):
                 locked_discount = locked_coupon.discount_for(locked_subtotal)
             else:
                 locked_coupon = None
@@ -380,6 +381,10 @@ def checkout(request):
             if locked_coupon and payment_method_choice == 'cod':
                 locked_coupon.used_count += 1
                 locked_coupon.save(update_fields=['used_count'])
+                ReferralReward.objects.filter(
+                    reward_coupon_code=locked_coupon.code,
+                    status='earned',
+                ).update(status='redeemed')
 
             if payment_method_choice == 'cod':
                 CartItem.objects.filter(user=request.user).delete()
@@ -449,7 +454,7 @@ def apply_coupon(request):
             for item in CartItem.objects.filter(user=request.user).select_related('product', 'variant')
         )
         coupon = Coupon.objects.filter(code__iexact=code).first()
-        if coupon and coupon.is_valid_for(subtotal):
+        if coupon and coupon.is_valid_for(subtotal, user=request.user):
             request.session['coupon_code'] = coupon.code
             messages.success(request, f'Coupon {coupon.code} was applied.')
         else:
@@ -520,6 +525,7 @@ def verify_razorpay_payment(request):
         )
         if order.coupon_code:
             Coupon.objects.filter(code=order.coupon_code).update(used_count=F('used_count') + 1)
+            ReferralReward.objects.filter(reward_coupon_code=order.coupon_code, status='earned').update(status='redeemed')
         CartItem.objects.filter(user=request.user).delete()
 
     request.session.pop('coupon_code', None)

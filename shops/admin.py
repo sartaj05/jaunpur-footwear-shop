@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import MarketplaceConnection, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot
+from .models import MarketplaceConnection, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
 
 
 @admin.register(Shop)
@@ -48,3 +48,11 @@ class ONDCEnrollmentAdmin(admin.ModelAdmin):
     list_filter = ['status', 'submitted_at']
     search_fields = ['shop__name', 'participant_name', 'seller_network_id', 'application_reference']
     readonly_fields = ['submitted_at', 'updated_at']
+
+
+@admin.register(ShopPromotion)
+class ShopPromotionAdmin(admin.ModelAdmin):
+    list_display = ['title', 'shop', 'discount_type', 'discount_value', 'is_active', 'starts_at', 'expires_at']
+    list_filter = ['is_active', 'discount_type', 'starts_at', 'expires_at']
+    search_fields = ['title', 'shop__name']
+    filter_horizontal = ['products']

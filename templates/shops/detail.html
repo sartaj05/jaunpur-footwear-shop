@@ -4,15 +4,16 @@
 {% else %}<section class="page-banner"><h1>{{ shop.name }}</h1><p>{{ shop.city }}, Jaunpur · {{ shop.pincode }}</p></section>{% endif %}
 <section class="featured-section">
     {% if shop.logo %}<img src="{{ shop.logo.url }}" alt="{{ shop.name }}" width="120">{% endif %}
-    <p>{{ shop.description|default:'A local Jaunpur footwear shop.' }}</p>
-    <p>{{ shop.address }}{% if shop.opening_hours %} · Hours: {{ shop.opening_hours }}{% endif %}</p>
-    <p>Call <a href="tel:{{ shop.phone }}">{{ shop.phone }}</a></p>
-    {% if coverage_areas %}<h3>Delivery areas</h3><ul>{% for area in coverage_areas %}<li>{{ area.area_name|default:area.pincode }} · delivery ₹{{ area.delivery_fee }}</li>{% endfor %}</ul>{% endif %}
-    {% if fulfillment_slots %}<h3>Pickup and delivery hours</h3><ul>{% for slot in fulfillment_slots %}<li>{{ slot.get_weekday_display }} · {{ slot.get_mode_display }} · {{ slot.start_time|time:'g:i A' }}–{{ slot.end_time|time:'g:i A' }}</li>{% endfor %}</ul>{% endif %}
-    <h2>Products from {{ shop.name }}</h2>
+    <p>{% if is_hindi and shop.description_hi %}{{ shop.description_hi }}{% else %}{{ shop.description|default:'A local Jaunpur footwear shop.' }}{% endif %}</p>
+    <p>{{ shop.address }}{% if shop.opening_hours %} · {% if is_hindi %}समय{% else %}Hours{% endif %}: {{ shop.opening_hours }}{% endif %}</p>
+    <p>{% if is_hindi %}फ़ोन{% else %}Call{% endif %} <a href="tel:{{ shop.phone }}">{{ shop.phone }}</a></p>
+    {% if coverage_areas %}<h3>{% if is_hindi %}डिलीवरी क्षेत्र{% else %}Delivery areas{% endif %}</h3><ul>{% for area in coverage_areas %}<li>{{ area.area_name|default:area.pincode }} · {% if is_hindi %}डिलीवरी{% else %}delivery{% endif %} ₹{{ area.delivery_fee }}</li>{% endfor %}</ul>{% endif %}
+    {% if fulfillment_slots %}<h3>{% if is_hindi %}पिकअप और डिलीवरी का समय{% else %}Pickup and delivery hours{% endif %}</h3><ul>{% for slot in fulfillment_slots %}<li>{{ slot.get_weekday_display }} · {{ slot.get_mode_display }} · {{ slot.start_time|time:'g:i A' }}–{{ slot.end_time|time:'g:i A' }}</li>{% endfor %}</ul>{% endif %}
+    {% if promotions %}<section class="featured-section"><h2>{% if is_hindi %}स्थानीय ऑफ़र{% else %}Local offers{% endif %}</h2><div class="product-grid">{% for promotion in promotions %}<article class="product-card"><div class="product-info"><h3>{% if is_hindi and promotion.title_hi %}{{ promotion.title_hi }}{% else %}{{ promotion.title }}{% endif %}</h3><p>{% if is_hindi and promotion.description_hi %}{{ promotion.description_hi }}{% else %}{{ promotion.description }}{% endif %}</p><strong>{% if promotion.discount_type == 'percent' %}{{ promotion.discount_value }}%{% else %}₹{{ promotion.discount_value }}{% endif %} {% if is_hindi %}की छूट{% else %}off{% endif %}</strong><p>{% for item in promotion.products.all %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p></div></article>{% endfor %}</div></section>{% endif %}
+    <h2>{% if is_hindi %}{{ shop.name }} के जूते{% else %}Products from {{ shop.name }}{% endif %}</h2>
     <div class="product-grid">
-        {% for product in products %}<article class="product-card"><img src="{{ product.image.url }}" alt="{{ product.name }}"><div class="product-info"><p>{{ product.brand.name }}</p><h3>{{ product.name }}</h3><p>Sizes: {{ product.available_sizes }}</p><strong>₹{{ product.final_price }}</strong><a class="card-btn" href="{% url 'product_detail' product.id %}">View details</a></div></article>
-        {% empty %}<p>This shop is preparing its online catalog.</p>{% endfor %}
+        {% for product in products %}<article class="product-card"><img src="{{ product.image.url }}" alt="{{ product.name }}"><div class="product-info"><p>{{ product.brand.name }}</p><h3>{% if is_hindi and product.name_hi %}{{ product.name_hi }}{% else %}{{ product.name }}{% endif %}</h3><p>{% if is_hindi %}साइज़{% else %}Sizes{% endif %}: {{ product.available_sizes }}</p><strong>₹{{ product.final_price }}</strong>{% if product.final_price < product.price %}<del>₹{{ product.price }}</del>{% endif %}<a class="card-btn" href="{% url 'product_detail' product.id %}">{% if is_hindi %}विवरण देखें{% else %}View details{% endif %}</a></div></article>
+        {% empty %}<p>{% if is_hindi %}यह दुकान अपना ऑनलाइन कैटलॉग तैयार कर रही है।{% else %}This shop is preparing its online catalog.{% endif %}</p>{% endfor %}
     </div>
 </section>
 {% endblock %}

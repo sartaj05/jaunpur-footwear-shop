@@ -2,6 +2,7 @@ from django.conf import settings
 from decimal import Decimal
 
 from django.db import models
+from django.utils import timezone
 from django.utils.text import slugify
 
 
@@ -22,6 +23,7 @@ class Shop(models.Model):
     district = models.CharField(max_length=100, default='Jaunpur')
     pincode = models.CharField(max_length=6)
     description = models.TextField(blank=True)
+    description_hi = models.TextField(blank=True)
     opening_hours = models.CharField(max_length=180, blank=True)
     logo = models.ImageField(upload_to='shops/logos/', blank=True, null=True)
     banner = models.ImageField(upload_to='shops/banners/', blank=True, null=True)
@@ -145,3 +147,41 @@ class ONDCEnrollment(models.Model):
 
     def __str__(self):
         return f'ONDC onboarding · {self.shop.name}'
+
+
+class ShopPromotion(models.Model):
+    DISCOUNT_TYPES = [('percent', 'Percentage'), ('fixed', 'Fixed amount')]
+
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='promotions')
+    products = models.ManyToManyField('products.Product', related_name='promotions')
+    title = models.CharField(max_length=140)
+    title_hi = models.CharField(max_length=140, blank=True)
+    description = models.TextField(blank=True)
+    description_hi = models.TextField(blank=True)
+    discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPES, default='percent')
+    discount_value = models.DecimalField(max_digits=8, decimal_places=2)
+    starts_at = models.DateTimeField(blank=True, null=True)
+    expires_at = models.DateTimeField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def discounted_price(self, price):
+        if self.discount_type == 'percent':
+            amount = price * self.discount_value / Decimal('100')
+        else:
+            amount = self.discount_value
+        return max(Decimal('0.00'), price - min(price, amount)).quantize(Decimal('0.01'))
+
+    def is_live(self, at=None):
+        at = at or timezone.now()
+        return (
+            self.is_active
+            and (self.starts_at is None or self.starts_at <= at)
+            and (self.expires_at is None or self.expires_at >= at)
+        )
+
+    def __str__(self):
+        return f'{self.title} · {self.shop.name}'

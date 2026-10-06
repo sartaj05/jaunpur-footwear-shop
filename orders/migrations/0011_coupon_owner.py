@@ -1,0 +1,18 @@
+import django.db.models.deletion
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ('orders', '0010_seller_commission_payout'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='coupon',
+            name='reserved_for',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='reserved_coupons', to=settings.AUTH_USER_MODEL),
+        ),
+    ]

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Jaunpur shop offers</h1><p>Create a scheduled offer for products sold by {{ shop.name }}.</p></section>
+<section class="checkout-page">
+    <form method="post" class="checkout-form-card">{% csrf_token %}
+        <div class="form-group"><label>Offer title</label><input name="title" maxlength="140" required></div>
+        <div class="form-group"><label>Offer title in Hindi</label><input name="title_hi" maxlength="140"></div>
+        <div class="form-group"><label>Description</label><textarea name="description"></textarea></div>
+        <div class="form-group"><label>Description in Hindi</label><textarea name="description_hi"></textarea></div>
+        <div class="form-group"><label>Discount type</label><select name="discount_type" required>{% for value,label in discount_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Discount amount (percent or ₹)</label><input type="number" name="discount_value" min="0.01" step="0.01" required></div>
+        <div class="form-group"><label>Starts at (optional)</label><input type="datetime-local" name="starts_at"></div>
+        <div class="form-group"><label>Ends at (optional)</label><input type="datetime-local" name="expires_at"></div>
+        <fieldset><legend>Products in this offer</legend>{% for product in products %}<label class="form-group"><input type="checkbox" name="products" value="{{ product.id }}"> {{ product.name }} · ₹{{ product.final_price }}</label>{% empty %}<p>Add an active product before making an offer.</p>{% endfor %}</fieldset>
+        <button class="auth-btn" {% if not products %}disabled{% endif %}>Publish offer</button>
+    </form>
+    <section class="featured-section"><h2>Your offers</h2>
+        {% for promotion in promotions %}<article class="checkout-form-card"><h3>{{ promotion.title }}{% if promotion.title_hi %} · {{ promotion.title_hi }}{% endif %}</h3><p>{{ promotion.get_discount_type_display }} {{ promotion.discount_value }} · {% if promotion.is_active %}Enabled{% else %}Closed{% endif %}</p><p>{{ promotion.starts_at|default:'Now' }} to {{ promotion.expires_at|default:'No end date' }}</p><p>Products: {% for item in promotion.products.all %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% empty %}None{% endfor %}</p>{% if promotion.is_active %}<form method="post" action="{% url 'deactivate_promotion' promotion.id %}">{% csrf_token %}<button class="secondary-btn">Close offer</button></form>{% endif %}</article>{% empty %}<p>You have not created an offer yet.</p>{% endfor %}
+    </section>
+</section>
+{% endblock %}

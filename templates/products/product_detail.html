@@ -9,18 +9,18 @@
 
     <div class="detail-content">
         <p class="brand-name">{{ product.brand.name }}</p>
-        <h1>{{ product.name }}</h1>
+        <h1>{% if is_hindi and product.name_hi %}{{ product.name_hi }}{% else %}{{ product.name }}{% endif %}</h1>
 
         <p class="detail-category">
             {{ product.category.name }} • {{ product.get_gender_display }}
         </p>
 
         <div class="detail-price">
-            {% if product.discount_price %}
+            {% if product.final_price < product.price %}
                 <del>₹{{ product.price }}</del>
-                <strong>₹{{ product.discount_price }}</strong>
+                <strong>₹{{ product.final_price }}</strong>
             {% else %}
-                <strong>₹{{ product.price }}</strong>
+                <strong>₹{{ product.final_price }}</strong>
             {% endif %}
         </div>
 
@@ -36,7 +36,7 @@
             {% endif %}
         {% endif %}
 
-        <p class="detail-description">{{ product.description }}</p>
+        <p class="detail-description">{% if is_hindi and product.description_hi %}{{ product.description_hi }}{% else %}{{ product.description }}{% endif %}</p>
 
         <div class="product-rating-summary">
             <strong>Customer rating:</strong>

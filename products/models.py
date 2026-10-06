@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from shops.models import Shop
 
 
@@ -28,11 +29,13 @@ class Product(models.Model):
     ]
 
     name = models.CharField(max_length=200)
+    name_hi = models.CharField(max_length=200, blank=True)
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
 
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='men')
     description = models.TextField()
+    description_hi = models.TextField(blank=True)
 
     price = models.DecimalField(max_digits=10, decimal_places=2)
     discount_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
@@ -50,7 +53,19 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def final_price(self):
-        return self.discount_price if self.discount_price else self.price
+        base_price = self.discount_price if self.discount_price else self.price
+        return self.price_after_promotions(base_price)
+
+    def price_after_promotions(self, base_price):
+        if not self.shop_id:
+            return base_price
+        now = timezone.now()
+        promotions = self.promotions.filter(shop_id=self.shop_id, is_active=True).filter(
+            models.Q(starts_at__isnull=True) | models.Q(starts_at__lte=now),
+            models.Q(expires_at__isnull=True) | models.Q(expires_at__gte=now),
+        )
+        promotional_prices = [promotion.discounted_price(base_price) for promotion in promotions]
+        return min([base_price, *promotional_prices])
 
     def is_low_stock(self):
         return self.stock <= 5
@@ -74,7 +89,9 @@ class ProductVariant(models.Model):
         ]
 
     def final_price(self):
-        return self.price_override if self.price_override is not None else self.product.final_price()
+        if self.price_override is not None:
+            return self.product.price_after_promotions(self.price_override)
+        return self.product.final_price()
 
     @classmethod
     def sync_product_stock(cls, product_id):

@@ -159,11 +159,13 @@ class Coupon(models.Model):
     usage_limit = models.PositiveIntegerField(blank=True, null=True)
     used_count = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    reserved_for = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='reserved_coupons')
 
-    def is_valid_for(self, amount, at=None):
+    def is_valid_for(self, amount, at=None, user=None):
         at = at or timezone.now()
         return (
             self.is_active
+            and (self.reserved_for_id is None or (user is not None and self.reserved_for_id == user.pk))
             and amount >= self.minimum_order_amount
             and (self.starts_at is None or at >= self.starts_at)
             and (self.expires_at is None or at <= self.expires_at)
