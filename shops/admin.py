@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import admin
 
-from .models import MarketplaceChannelOrder, MarketplaceChannelOrderItem, MarketplaceConnection, MarketplaceProductMapping, MarketplaceSyncRun, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
+from .models import MarketplaceChannelOrder, MarketplaceChannelOrderItem, MarketplaceConnection, MarketplaceProductMapping, MarketplaceSyncRun, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion, ShopReview
 
 
 @admin.register(Shop)
@@ -123,3 +123,11 @@ class MarketplaceChannelOrderAdmin(admin.ModelAdmin):
     search_fields = ['external_order_id', 'settlement_reference', 'connection__shop__name']
     readonly_fields = ['connection', 'external_order_id', 'marketplace_id', 'external_status', 'purchased_at', 'currency', 'total_amount', 'created_at', 'last_synced_at']
     inlines = [MarketplaceChannelOrderItemInline]
+
+
+@admin.register(ShopReview)
+class ShopReviewAdmin(admin.ModelAdmin):
+    list_display = ['shop', 'customer', 'seller_order', 'rating', 'is_visible', 'created_at']
+    list_filter = ['rating', 'is_visible', 'created_at']
+    search_fields = ['shop__name', 'customer__username', 'body']
+    readonly_fields = ['shop', 'customer', 'seller_order', 'rating', 'body', 'created_at', 'updated_at']

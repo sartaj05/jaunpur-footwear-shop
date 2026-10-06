@@ -4,7 +4,7 @@ Copy `.env.example` to `.env` for local configuration. Production mode is enable
 
 A Jaunpur-focused, multi-seller footwear marketplace built with Django. Customers can browse local shop catalogs, check size/color stock, place orders, and track delivery. Local sellers can manage their storefronts, products, fulfillment, and connected marketplace workflows.
 
-This repository currently documents **50 feature areas**: 42 customer and seller areas plus 8 admin areas. Some features require an approved provider account or human review. In particular, Amazon/Flipkart API work needs authorized seller accounts, marketplace fees and settlements are entered manually, and ONDC is an onboarding handoff rather than a live network connection.
+The feature list below describes the current repository scope. Some workflows require an approved provider account or human review. Amazon/Flipkart API work needs authorized seller accounts, marketplace fees and settlements are entered manually, and ONDC remains an onboarding handoff rather than a live network connection.
 
 ## Features
 
@@ -42,6 +42,7 @@ This repository currently documents **50 feature areas**: 42 customer and seller
 - Coupon discounts and PIN-code delivery fees
 - Cash on Delivery and Razorpay online checkout
 - Customer product ratings and reviews
+- Service ratings from customers with a delivered Jaunpur shop order
 - My orders
 - Order tracking timeline and email updates
 - Customer-owned downloadable order receipt PDF

@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-banner"><h1>Rate {{ seller_order.shop.name }}</h1><p>Verified order #{{ seller_order.order_id }} · delivered</p></section>
+<form class="checkout-form-card" method="post">{% csrf_token %}
+    <div class="form-group"><label for="rating">Shop service rating</label><select id="rating" name="rating" required>{% for value in "12345" %}<option value="{{ value }}" {% if review.rating|stringformat:"s" == value %}selected{% endif %}>{{ value }} / 5</option>{% endfor %}</select></div>
+    <div class="form-group"><label for="body">Comment (optional)</label><textarea id="body" name="body" maxlength="1200" rows="5">{{ review.body }}</textarea></div>
+    <button class="auth-btn">Save review</button>
+</form>
+{% endblock %}

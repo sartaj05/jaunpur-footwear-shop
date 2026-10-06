@@ -67,6 +67,26 @@ class Shop(models.Model):
         return self.name
 
 
+class ShopReview(models.Model):
+    seller_order = models.OneToOneField('orders.SellerOrder', on_delete=models.CASCADE, related_name='shop_review')
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='reviews')
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='shop_reviews')
+    rating = models.PositiveSmallIntegerField()
+    body = models.TextField(blank=True, max_length=1200)
+    is_visible = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        constraints = [
+            models.CheckConstraint(condition=models.Q(rating__gte=1) & models.Q(rating__lte=5), name='shop_review_rating_1_to_5'),
+        ]
+
+    def __str__(self):
+        return f'{self.rating}/5 service review for {self.shop.name}'
+
+
 class ShopCoverage(models.Model):
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='coverage_areas')
     pincode = models.CharField(max_length=6)

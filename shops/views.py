@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.db.models import Q, Sum
+from django.db.models import Avg, Q, Sum
 from django.db import transaction
 from django.views.decorators.http import require_GET, require_POST
 from urllib.parse import urlencode
@@ -28,7 +28,7 @@ from footwear.task_dispatch import dispatch_background_task
 from accounts.models import ReferralReward
 from accounts.services import award_loyalty_for_order
 
-from .models import MarketplaceChannelOrder, MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion
+from .models import MarketplaceChannelOrder, MarketplaceConnection, MarketplaceProductMapping, ONDCEnrollment, Shop, ShopCoverage, ShopFulfillmentSlot, ShopPromotion, ShopReview
 from .inventory import local_available_stock, update_mapping_allocation
 from .marketplace_auth import (
     MarketplaceAuthorizationError,
@@ -120,7 +120,44 @@ def shop_page(request, slug):
         'fulfillment_slots': shop.fulfillment_slots.filter(is_active=True),
         'promotions': area_promotions,
         'pincode': pincode,
+        'shop_review_average': shop.reviews.filter(is_visible=True).aggregate(value=Avg('rating'))['value'],
+        'shop_review_count': shop.reviews.filter(is_visible=True).count(),
+        'shop_reviews': shop.reviews.filter(is_visible=True).select_related('customer')[:10],
     })
+
+
+@login_required
+def review_shop(request, seller_order_id):
+    seller_order = get_object_or_404(
+        SellerOrder.objects.select_related('shop', 'order'),
+        pk=seller_order_id,
+        order__user=request.user,
+        status='delivered',
+        shop__isnull=False,
+    )
+    review = ShopReview.objects.filter(seller_order=seller_order, customer=request.user).first()
+    if request.method == 'POST':
+        try:
+            rating = int(request.POST.get('rating', '0'))
+        except (TypeError, ValueError):
+            rating = 0
+        body = request.POST.get('body', '').strip()
+        if rating not in range(1, 6) or len(body) > 1200:
+            messages.error(request, 'Choose a rating from 1 to 5 and keep the review under 1,200 characters.')
+        else:
+            ShopReview.objects.update_or_create(
+                seller_order=seller_order,
+                defaults={
+                    'shop': seller_order.shop,
+                    'customer': request.user,
+                    'rating': rating,
+                    'body': body,
+                    'is_visible': True,
+                },
+            )
+            messages.success(request, 'Your verified-shop review was saved.')
+            return redirect('shop_page', slug=seller_order.shop.slug)
+    return render(request, 'shops/review.html', {'seller_order': seller_order, 'review': review})
 
 
 @login_required
@@ -233,6 +270,8 @@ def seller_dashboard(request):
         'products': products,
         'pending_payout_total': ready_payouts.aggregate(total=Sum('net_amount'))['total'] or Decimal('0.00'),
         'paid_payout_total': paid_payouts.aggregate(total=Sum('net_amount'))['total'] or Decimal('0.00'),
+        'shop_review_average': shop.reviews.filter(is_visible=True).aggregate(value=Avg('rating'))['value'],
+        'shop_review_count': shop.reviews.filter(is_visible=True).count(),
     })
 
 
