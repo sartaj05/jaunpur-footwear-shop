@@ -1,0 +1,415 @@
+%PDF-1.4
+%JAUNPUR
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 3 /Kids [6 0 R 8 0 R 10 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 9589 >>
+stream
+0.78 w 0.78 0.82 0.86 RG 48 808 m 547 808 l S
+BT /F2 8 Tf 0.34 0.42 0.50 rg 48.0 818.0 Td (JAUNPUR FOOTWEAR MARKETPLACE) Tj ET
+BT /F2 9 Tf 0.60 0.38 0.12 rg 48.0 790.0 Td (Operations handbook) Tj ET
+BT /F2 23 Tf 0.07 0.19 0.29 rg 48.0 773.0 Td (Deployment & Setup Guide) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 743.0 Td (Local setup, production requirements, release sequence, and verification checklist) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 726.0 Td (Prepared 7 October 2026 | Repository review | Branch: sartaj) Tj ET
+BT /F2 15 Tf 0.07 0.19 0.29 rg 48.0 704.0 Td (Purpose and deployment status) Tj ET
+0.82 0.55 0.22 RG 1.4 w 48 693 m 547 693 l S
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 682.0 Td (This guide describes local setup and a provider-neutral production release for the repository as reviewed on 7) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 670.0 Td (October 2026. The hosting provider is not specified, and this repository does not include a production WSGI) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 658.0 Td (server dependency. Add and pin the server required by the selected host before deployment. No deployment URL) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 646.0 Td (or live production environment is claimed here.) Tj ET
+BT /F2 15 Tf 0.07 0.19 0.29 rg 48.0 624.0 Td (1. Local setup on Windows PowerShell) Tj ET
+0.82 0.55 0.22 RG 1.4 w 48 613 m 547 613 l S
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 602.0 Td (Install Python 3.11 or newer supported by Django 5.2 and Git. From the repository root, run:) Tj ET
+BT /F1 8.1 Tf 0.15 0.21 0.27 rg 48.0 585.0 Td (py -3.11 -m venv .venv) Tj ET
+BT /F1 8.1 Tf 0.15 0.21 0.27 rg 48.0 574.0 Td (.\\.venv\\Scripts\\Activate.ps1) Tj ET
+BT /F1 8.1 Tf 0.15 0.21 0.27 rg 48.0 563.0 Td (python -m pip install --upgrade pip) Tj ET
+BT /F1 8.1 Tf 0.15 0.21 0.27 rg 48.0 552.0 Td (python -m pip install -r requirements.txt) Tj ET
+BT /F1 8.1 Tf 0.15 0.21 0.27 rg 48.0 541.0 Td (python manage.py migrate) Tj ET
+BT /F1 8.1 Tf 0.15 0.21 0.27 rg 48.0 530.0 Td (python manage.py createsuperuser) Tj ET
+BT /F1 8.1 Tf 0.15 0.21 0.27 rg 48.0 519.0 Td (python manage.py runserver) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 503.0 Td (Open `http://127.0.0.1:8000/`. Local defaults use SQLite. The `.env.example` file is a reference; Django does) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 491.0 Td (not automatically load it. Optional values can be set in the shell or a secrets manager. For example, Razorpay) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 479.0 Td (test keys use `$env:RAZORPAY_KEY_ID`, `$env:RAZORPAY_KEY_SECRET`, and `$env:RAZORPAY_WEBHOOK_SECRET`.) Tj ET
+BT /F2 15 Tf 0.07 0.19 0.29 rg 48.0 457.0 Td (2. What production services are needed) Tj ET
+0.82 0.55 0.22 RG 1.4 w 48 446 m 547 446 l S
+q 0.07 0.19 0.29 rg 48.0 415.6 139.7 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 415.6 139.7 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 52.0 422.9 Td (Service) Tj ET
+q 0.07 0.19 0.29 rg 187.7 415.6 359.3 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 415.6 359.3 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 191.7 422.9 Td (Purpose / notes) Tj ET
+q 0.95 0.97 0.98 rg 48.0 386.8 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 386.8 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 404.0 Td (Web app + domain) Tj ET
+q 0.95 0.97 0.98 rg 187.7 386.8 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 386.8 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 404.0 Td (Run `footwear.wsgi:application` behind the hosting provider's production server and HTTPS) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 394.6 Td (proxy. Add and pin a compatible WSGI server in requirements if the host requires it.) Tj ET
+q 1 1 1 rg 48.0 358.0 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 358.0 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 375.2 Td (PostgreSQL) Tj ET
+q 1 1 1 rg 187.7 358.0 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 358.0 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 375.2 Td (Required in production through `DJANGO_DATABASE_URL`; production settings require PostgreSQL) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 365.8 Td (and request SSL when not specified.) Tj ET
+q 0.95 0.97 0.98 rg 48.0 329.2 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 329.2 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 346.4 Td (Redis) Tj ET
+q 0.95 0.97 0.98 rg 187.7 329.2 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 329.2 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 346.4 Td (Required broker through `CELERY_BROKER_URL` in production; run a Celery worker and beat) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 337.0 Td (scheduler as managed processes.) Tj ET
+q 1 1 1 rg 48.0 300.4 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 300.4 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 317.6 Td (S3-compatible object storage) Tj ET
+q 1 1 1 rg 187.7 300.4 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 300.4 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 317.6 Td (Production media default is S3; set bucket and region plus provider credentials/endpoint) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 308.2 Td (where needed. Product uploads need durable storage.) Tj ET
+q 0.95 0.97 0.98 rg 48.0 281.0 139.7 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 281.0 139.7 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 288.8 Td (Static files) Tj ET
+q 0.95 0.97 0.98 rg 187.7 281.0 359.3 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 281.0 359.3 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 288.8 Td (Run `collectstatic`; configure the host/CDN/static service to serve collected static assets.) Tj ET
+q 1 1 1 rg 48.0 252.2 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 252.2 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 269.4 Td (Secrets and HTTPS) Tj ET
+q 1 1 1 rg 187.7 252.2 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 252.2 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 269.4 Td (Use host secret settings for Django key, DB/broker credentials, provider secrets, exact) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 260.0 Td (hosts, CSRF origins, and TLS.) Tj ET
+q 0.95 0.97 0.98 rg 48.0 223.4 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 223.4 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 240.6 Td (Operations) Tj ET
+q 0.95 0.97 0.98 rg 187.7 223.4 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 223.4 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 240.6 Td (Enable DB/media backups, tested restore, logs, health monitoring, error/job alerts, and a) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 231.2 Td (support owner.) Tj ET
+BT /F2 15 Tf 0.07 0.19 0.29 rg 48.0 210.4 Td (3. Environment variables) Tj ET
+0.82 0.55 0.22 RG 1.4 w 48 199.39999999999998 m 547 199.39999999999998 l S
+q 0.07 0.19 0.29 rg 48.0 169.0 94.8 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 169.0 94.8 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 52.0 176.3 Td (Variable) Tj ET
+q 0.07 0.19 0.29 rg 142.8 169.0 169.7 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 169.0 169.7 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 146.8 176.3 Td (Required when) Tj ET
+q 0.07 0.19 0.29 rg 312.5 169.0 234.5 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 169.0 234.5 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 316.5 176.3 Td (Purpose) Tj ET
+q 0.95 0.97 0.98 rg 48.0 140.2 94.8 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 140.2 94.8 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 157.4 Td (`DJANGO_ENV=production) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 148.0 Td (`) Tj ET
+q 0.95 0.97 0.98 rg 142.8 140.2 169.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 140.2 169.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 157.4 Td (Production) Tj ET
+q 0.95 0.97 0.98 rg 312.5 140.2 234.5 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 140.2 234.5 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 157.4 Td (Activates production security and required-setting checks.) Tj ET
+q 1 1 1 rg 48.0 120.8 94.8 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 120.8 94.8 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 128.6 Td (`DJANGO_SECRET_KEY`) Tj ET
+q 1 1 1 rg 142.8 120.8 169.7 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 120.8 169.7 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 128.6 Td (Always in production) Tj ET
+q 1 1 1 rg 312.5 120.8 234.5 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 120.8 234.5 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 128.6 Td (Long random secret; never commit it.) Tj ET
+q 0.95 0.97 0.98 rg 48.0 101.4 94.8 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 101.4 94.8 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 109.2 Td (`DJANGO_ALLOWED_HOSTS`) Tj ET
+q 0.95 0.97 0.98 rg 142.8 101.4 169.7 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 101.4 169.7 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 109.2 Td (Production) Tj ET
+q 0.95 0.97 0.98 rg 312.5 101.4 234.5 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 101.4 234.5 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 109.2 Td (Comma-separated exact hostnames.) Tj ET
+q 1 1 1 rg 48.0 72.6 94.8 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 72.6 94.8 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 89.8 Td (`DJANGO_CSRF_TRUSTED_O) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 80.4 Td (RIGINS`) Tj ET
+q 1 1 1 rg 142.8 72.6 169.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 72.6 169.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 89.8 Td (Production/browser POSTs) Tj ET
+q 1 1 1 rg 312.5 72.6 234.5 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 72.6 234.5 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 89.8 Td (HTTPS origins such as `https://shop.example.com`.) Tj ET
+0.78 w 0.78 0.82 0.86 RG 48 43 m 547 43 l S
+BT /F1 7 Tf 0.38 0.45 0.52 rg 48.0 27.0 Td (Project documentation | Prepared 7 October 2026) Tj ET
+BT /F2 8 Tf 0.34 0.42 0.50 rg 512.0 27.0 Td (1) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 10253 >>
+stream
+0.78 w 0.78 0.82 0.86 RG 48 808 m 547 808 l S
+BT /F2 8 Tf 0.34 0.42 0.50 rg 48.0 818.0 Td (JAUNPUR FOOTWEAR MARKETPLACE) Tj ET
+q 0.07 0.19 0.29 rg 48.0 770.6 94.8 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 770.6 94.8 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 52.0 777.9 Td (Variable) Tj ET
+q 0.07 0.19 0.29 rg 142.8 770.6 169.7 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 770.6 169.7 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 146.8 777.9 Td (Required when) Tj ET
+q 0.07 0.19 0.29 rg 312.5 770.6 234.5 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 770.6 234.5 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 316.5 777.9 Td (Purpose) Tj ET
+q 0.95 0.97 0.98 rg 48.0 751.2 94.8 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 751.2 94.8 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 759.0 Td (`DJANGO_DATABASE_URL`) Tj ET
+q 0.95 0.97 0.98 rg 142.8 751.2 169.7 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 751.2 169.7 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 759.0 Td (Production) Tj ET
+q 0.95 0.97 0.98 rg 312.5 751.2 234.5 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 751.2 234.5 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 759.0 Td (Managed PostgreSQL URL; protect its credentials.) Tj ET
+q 1 1 1 rg 48.0 731.8 94.8 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 731.8 94.8 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 739.6 Td (`CELERY_BROKER_URL`) Tj ET
+q 1 1 1 rg 142.8 731.8 169.7 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 731.8 169.7 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 739.6 Td (Production) Tj ET
+q 1 1 1 rg 312.5 731.8 234.5 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 731.8 234.5 19.4 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 739.6 Td (Redis broker URL.) Tj ET
+q 0.95 0.97 0.98 rg 48.0 703.0 94.8 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 703.0 94.8 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 720.2 Td (`DJANGO_MEDIA_STORAGE=) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 710.8 Td (s3`) Tj ET
+q 0.95 0.97 0.98 rg 142.8 703.0 169.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 703.0 169.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 720.2 Td (Production default) Tj ET
+q 0.95 0.97 0.98 rg 312.5 703.0 234.5 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 703.0 234.5 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 720.2 Td (Selects durable media storage.) Tj ET
+q 1 1 1 rg 48.0 664.8 94.8 38.2 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 664.8 94.8 38.2 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 691.4 Td (`AWS_STORAGE_BUCKET_NA) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 682.0 Td (ME`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 672.6 Td (`AWS_S3_REGION_NAME`) Tj ET
+q 1 1 1 rg 142.8 664.8 169.7 38.2 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 664.8 169.7 38.2 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 691.4 Td (Production media) Tj ET
+q 1 1 1 rg 312.5 664.8 234.5 38.2 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 664.8 234.5 38.2 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 691.4 Td (S3 bucket and region; set provider credentials/endpoint as) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 682.0 Td (required.) Tj ET
+q 0.95 0.97 0.98 rg 48.0 617.2 94.8 47.6 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 617.2 94.8 47.6 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 653.2 Td (`RAZORPAY_KEY_ID`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 643.8 Td (`RAZORPAY_KEY_SECRET`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 634.4 Td (`RAZORPAY_WEBHOOK_SECR) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 625.0 Td (ET`) Tj ET
+q 0.95 0.97 0.98 rg 142.8 617.2 169.7 47.6 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 617.2 169.7 47.6 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 653.2 Td (Online payment) Tj ET
+q 0.95 0.97 0.98 rg 312.5 617.2 234.5 47.6 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 617.2 234.5 47.6 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 653.2 Td (API credentials and separate webhook signing secret.) Tj ET
+q 1 1 1 rg 48.0 532.0 94.8 85.2 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 532.0 94.8 85.2 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 605.6 Td (`WHATSAPP_GRAPH_API_VE) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 596.2 Td (RSION`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 586.8 Td (`WHATSAPP_PHONE_NUMBER) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 577.4 Td (_ID`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 568.0 Td (`WHATSAPP_ACCESS_TOKEN) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 558.6 Td (`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 549.2 Td (`WHATSAPP_ORDER_TEMPLA) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 539.8 Td (TE`) Tj ET
+q 1 1 1 rg 142.8 532.0 169.7 85.2 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 532.0 169.7 85.2 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 605.6 Td (WhatsApp notifications) Tj ET
+q 1 1 1 rg 312.5 532.0 234.5 85.2 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 532.0 234.5 85.2 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 605.6 Td (Meta Cloud API setup; use approved templates and customer) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 596.2 Td (opt-in.) Tj ET
+q 0.95 0.97 0.98 rg 48.0 456.2 94.8 75.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 456.2 94.8 75.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 520.4 Td (`FLIPKART_CLIENT_ID`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 511.0 Td (`FLIPKART_CLIENT_SECRE) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 501.6 Td (T`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 492.2 Td (`FLIPKART_REDIRECT_URI) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 482.8 Td (`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 473.4 Td (`MARKETPLACE_TOKEN_ENC) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 464.0 Td (RYPTION_KEY`) Tj ET
+q 0.95 0.97 0.98 rg 142.8 456.2 169.7 75.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 456.2 169.7 75.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 520.4 Td (Flipkart seller authorization) Tj ET
+q 0.95 0.97 0.98 rg 312.5 456.2 234.5 75.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 456.2 234.5 75.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 520.4 Td (Registered partner app and stable encryption key.) Tj ET
+q 1 1 1 rg 48.0 361.6 94.8 94.6 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 361.6 94.8 94.6 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 444.6 Td (`AMAZON_APPLICATION_ID) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 435.2 Td (`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 425.8 Td (`AMAZON_LWA_CLIENT_ID`) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 416.4 Td (,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 407.0 Td (`AMAZON_LWA_CLIENT_SEC) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 397.6 Td (RET`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 388.2 Td (`AMAZON_REDIRECT_URI`,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 378.8 Td (`MARKETPLACE_TOKEN_ENC) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 369.4 Td (RYPTION_KEY`) Tj ET
+q 1 1 1 rg 142.8 361.6 169.7 94.6 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 361.6 169.7 94.6 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 444.6 Td (Amazon SP-API) Tj ET
+q 1 1 1 rg 312.5 361.6 234.5 94.6 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 361.6 234.5 94.6 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 444.6 Td (Registered application, seller consent, roles, and region) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 435.2 Td (endpoint.) Tj ET
+q 0.95 0.97 0.98 rg 48.0 332.8 94.8 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 332.8 94.8 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 350.0 Td (`ONDC_PARTICIPANT_ADAP) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 340.6 Td (TER`) Tj ET
+q 0.95 0.97 0.98 rg 142.8 332.8 169.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 142.8 332.8 169.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 146.8 350.0 Td (Optional ONDC check) Tj ET
+q 0.95 0.97 0.98 rg 312.5 332.8 234.5 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 312.5 332.8 234.5 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 350.0 Td (Dotted import path for the participant-specific adapter;) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 316.5 340.6 Td (credentials stay in a secret manager.) Tj ET
+BT /F2 15 Tf 0.07 0.19 0.29 rg 48.0 319.8 Td (4. Release sequence) Tj ET
+0.82 0.55 0.22 RG 1.4 w 48 308.79999999999995 m 547 308.79999999999995 l S
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 297.8 Td (- Provision PostgreSQL, Redis, media storage, app service, HTTPS domain, and secret settings.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 280.8 Td (- Install the pinned requirements plus the chosen production WSGI/ASGI server dependency.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 263.8 Td (- Run python manage.py check --deploy using production environment settings; fix every configuration issue.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 246.8 Td (- Run python manage.py showmigrations, then apply python manage.py migrate as a release step.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 229.8 Td (- Run python manage.py collectstatic --noinput and verify static assets and uploaded media from the public) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 217.8 Td (app.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 200.8 Td (- Start the web process, Celery worker, and Celery beat scheduler. The WSGI target is) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 188.8 Td (footwear.wsgi:application.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 171.8 Td (- Verify /health/, login, seller/staff permissions, catalog images, checkout, and logs before opening the) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 159.8 Td (site.) Tj ET
+BT /F2 15 Tf 0.07 0.19 0.29 rg 48.0 137.8 Td (5. Verify business-critical paths in staging) Tj ET
+0.82 0.55 0.22 RG 1.4 w 48 126.79999999999995 m 547 126.79999999999995 l S
+q 0.07 0.19 0.29 rg 48.0 96.4 139.7 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 96.4 139.7 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 52.0 103.7 Td (Area) Tj ET
+q 0.07 0.19 0.29 rg 187.7 96.4 359.3 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 96.4 359.3 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 191.7 103.7 Td (Rehearsal) Tj ET
+q 0.95 0.97 0.98 rg 48.0 67.6 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 67.6 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 84.8 Td (Checkout and stock) Tj ET
+q 0.95 0.97 0.98 rg 187.7 67.6 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 67.6 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 84.8 Td (COD, variant stock changes, delivery PIN coverage/slot capacity, multi-shop split, and) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 75.4 Td (concurrent attempts on the last unit.) Tj ET
+0.78 w 0.78 0.82 0.86 RG 48 43 m 547 43 l S
+BT /F1 7 Tf 0.38 0.45 0.52 rg 48.0 27.0 Td (Project documentation | Prepared 7 October 2026) Tj ET
+BT /F2 8 Tf 0.34 0.42 0.50 rg 512.0 27.0 Td (2) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 11 0 R >>
+endobj
+11 0 obj
+<< /Length 5818 >>
+stream
+0.78 w 0.78 0.82 0.86 RG 48 808 m 547 808 l S
+BT /F2 8 Tf 0.34 0.42 0.50 rg 48.0 818.0 Td (JAUNPUR FOOTWEAR MARKETPLACE) Tj ET
+q 0.07 0.19 0.29 rg 48.0 770.6 139.7 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 770.6 139.7 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 52.0 777.9 Td (Area) Tj ET
+q 0.07 0.19 0.29 rg 187.7 770.6 359.3 19.4 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 770.6 359.3 19.4 re S
+BT /F2 8.1 Tf 1 1 1 rg 191.7 777.9 Td (Rehearsal) Tj ET
+q 1 1 1 rg 48.0 741.8 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 741.8 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 759.0 Td (Razorpay) Tj ET
+q 1 1 1 rg 187.7 741.8 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 741.8 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 759.0 Td (Test success, failure, bad signature, duplicate event, amount mismatch, delayed callback,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 749.6 Td (refund queue, and manual-review case using test credentials.) Tj ET
+q 0.95 0.97 0.98 rg 48.0 713.0 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 713.0 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 730.2 Td (Seller operations) Tj ET
+q 0.95 0.97 0.98 rg 187.7 713.0 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 713.0 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 730.2 Td (Shop approval, role/data boundaries, CSV import validation, fulfillment route, proof of) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 720.8 Td (delivery, return/exchange, commission, and payout record.) Tj ET
+q 1 1 1 rg 48.0 684.2 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 684.2 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 701.4 Td (External providers) Tj ET
+q 1 1 1 rg 187.7 684.2 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 684.2 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 701.4 Td (Use approved sandbox/test accounts first. Confirm callbacks, token encryption-key backup,) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 692.0 Td (API roles, provider rate limits, opt-in and consent behavior.) Tj ET
+q 0.95 0.97 0.98 rg 48.0 655.4 139.7 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 48.0 655.4 139.7 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 52.0 672.6 Td (Recovery) Tj ET
+q 0.95 0.97 0.98 rg 187.7 655.4 359.3 28.8 re f Q
+0.68 0.73 0.78 RG 0.45 w 187.7 655.4 359.3 28.8 re S
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 672.6 Td (Take database/media backups and restore to a separate staging environment; record elapsed) Tj ET
+BT /F1 7.6 Tf 0.15 0.21 0.27 rg 191.7 663.2 Td (time and missing steps.) Tj ET
+BT /F2 15 Tf 0.07 0.19 0.29 rg 48.0 642.4 Td (6. Background processes and operations) Tj ET
+0.82 0.55 0.22 RG 1.4 w 48 631.4000000000002 m 547 631.4000000000002 l S
+BT /F1 8.1 Tf 0.15 0.21 0.27 rg 48.0 620.4 Td (celery -A footwear worker -l INFO) Tj ET
+BT /F1 8.1 Tf 0.15 0.21 0.27 rg 48.0 609.4 Td (celery -A footwear beat -l INFO) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 593.4 Td (Run these as separate supervised services, not manually in a one-off shell. Configure process restart, logs,) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 581.4 Td (alerting, and a controlled release procedure. Read) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 569.4 Td ([`docs/production-operations.md`]\(../docs/production-operations.md\) for backup and operational notes.) Tj ET
+BT /F2 15 Tf 0.07 0.19 0.29 rg 48.0 547.4 Td (7. Launch checklist) Tj ET
+0.82 0.55 0.22 RG 1.4 w 48 536.4000000000002 m 547 536.4000000000002 l S
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 525.4 Td (- Production-only secret values are set in the hosting platform; no keys are in Git or the document.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 508.4 Td (- `DEBUG` is false, allowed hosts and CSRF origins are exact, TLS/secure cookies are active, and `check) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 496.4 Td (--deploy` passes.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 479.4 Td (- PostgreSQL migration, backup, and restore are verified; media upload and retrieval survive a redeploy.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 462.4 Td (- Production server and static serving are configured; Celery processes are supervised if tasks are) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 450.4 Td (enabled.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 433.4 Td (- Payment webhook URL and secret are configured and rehearsed; staff know how to handle mismatches and) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 421.4 Td (uncertain refunds.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 404.4 Td (- Seller, support, delivery, return, payout, privacy, and incident processes have named owners for the) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 392.4 Td (Jaunpur pilot.) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 375.4 Td (- Provider approvals and account authorizations are complete for every enabled integration; unavailable) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 363.4 Td (integrations remain disabled.) Tj ET
+BT /F2 15 Tf 0.07 0.19 0.29 rg 48.0 341.4 Td (References) Tj ET
+0.82 0.55 0.22 RG 1.4 w 48 330.4000000000002 m 547 330.4000000000002 l S
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 319.4 Td (- Django 5.2 deployment checklist) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 302.4 Td (- Django static files deployment) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 285.4 Td (- Celery with Django) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 62.0 268.4 Td (- Repository production operations notes) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 251.4 Td (Before production: review the current official documentation for the selected host, provider APIs, and service) Tj ET
+BT /F1 9 Tf 0.15 0.21 0.27 rg 48.0 239.4 Td (versions; platform-specific networking, server command, secrets, and static hosting vary by provider.) Tj ET
+0.78 w 0.78 0.82 0.86 RG 48 43 m 547 43 l S
+BT /F1 7 Tf 0.38 0.45 0.52 rg 48.0 27.0 Td (Project documentation | Prepared 7 October 2026) Tj ET
+BT /F2 8 Tf 0.34 0.42 0.50 rg 512.0 27.0 Td (3) Tj ET
+endstream
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000018 00000 n 
+0000000067 00000 n 
+0000000137 00000 n 
+0000000234 00000 n 
+0000000336 00000 n 
+0000000431 00000 n 
+0000000577 00000 n 
+0000010218 00000 n 
+0000010364 00000 n 
+0000020670 00000 n 
+0000020818 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R /Info << /Title (Jaunpur Footwear Project Document) /Producer (Codex document generator) >> >>
+startxref
+26689
+%%EOF
