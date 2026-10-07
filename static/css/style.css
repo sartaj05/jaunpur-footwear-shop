@@ -1575,3 +1575,60 @@ textarea {
     font-weight: 700;
     vertical-align: middle;
 }
+
+.rider-offline-status {
+    position: sticky;
+    top: 0.5rem;
+    z-index: 5;
+    padding: 0.85rem 1rem;
+    margin: 0 0 1rem;
+    border: 1px solid #b6d9c1;
+    border-radius: 12px;
+    background: #edf8f0;
+    color: #14532d;
+    font-weight: 700;
+}
+
+.rider-offline-status.is-error {
+    border-color: #f0b4b4;
+    background: #fff1f1;
+    color: #8c1d1d;
+}
+
+.rider-offline-status:not(.is-visible) {
+    opacity: 0.85;
+}
+
+.rider-delivery-card {
+    max-width: 760px;
+    margin: 1rem auto;
+}
+
+.rider-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.rider-action-row button {
+    min-height: 48px;
+    flex: 1 1 220px;
+}
+
+.rider-proof-photo {
+    display: block;
+    width: min(100%, 320px);
+    max-height: 320px;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+@media (max-width: 600px) {
+    .rider-action-row {
+        flex-direction: column;
+    }
+
+    .rider-action-row button {
+        width: 100%;
+    }
+}

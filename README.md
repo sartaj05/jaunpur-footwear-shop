@@ -31,7 +31,7 @@ The [feature catalog](docs/Jaunpur_Footwear_Feature_Catalog.docx) groups the cur
 - Import a catalog from CSV with product photos; map eligible catalog items to marketplace categories/listings.
 - Review shop-specific orders created when checkout contains items from multiple shops.
 - View shop-scoped 7/30/90-day order, delivery, cancellation, return, sales, proceeds, and low-stock summaries.
-- Use pickup or local delivery workflows; staff can group rider routes by PIN cluster and record proof of delivery.
+- Use pickup or local delivery workflows; staff can group rider routes by PIN cluster. Riders can queue delivery confirmations, failed attempts, notes, and proof photos on the device while the route screen is open offline, then sync when connectivity returns.
 - Review shop commission statements and audited payout batches with sales, commission, processed-return adjustments, transfer references, and staff history. Active return requests hold payout eligibility.
 
 ### Staff and operations

@@ -1,16 +1,32 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
 <section class="page-banner"><h1>My Jaunpur delivery routes</h1><p>{{ rider }} · PIN-clustered delivery stops</p></section>
 <section class="featured-section">
+    <div id="riderOfflineStatus" class="rider-offline-status" data-endpoint="{% url 'rider_deliveries' %}" role="status" aria-live="polite">Checking offline capture…</div>
     {% for assignment in assignments %}
-    <article class="checkout-form-card"><h2>Route #{{ assignment.run_id }} · Stop {{ assignment.sequence }}</h2><p>PIN {{ assignment.run.pincode }} · {{ assignment.run.delivery_date }} · {{ assignment.get_status_display }}</p>
+    <article class="checkout-form-card rider-delivery-card">
+        <h2>Route #{{ assignment.run_id }} · Stop {{ assignment.sequence }}</h2>
+        <p><strong>PIN {{ assignment.run.pincode }}</strong> · {{ assignment.run.delivery_date }} · {{ assignment.get_status_display }}</p>
         <p>Order #{{ assignment.seller_order.order_id }} · {{ assignment.seller_order.shop.name|default:'Jaunpur Footwear' }}</p>
         <p>Deliver to {{ assignment.seller_order.order.full_name }} · <a href="tel:{{ assignment.seller_order.order.mobile }}">{{ assignment.seller_order.order.mobile }}</a></p>
         <p>{{ assignment.seller_order.order.address }} · {{ assignment.seller_order.order.delivery_pincode }}</p>
         {% if assignment.seller_order.items.all %}<ul>{% for item in assignment.seller_order.items.all %}<li>{{ item.product_name }} · size {{ item.size }}{% if item.color %} / {{ item.color }}{% endif %} · quantity {{ item.quantity }}</li>{% endfor %}</ul>{% endif %}
-        {% if assignment.status == 'delivered' %}<p>Delivered to {{ assignment.delivered_to }} at {{ assignment.delivered_at }}</p>{% if assignment.proof_photo %}<img src="{{ assignment.proof_photo.url }}" alt="Delivery proof" width="180">{% endif %}
-        {% else %}<form method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="assignment_id" value="{{ assignment.id }}"><div class="form-group"><label>Received by</label><input name="delivered_to" maxlength="120"></div><div class="form-group"><label>Proof photo (optional)</label><input type="file" name="proof_photo" accept="image/*"></div><div class="form-group"><label>Delivery note</label><textarea name="note"></textarea></div><button class="primary-btn" name="action" value="delivered">Confirm delivery</button><button class="secondary-btn" name="action" value="failed">Record failed attempt</button></form>{% if assignment.note %}<p>Previous attempt: {{ assignment.note }}</p>{% endif %}{% endif %}
+        {% if assignment.status == 'delivered' %}
+            <p>Delivered to {{ assignment.delivered_to }} at {{ assignment.delivered_at }}</p>
+            {% if assignment.proof_photo %}<a href="{{ assignment.proof_photo.url }}" target="_blank" rel="noopener"><img class="rider-proof-photo" src="{{ assignment.proof_photo.url }}" alt="Delivery proof photo"></a>{% endif %}
+        {% else %}
+            <form method="post" enctype="multipart/form-data" class="rider-update-form">
+                {% csrf_token %}<input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                <div class="form-group"><label>Received by</label><input name="delivered_to" maxlength="120" autocomplete="name"></div>
+                <div class="form-group"><label>Proof photo (optional)</label><input type="file" name="proof_photo" accept="image/*" capture="environment"></div>
+                <div class="form-group"><label>Delivery note / failed attempt reason</label><textarea name="note" maxlength="2000"></textarea></div>
+                <div class="rider-action-row"><button class="primary-btn" name="action" value="delivered">Confirm delivery</button><button class="secondary-btn" name="action" value="failed">Record failed attempt</button></div>
+            </form>
+            {% if assignment.note %}<p>Previous attempt: {{ assignment.note }}</p>{% endif %}
+        {% endif %}
     </article>
     {% empty %}<p>No delivery stops assigned to your account.</p>{% endfor %}
 </section>
+<script src="{% static 'js/rider-offline.js' %}" defer></script>
 {% endblock %}

@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import JsonResponse
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
@@ -763,6 +764,7 @@ def rider_deliveries(request):
         'run', 'seller_order__order', 'seller_order__shop'
     ).prefetch_related('seller_order__items').order_by('run__delivery_date', 'run__pincode', 'sequence')
     if request.method == 'POST':
+        sync_success = False
         try:
             assignment_id = int(request.POST.get('assignment_id', ''))
         except (TypeError, ValueError):
@@ -771,6 +773,7 @@ def rider_deliveries(request):
         action = request.POST.get('action')
         if assignment.status == 'delivered':
             messages.info(request, 'This delivery stop is already marked delivered.')
+            sync_success = action == 'delivered'
         elif action == 'delivered':
             delivered_to = request.POST.get('delivered_to', '').strip()
             proof_photo = request.FILES.get('proof_photo')
@@ -818,6 +821,7 @@ def rider_deliveries(request):
                         assignment.run.status = 'completed'
                         assignment.run.save(update_fields=['status'])
                 messages.success(request, f'Order #{seller_order.order_id} delivery recorded.')
+                sync_success = True
         elif action == 'failed':
             note = request.POST.get('note', '').strip()
             if not note:
@@ -826,5 +830,8 @@ def rider_deliveries(request):
                 assignment.note = note
                 assignment.save(update_fields=['note'])
                 messages.warning(request, 'Attempt recorded. This stop remains on your route for retry.')
+                sync_success = True
+        if request.headers.get('X-Rider-Offline-Sync') == '1':
+            return JsonResponse({'accepted': sync_success}, status=200 if sync_success else 400)
         return redirect('rider_deliveries')
     return render(request, 'orders/rider_deliveries.html', {'rider': rider, 'assignments': assignments})
