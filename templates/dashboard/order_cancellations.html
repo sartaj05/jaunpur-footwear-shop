@@ -1,0 +1,35 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block content %}
+<h1>Order cancellations and refunds</h1>
+<p>Approve eligible pre-fulfillment cancellations, then record the actual payment-provider or bank reference after a refund is sent.</p>
+
+{% for cancellation in cancellation_requests %}
+<section class="checkout-form-card">
+    <h2>Order #{{ cancellation.order_id }} · {{ cancellation.get_status_display }}</h2>
+    <p>{{ cancellation.customer.get_full_name|default:cancellation.customer.username }} · requested {{ cancellation.requested_at|date:'M j, Y g:i A' }}</p>
+    <p><strong>Reason:</strong> {{ cancellation.reason }}</p>
+    <p><strong>Payment:</strong> {{ cancellation.order.payment_method }} · {{ cancellation.order.get_payment_status_display }} · ₹{{ cancellation.order.total_amount }}</p>
+    {% if cancellation.refund_reference %}<p><strong>Refund reference:</strong> {{ cancellation.refund_reference }}</p>{% endif %}
+    {% if cancellation.staff_note %}<p><strong>Staff note:</strong> {{ cancellation.staff_note }}</p>{% endif %}
+    {% if cancellation.status == 'requested' or cancellation.status == 'refund_pending' %}
+    <form method="post" class="checkout-form-card">
+        {% csrf_token %}
+        <input type="hidden" name="request_id" value="{{ cancellation.id }}">
+        <label for="staff-note-{{ cancellation.id }}">Staff note</label>
+        <textarea id="staff-note-{{ cancellation.id }}" name="staff_note" maxlength="2000">{{ cancellation.staff_note }}</textarea>
+        {% if cancellation.status == 'requested' %}
+        <button class="primary-btn" name="action" value="approve">Approve cancellation</button>
+        <button class="secondary-btn" name="action" value="reject">Decline request</button>
+        {% else %}
+        <label for="refund-ref-{{ cancellation.id }}">Refund reference after transfer</label>
+        <input id="refund-ref-{{ cancellation.id }}" name="refund_reference" maxlength="120" required>
+        <button class="primary-btn" name="action" value="record_refund">Record refund sent</button>
+        {% endif %}
+    </form>
+    {% endif %}
+</section>
+{% empty %}
+<p>No cancellation requests yet.</p>
+{% endfor %}
+{% endblock %}

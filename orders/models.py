@@ -28,6 +28,8 @@ class Order(models.Model):
         ('pending', 'Payment pending'),
         ('paid', 'Paid'),
         ('failed', 'Failed'),
+        ('refund_pending', 'Refund pending'),
+        ('refunded', 'Refunded'),
     ]
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -51,7 +53,7 @@ class Order(models.Model):
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_method = models.CharField(max_length=50, default='Cash on Delivery')
-    payment_status = models.CharField(max_length=12, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
+    payment_status = models.CharField(max_length=16, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
     stock_released = models.BooleanField(default=False)
     stock_reservation_expires_at = models.DateTimeField(blank=True, null=True, db_index=True)
 
@@ -319,3 +321,29 @@ class ReturnRequest(models.Model):
 
     def __str__(self):
         return f'{self.get_request_type_display()} for order #{self.order_id}'
+
+
+class OrderCancellationRequest(models.Model):
+    STATUS_CHOICES = [
+        ('requested', 'Awaiting staff review'),
+        ('rejected', 'Cancellation declined'),
+        ('cancelled', 'Cancelled'),
+        ('refund_pending', 'Cancelled · refund pending'),
+        ('refunded', 'Cancelled · refund recorded'),
+    ]
+
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='cancellation_request')
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='order_cancellations')
+    reason = models.TextField(max_length=1000)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='requested')
+    staff_note = models.TextField(blank=True)
+    refund_reference = models.CharField(max_length=120, blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(blank=True, null=True)
+    refunded_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-requested_at', '-id']
+
+    def __str__(self):
+        return f'Cancellation for order #{self.order_id} · {self.get_status_display()}'

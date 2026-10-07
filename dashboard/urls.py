@@ -25,5 +25,6 @@ urlpatterns = [
     path('customers/', views.dashboard_customers, name='dashboard_customers'),
     path('reports/sales/', views.sales_reports, name='sales_reports'),
     path('payouts/', views.seller_payouts, name='seller_payouts'),
+    path('order-cancellations/', views.order_cancellations, name='order_cancellations'),
     path('dispatch/', views.delivery_dispatch, name='delivery_dispatch'),
 ]

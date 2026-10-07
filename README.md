@@ -16,6 +16,7 @@ The [feature catalog](docs/Jaunpur_Footwear_Feature_Catalog.docx) groups the cur
 - Reserve stock for a configurable payment window (15 minutes by default); Celery Beat cancels expired unpaid Razorpay orders and releases stock.
 - Use wishlists and the shoe-size finder; submit product reviews and eligible delivered-shop reviews.
 - View orders and status timelines, download a personal order receipt PDF, and request returns or exchanges.
+- Request cancellation before shop fulfillment starts and follow staff review plus externally recorded refund progress.
 - Receive email status updates and opt-in English/Hindi WhatsApp updates when Meta Cloud API settings are configured.
 - Open order-linked customer support tickets and exchange messages with staff.
 - Earn Jaunpur loyalty points and use eligible reward coupons.

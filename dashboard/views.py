@@ -9,7 +9,7 @@ from datetime import date, timedelta
 import re
 
 from products.models import Product, ProductVariant, Brand, Category
-from orders.models import DeliveryAssignment, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, SellerOrder
+from orders.models import DeliveryAssignment, DeliveryRider, DeliveryRun, Order, OrderCancellationRequest, OrderItem, OrderTrackingEvent, PaymentAttempt, SellerOrder
 from orders.tasks import send_order_status_update_task
 from footwear.task_dispatch import dispatch_background_task
 from orders.payments import release_order_inventory
@@ -320,6 +320,78 @@ def seller_payouts(request):
         'paid_orders': paid,
         'eligible_total': eligible.aggregate(total=Sum('net_amount'))['total'] or 0,
     })
+
+
+@staff_member_required
+def order_cancellations(request):
+    requests = OrderCancellationRequest.objects.select_related('order', 'customer').order_by('-requested_at')
+    if request.method == 'POST':
+        try:
+            request_id = int(request.POST.get('request_id', ''))
+        except (TypeError, ValueError):
+            request_id = 0
+        action = request.POST.get('action', '')
+        with transaction.atomic():
+            cancellation = get_object_or_404(
+                OrderCancellationRequest.objects.select_for_update().select_related('order'), pk=request_id,
+            )
+            order = Order.objects.select_for_update().get(pk=cancellation.order_id)
+            if action == 'reject' and cancellation.status == 'requested':
+                cancellation.status = 'rejected'
+                cancellation.staff_note = request.POST.get('staff_note', '').strip()[:2000]
+                cancellation.reviewed_at = timezone.now()
+                cancellation.save(update_fields=['status', 'staff_note', 'reviewed_at'])
+                messages.success(request, f'Cancellation request for order #{order.pk} was declined.')
+            elif action == 'approve' and cancellation.status == 'requested':
+                can_cancel = (
+                    order.status in {'pending', 'confirmed'}
+                    and not order.seller_orders.exclude(status__in=['pending', 'confirmed']).exists()
+                    and order.payment_status in {'unpaid', 'pending', 'paid'}
+                )
+                if not can_cancel:
+                    messages.error(request, f'Order #{order.pk} has progressed and cannot be cancelled through this workflow.')
+                else:
+                    release_order_inventory(order)
+                    order.status = 'cancelled'
+                    paid = order.payment_status == 'paid'
+                    order.payment_status = 'refund_pending' if paid else order.payment_status
+                    order.save(update_fields=['status', 'payment_status'])
+                    cancellation.status = 'refund_pending' if paid else 'cancelled'
+                    cancellation.staff_note = request.POST.get('staff_note', '').strip()[:2000]
+                    cancellation.reviewed_at = timezone.now()
+                    cancellation.save(update_fields=['status', 'staff_note', 'reviewed_at'])
+                    OrderTrackingEvent.objects.create(
+                        order=order,
+                        status='cancelled',
+                        note='Cancellation approved; refund is pending.' if paid else 'Cancellation approved; inventory was released.',
+                        created_by=request.user,
+                    )
+                    transaction.on_commit(lambda order_id=order.pk: dispatch_background_task(send_order_status_update_task, order_id))
+                    messages.success(request, f'Order #{order.pk} was cancelled. Review the refund state before closing the request.')
+            elif action == 'record_refund' and cancellation.status == 'refund_pending':
+                reference = request.POST.get('refund_reference', '').strip()
+                if not reference:
+                    messages.error(request, 'Enter the actual bank or payment-provider refund reference.')
+                else:
+                    cancellation.status = 'refunded'
+                    cancellation.refund_reference = reference[:120]
+                    cancellation.staff_note = request.POST.get('staff_note', '').strip()[:2000]
+                    cancellation.refunded_at = timezone.now()
+                    cancellation.save(update_fields=['status', 'refund_reference', 'staff_note', 'refunded_at'])
+                    order.payment_status = 'refunded'
+                    order.save(update_fields=['payment_status'])
+                    OrderTrackingEvent.objects.create(
+                        order=order,
+                        status='cancelled',
+                        note=f'Refund recorded as sent. Reference: {reference[:120]}',
+                        created_by=request.user,
+                    )
+                    transaction.on_commit(lambda order_id=order.pk: dispatch_background_task(send_order_status_update_task, order_id))
+                    messages.success(request, f'Refund progress for order #{order.pk} was recorded as complete.')
+            else:
+                messages.info(request, 'This cancellation request has already moved past that action.')
+        return redirect('order_cancellations')
+    return render(request, 'dashboard/order_cancellations.html', {'cancellation_requests': requests})
 
 
 @staff_member_required

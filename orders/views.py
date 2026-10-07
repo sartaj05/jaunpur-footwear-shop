@@ -10,7 +10,7 @@ from decimal import Decimal
 import re
 import uuid
 from products.models import Product, ProductVariant
-from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
+from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, Order, OrderCancellationRequest, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
 from .tasks import send_order_confirmation_task, send_order_status_update_task
 from footwear.task_dispatch import dispatch_background_task
 from .payments import (
@@ -602,6 +602,41 @@ def my_orders(request):
         'seller_orders__delivery_assignment__run__rider__user',
     ).order_by('-created_at')
     return render(request, 'orders/my_orders.html', {'orders': orders})
+
+
+@login_required
+def request_order_cancellation(request, order_id):
+    if request.method != 'POST':
+        return redirect('my_orders')
+    order = get_object_or_404(Order, pk=order_id, user=request.user)
+    reason = request.POST.get('reason', '').strip()
+    cancellable_status = order.status in {'pending', 'confirmed'}
+    seller_orders_ready = not order.seller_orders.exclude(status__in=['pending', 'confirmed']).exists()
+    if not cancellable_status or not seller_orders_ready or order.payment_status not in {'unpaid', 'pending', 'paid'}:
+        messages.error(request, 'This order can no longer be cancelled from your account. Contact support for help.')
+        return redirect('my_orders')
+    if not reason or len(reason) > 1000:
+        messages.error(request, 'Enter a cancellation reason of up to 1,000 characters.')
+        return redirect('my_orders')
+
+    with transaction.atomic():
+        cancellation = OrderCancellationRequest.objects.select_for_update().filter(order=order).first()
+        if cancellation and cancellation.status != 'rejected':
+            messages.info(request, 'A cancellation request is already being tracked for this order.')
+            return redirect('my_orders')
+        if cancellation:
+            cancellation.customer = request.user
+            cancellation.reason = reason
+            cancellation.status = 'requested'
+            cancellation.staff_note = ''
+            cancellation.refund_reference = ''
+            cancellation.reviewed_at = None
+            cancellation.refunded_at = None
+            cancellation.save(update_fields=['customer', 'reason', 'status', 'staff_note', 'refund_reference', 'reviewed_at', 'refunded_at'])
+        else:
+            OrderCancellationRequest.objects.create(order=order, customer=request.user, reason=reason)
+    messages.success(request, 'Your cancellation request was sent. You can follow its review and refund status below.')
+    return redirect('my_orders')
 
 
 @login_required

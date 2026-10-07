@@ -31,6 +31,20 @@
             {% if order.coupon_code %}<p><strong>Coupon:</strong> {{ order.coupon_code }} (saved ₹{{ order.discount_amount }})</p>{% endif %}
             <p><strong>Payment:</strong> {{ order.payment_method }}</p>
             <p><strong>Payment status:</strong> {{ order.get_payment_status_display }}</p>
+            {% if order.cancellation_request %}
+            <p class="return-request-status"><strong>Cancellation:</strong> {{ order.cancellation_request.get_status_display }}{% if order.cancellation_request.refund_reference %} · refund reference {{ order.cancellation_request.refund_reference }}{% endif %}{% if order.cancellation_request.staff_note %} · {{ order.cancellation_request.staff_note }}{% endif %}</p>
+            {% if order.cancellation_request.status == 'requested' or order.cancellation_request.status == 'refund_pending' %}<p>Your cancellation or refund is being reviewed by the Jaunpur shop team.</p>{% endif %}
+            {% endif %}
+            {% if order.status == 'pending' or order.status == 'confirmed' %}
+                {% if not order.cancellation_request or order.cancellation_request.status == 'rejected' %}
+                <form method="post" action="{% url 'request_order_cancellation' order.id %}" class="checkout-form-card">
+                    {% csrf_token %}
+                    <label for="cancel-reason-{{ order.id }}">Need to cancel?</label>
+                    <textarea id="cancel-reason-{{ order.id }}" name="reason" maxlength="1000" required placeholder="Tell us why you need to cancel"></textarea>
+                    <button class="secondary-btn" type="submit">Request cancellation</button>
+                </form>
+                {% endif %}
+            {% endif %}
             <a class="secondary-btn" href="{% url 'order_invoice' order.id %}">Download order receipt (PDF)</a>
             {% if order.payment_status == 'pending' %}
             {% for attempt in order.payment_attempts.all %}
