@@ -4,7 +4,7 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Count 3 /Kids [6 0 R 8 0 R 10 0 R] >>
+<< /Type /Pages /Count 4 /Kids [6 0 R 8 0 R 10 0 R 12 0 R] >>
 endobj
 3 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
@@ -394,22 +394,62 @@ BT /F1 7 Tf 0.38 0.45 0.52 rg 48.0 27.0 Td (Project documentation | Prepared 7 O
 BT /F2 8 Tf 0.34 0.42 0.50 rg 512.0 27.0 Td (3) Tj ET
 endstream
 endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 13 0 R >>
+endobj
+13 0 obj
+<< /Length 3120 >>
+stream
+0.78 w 0.78 0.82 0.86 RG 48 808 m 547 808 l S
+BT /F2 8 Tf 0.34 0.42 0.50 rg 48 818 Td (JAUNPUR FOOTWEAR MARKETPLACE) Tj ET
+BT /F2 21 Tf 0.07 0.19 0.29 rg 48 785 Td (Reservation expiry update | 8 October 2026) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 48 754 Td (Razorpay checkout holds inventory for a limited payment window. The timeout is 15 minutes) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 48 740 Td (by default and is configurable with ORDER_STOCK_RESERVATION_MINUTES \(minimum 1\).) Tj ET
+BT /F2 14 Tf 0.07 0.19 0.29 rg 48 721 Td (What the new workflow does) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 698 Td (At checkout, the order stores its stock reservation deadline. The customer sees the) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 684 Td (deadline on the Razorpay payment page.) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 665 Td (Celery Beat scans expired orders once per minute. Expired unpaid orders are cancelled,) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 651 Td (active payment attempts are closed, and stock is restored once.) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 632 Td (The cancellation is recorded in the order timeline. The customer's cart remains available) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 618 Td (for a new order.) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 48 599 Td (Expiry and payment callbacks lock the payment attempt before the order and recheck the) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 48 585 Td (current state inside a transaction. This prevents a callback that has already completed) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 48 571 Td (from being cancelled a second time.) Tj ET
+BT /F2 14 Tf 0.07 0.19 0.29 rg 48 552 Td (Deployment requirements) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 529 Td (Apply migration 0016_order_stock_reservation_expiry.py with the normal release migration) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 515 Td (step: python manage.py migrate.) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 496 Td (Keep Celery Beat running in production alongside the Celery worker and Redis broker. If) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 482 Td (Beat is stopped, automatic expiry runs when it resumes; expired orders may keep stock held) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 468 Td (until then.) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 449 Td (Set ORDER_STOCK_RESERVATION_MINUTES in the hosting environment only when changing the) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 56 435 Td (15-minute default. The setting must be a positive integer.) Tj ET
+BT /F2 14 Tf 0.07 0.19 0.29 rg 48 416 Td (Late captures) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 48 393 Td (A payment reported after stock has been released must not confirm the order because the) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 48 379 Td (item may have been sold again. Configure the Razorpay webhook and review late-capture) Tj ET
+BT /F1 10 Tf 0.15 0.21 0.27 rg 48 365 Td (events in staff operations before responding to the customer.) Tj ET
+0.78 w 0.78 0.82 0.86 RG 48 43 m 547 43 l S
+BT /F1 7 Tf 0.38 0.45 0.52 rg 48 27 Td (Jaunpur Footwear | Project documentation | Updated 8 October 2026) Tj ET
+BT /F2 8 Tf 0.34 0.42 0.50 rg 512 27 Td (4) Tj ET
+endstream
+endobj
 xref
-0 12
-0000000000 65535 f 
-0000000018 00000 n 
-0000000067 00000 n 
-0000000137 00000 n 
-0000000234 00000 n 
-0000000336 00000 n 
-0000000431 00000 n 
-0000000577 00000 n 
-0000010218 00000 n 
-0000010364 00000 n 
-0000020670 00000 n 
-0000020818 00000 n 
+0 14
+0000000000 65535 f
+0000000018 00000 n
+0000000067 00000 n
+0000000144 00000 n
+0000000241 00000 n
+0000000343 00000 n
+0000000438 00000 n
+0000000584 00000 n
+0000010225 00000 n
+0000010371 00000 n
+0000020677 00000 n
+0000020825 00000 n
+0000026696 00000 n
+0000026844 00000 n
 trailer
-<< /Size 12 /Root 1 0 R /Info << /Title (Jaunpur Footwear Project Document) /Producer (Codex document generator) >> >>
+<< /Size 14 /Root 1 0 R /Info << /Title (Jaunpur Footwear Deployment and Setup Guide) /Producer (Codex document generator) >> >>
 startxref
-26689
+30017
 %%EOF

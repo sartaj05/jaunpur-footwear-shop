@@ -82,6 +82,13 @@ def razorpay_webhook(request):
                 logger.error("Razorpay capture did not match its attempt; event=%s attempt=%s", event_id, attempt.pk)
                 return JsonResponse({"status": "recorded_for_review"})
 
+            if attempt.status == "failed":
+                event.status = "failed"
+                event.error_summary = "A captured payment arrived after its payment attempt was closed; provider review is required."
+                event.save(update_fields=["status", "error_summary"])
+                logger.critical("Late Razorpay capture needs review; order=%s attempt=%s event=%s", order.pk, attempt.pk, event_id)
+                return JsonResponse({"status": "recorded_for_review"})
+
             if attempt.status == "created" and order.stock_released:
                 event.status = "failed"
                 event.error_summary = "Payment arrived after the order stock reservation was released."

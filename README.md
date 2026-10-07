@@ -13,6 +13,7 @@ The [feature catalog](docs/Jaunpur_Footwear_Feature_Catalog.docx) groups the cur
 - Browse and search footwear; filter by brand, category, and size, including English/Hindi catalog matches.
 - View Jaunpur shop storefronts, delivery PIN-code coverage, fees, delivery estimates, and available fulfillment slots.
 - Manage a cart with size/color variants, apply coupons, and choose Cash on Delivery or configured Razorpay checkout.
+- Reserve stock for a configurable payment window (15 minutes by default); Celery Beat cancels expired unpaid Razorpay orders and releases stock.
 - Use wishlists and the shoe-size finder; submit product reviews and eligible delivered-shop reviews.
 - View orders and status timelines, download a personal order receipt PDF, and request returns or exchanges.
 - Receive email status updates and opt-in English/Hindi WhatsApp updates when Meta Cloud API settings are configured.
@@ -116,6 +117,8 @@ Run a Celery worker and scheduler as separate managed processes when background 
 celery -A footwear worker -l INFO
 celery -A footwear beat -l INFO
 ```
+
+The scheduler must be running for expired online-payment reservations to be processed automatically. Set `ORDER_STOCK_RESERVATION_MINUTES` to a positive number of minutes to change the default window.
 
 See [`docs/production-operations.md`](docs/production-operations.md) for operations and backup notes, and the generated [deployment and setup guide](output/pdf/Jaunpur_Footwear_Deployment_Setup.pdf) for the environment checklist and release sequence.
 

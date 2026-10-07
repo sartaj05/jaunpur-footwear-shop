@@ -9,6 +9,9 @@
 <section class="checkout-page">
     <div class="checkout-form-card">
         <p>Amount due: <strong>₹{{ order.total_amount }}</strong></p>
+        {% if order.stock_reservation_expires_at %}
+        <p>Please complete payment by <strong>{{ order.stock_reservation_expires_at|date:"j M Y, P" }}</strong>. Unpaid orders are cancelled and their stock is released automatically after this time.</p>
+        {% endif %}
         <button id="payWithRazorpay" class="primary-btn" type="button">Pay with Razorpay</button>
         <p><a href="{% url 'my_orders' %}">Return to my orders</a></p>
     </div>

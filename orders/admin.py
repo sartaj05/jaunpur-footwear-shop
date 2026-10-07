@@ -24,8 +24,9 @@ class SellerOrderInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'mobile', 'total_amount', 'status', 'payment_status', 'payment_method', 'created_at']
-    list_filter = ['status', 'payment_status', 'payment_method', 'created_at']
+    list_display = ['id', 'user', 'mobile', 'total_amount', 'status', 'payment_status', 'payment_method', 'stock_reservation_expires_at', 'stock_released', 'created_at']
+    list_filter = ['status', 'payment_status', 'payment_method', 'stock_released', 'created_at']
+    readonly_fields = ['stock_reservation_expires_at', 'stock_released']
     search_fields = ['user__username', 'mobile']
     inlines = [OrderItemInline, OrderTrackingEventInline, SellerOrderInline]
 

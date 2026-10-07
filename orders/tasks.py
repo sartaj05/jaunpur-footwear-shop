@@ -88,6 +88,13 @@ def sync_marketplace_channels_task(self, shop_id=None, channel=None, job_id=None
         run_record.save(update_fields=["status", "finished_at"])
 
 
+@shared_task
+def expire_pending_stock_reservations_task():
+    from .reservations import expire_pending_stock_reservations
+
+    return expire_pending_stock_reservations()
+
+
 @shared_task(bind=True)
 def process_return_refund_task(self, return_request_id, job_id=None):
     run = BackgroundJobRun.objects.filter(pk=job_id).first() if job_id else None

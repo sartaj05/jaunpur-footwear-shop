@@ -20,6 +20,7 @@ from .payments import (
     release_order_inventory,
     verify_razorpay_signature,
 )
+from .reservations import expire_pending_stock_reservations
 from shops.models import ShopCoverage, ShopFulfillmentSlot
 from shops.inventory import local_available_stock
 from accounts.models import ReferralReward
@@ -329,6 +330,10 @@ def checkout(request):
                 coupon_code=locked_coupon.code if locked_coupon else '',
                 payment_method='Razorpay' if payment_method_choice == 'razorpay' else 'Cash on Delivery',
                 payment_status='pending' if payment_method_choice == 'razorpay' else 'unpaid',
+                stock_reservation_expires_at=(
+                    timezone.now() + timedelta(minutes=settings.ORDER_STOCK_RESERVATION_MINUTES)
+                    if payment_method_choice == 'razorpay' else None
+                ),
             )
             OrderTrackingEvent.objects.create(
                 order=order,
@@ -489,14 +494,24 @@ def verify_razorpay_payment(request):
     payment_id = request.POST.get('razorpay_payment_id', '')
     signature = request.POST.get('razorpay_signature', '')
     attempt = get_object_or_404(
-        PaymentAttempt,
+        PaymentAttempt.objects.select_related('order'),
         gateway_order_id=gateway_order_id,
         order__user=request.user,
     )
     if attempt.status == 'paid':
         return redirect('my_orders')
     if attempt.status != 'created':
-        messages.error(request, 'This payment attempt is no longer active.')
+        if attempt.status == 'failed' and attempt.order.stock_released:
+            messages.error(request, 'This payment attempt is closed. If your bank shows a debit, contact the shop before retrying.')
+        else:
+            messages.error(request, 'This payment attempt is no longer active.')
+        return redirect('my_orders')
+    if (
+        attempt.order.stock_reservation_expires_at
+        and attempt.order.stock_reservation_expires_at <= timezone.now()
+    ):
+        expire_pending_stock_reservations(order_id=attempt.order_id)
+        messages.error(request, 'The payment window expired. If your bank shows a debit, contact the shop before retrying.')
         return redirect('my_orders')
     if not verify_razorpay_signature(attempt.gateway_order_id, payment_id, signature):
         messages.error(request, 'We could not verify this payment response.')
@@ -592,6 +607,10 @@ def my_orders(request):
 @login_required
 def resume_razorpay_payment(request, order_id):
     order = get_object_or_404(Order, pk=order_id, user=request.user, payment_status='pending')
+    if order.stock_reservation_expires_at and order.stock_reservation_expires_at <= timezone.now():
+        expire_pending_stock_reservations(order_id=order.pk)
+        messages.error(request, 'The payment window expired and the stock reservation was released. Please place a new order from your cart.')
+        return redirect('my_orders')
     attempt = order.payment_attempts.filter(status='created', gateway_order_id__isnull=False).first()
     if not attempt:
         messages.error(request, 'There is no active payment attempt for this order.')

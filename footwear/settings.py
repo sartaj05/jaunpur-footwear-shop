@@ -240,7 +240,14 @@ CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_TASK_TIME_LIMIT = 300
 CELERY_TASK_SOFT_TIME_LIMIT = 270
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+ORDER_STOCK_RESERVATION_MINUTES = int(os.environ.get("ORDER_STOCK_RESERVATION_MINUTES", "15"))
+if ORDER_STOCK_RESERVATION_MINUTES < 1:
+    raise ImproperlyConfigured("ORDER_STOCK_RESERVATION_MINUTES must be at least 1.")
 CELERY_BEAT_SCHEDULE = {
+    "expire-pending-razorpay-reservations-every-minute": {
+        "task": "orders.tasks.expire_pending_stock_reservations_task",
+        "schedule": 60.0,
+    },
     "authorized-marketplace-sync-every-30-minutes": {
         "task": "orders.tasks.sync_marketplace_channels_task",
         "schedule": 1800.0,

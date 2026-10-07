@@ -53,6 +53,7 @@ class Order(models.Model):
     payment_method = models.CharField(max_length=50, default='Cash on Delivery')
     payment_status = models.CharField(max_length=12, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
     stock_released = models.BooleanField(default=False)
+    stock_reservation_expires_at = models.DateTimeField(blank=True, null=True, db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
