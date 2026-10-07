@@ -46,6 +46,8 @@
             <label>{% if is_hindi %}जौनपुर पिन कोड{% else %}Jaunpur PIN code{% endif %}</label>
             <input type="text" name="pincode" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" placeholder="Filter by local delivery" value="{{ pincode }}">
 
+            <label class="stock-filter"><input type="checkbox" name="in_stock" value="1" {% if in_stock %}checked{% endif %}> {% if is_hindi %}अभी उपलब्ध स्टॉक दिखाएँ{% else %}Show only locally available stock{% endif %}</label>
+
             <button class="primary-btn full-btn">{% if is_hindi %}फ़िल्टर लागू करें{% else %}Apply Filter{% endif %}</button>
             <a href="{% url 'product_list' %}" class="clear-btn">{% if is_hindi %}फ़िल्टर हटाएँ{% else %}Clear Filter{% endif %}</a>
         </form>

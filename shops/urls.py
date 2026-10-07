@@ -42,6 +42,7 @@ urlpatterns = [
     path('seller/ondc/catalog.json', views.export_ondc_catalog, name='export_ondc_catalog'),
     path('seller/ondc/', views.ondc_setup, name='ondc_setup'),
     path('seller/ondc/connection/check/', views.check_ondc_participant_connection, name='check_ondc_participant_connection'),
+    path('areas/<slug:area_slug>/', views.shop_area, name='shop_area'),
     path('', views.shop_directory, name='shop_directory'),
     path('<slug:slug>/', views.shop_page, name='shop_page'),
 ]

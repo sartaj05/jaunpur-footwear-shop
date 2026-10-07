@@ -11,9 +11,10 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.core import signing
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.text import slugify
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Avg, Q, Sum
@@ -22,6 +23,7 @@ from django.views.decorators.http import require_GET, require_POST
 from urllib.parse import urlencode
 
 from products.models import Brand, Category, Product, ProductVariant
+from products.search import product_search_query
 from orders.models import Coupon, OrderTrackingEvent, ReturnRequest, SellerOrder
 from orders.tasks import send_order_status_update_task
 from footwear.task_dispatch import dispatch_background_task
@@ -52,6 +54,10 @@ def customer_delivery_pincode(request):
         request.session['delivery_pincode'] = candidate
         return candidate
     return ''
+
+
+def _json_for_script(payload):
+    return json.dumps(payload, ensure_ascii=False).replace('&', '\\u0026').replace('<', '\\u003c').replace('>', '\\u003e')
 
 
 @login_required
@@ -93,18 +99,43 @@ def apply_for_shop(request):
 
 def shop_directory(request):
     shops = Shop.objects.filter(status='approved').order_by('name')
+    search = request.GET.get('q', '').strip()[:100]
+    if search:
+        shops = shops.filter(
+            Q(name__icontains=search)
+            | Q(description__icontains=search)
+            | Q(description_hi__icontains=search)
+            | Q(city__icontains=search)
+            | Q(address__icontains=search)
+            | Q(coverage_areas__area_name__icontains=search)
+            | Q(coverage_areas__pincode__icontains=search)
+        ).distinct()
     pincode = request.GET.get('pincode', '').strip()
     if re.fullmatch(r'[1-9][0-9]{5}', pincode):
         shops = shops.filter(coverage_areas__pincode=pincode, coverage_areas__is_active=True).distinct()
     else:
         pincode = ''
-    return render(request, 'shops/directory.html', {'shops': shops, 'pincode': pincode})
+    area_names = ShopCoverage.objects.filter(shop__status='approved', is_active=True).exclude(area_name='').values_list('area_name', flat=True).distinct()
+    areas = sorted({(slugify(area), area) for area in area_names if slugify(area)}, key=lambda item: item[1].casefold())
+    return render(request, 'shops/directory.html', {'shops': shops, 'pincode': pincode, 'search': search, 'areas': areas})
 
 
 def shop_page(request, slug):
     shop = get_object_or_404(Shop, slug=slug, status='approved')
     products = Product.objects.filter(shop=shop, is_active=True).select_related('brand', 'category')
+    product_query = request.GET.get('q', '').strip()[:100]
+    stock_only = request.GET.get('in_stock') == '1'
+    if product_query:
+        products = products.filter(product_search_query(product_query))
     pincode = customer_delivery_pincode(request)
+    if stock_only:
+        in_stock_products = []
+        for product in products.prefetch_related('variants'):
+            active_variants = [variant for variant in product.variants.all() if variant.is_active]
+            stock_owners = active_variants or [product]
+            if any(local_available_stock(owner) > 0 for owner in stock_owners):
+                in_stock_products.append(product)
+        products = in_stock_products
     for product in products:
         product.display_price = product.final_price(pincode=pincode)
         product.has_discount = product.display_price < product.price
@@ -115,6 +146,24 @@ def shop_page(request, slug):
             Q(expires_at__isnull=True) | Q(expires_at__gte=now),
         ).prefetch_related('products') if promotion.applies_to_pincode(pincode)
     ]
+    canonical_url = request.build_absolute_uri(reverse('shop_page', kwargs={'slug': shop.slug}))
+    shop_schema = _json_for_script({
+        '@context': 'https://schema.org',
+        '@type': 'ShoeStore',
+        'name': shop.name,
+        'description': shop.description_hi if request.session.get('site_language') == 'hi' and shop.description_hi else shop.description,
+        'url': canonical_url,
+        'telephone': shop.phone,
+        'address': {
+            '@type': 'PostalAddress',
+            'streetAddress': shop.address,
+            'addressLocality': shop.city,
+            'addressRegion': 'Uttar Pradesh',
+            'postalCode': shop.pincode,
+            'addressCountry': 'IN',
+        },
+        'areaServed': list(shop.coverage_areas.filter(is_active=True).values_list('area_name', flat=True)),
+    })
     return render(request, 'shops/detail.html', {
         'shop': shop,
         'products': products,
@@ -125,6 +174,46 @@ def shop_page(request, slug):
         'shop_review_average': shop.reviews.filter(is_visible=True).aggregate(value=Avg('rating'))['value'],
         'shop_review_count': shop.reviews.filter(is_visible=True).count(),
         'shop_reviews': shop.reviews.filter(is_visible=True).select_related('customer')[:10],
+        'product_query': product_query,
+        'stock_only': stock_only,
+        'canonical_url': canonical_url,
+        'shop_schema': shop_schema,
+    })
+
+
+def shop_area(request, area_slug):
+    coverage_rows = list(ShopCoverage.objects.filter(
+        shop__status='approved', is_active=True,
+    ).exclude(area_name='').select_related('shop').order_by('area_name', 'shop__name'))
+    matching_rows = [row for row in coverage_rows if slugify(row.area_name) == area_slug]
+    if not matching_rows:
+        raise Http404('No approved Jaunpur shop coverage was found for that area.')
+    area_name = matching_rows[0].area_name
+    shops = list({row.shop_id: row.shop for row in matching_rows}.values())
+    pincode_set = {row.pincode for row in matching_rows}
+    product_rows = Product.objects.filter(shop_id__in=[shop.pk for shop in shops], is_active=True).select_related('shop', 'brand', 'category').prefetch_related('variants')
+    available_products = []
+    for product in product_rows:
+        active_variants = [variant for variant in product.variants.all() if variant.is_active]
+        stock_owners = active_variants or [product]
+        if any(local_available_stock(owner) > 0 for owner in stock_owners):
+            available_products.append(product)
+    canonical_url = request.build_absolute_uri(reverse('shop_area', kwargs={'area_slug': area_slug}))
+    area_schema = _json_for_script({
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        'name': f'Footwear shops in {area_name}, Jaunpur',
+        'url': canonical_url,
+        'about': {'@type': 'Place', 'name': f'{area_name}, Jaunpur, Uttar Pradesh, India'},
+        'mainEntity': [{'@type': 'ShoeStore', 'name': shop.name, 'url': request.build_absolute_uri(reverse('shop_page', kwargs={'slug': shop.slug}))} for shop in shops],
+    })
+    return render(request, 'shops/area.html', {
+        'area_name': area_name,
+        'shops': shops,
+        'products': available_products,
+        'pincodes': sorted(pincode_set),
+        'canonical_url': canonical_url,
+        'area_schema': area_schema,
     })
 
 

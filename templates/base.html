@@ -3,10 +3,12 @@
 <html lang="{{ site_language|default:'en' }}">
 <head>
     <meta charset="UTF-8">
-    <title>{% if is_hindi %}जौनपुर फुटवियर | जूते और चप्पल{% else %}Jaunpur Footwear | Shoes & Slippers{% endif %}</title>
+    <title>{% block page_title %}{% if is_hindi %}जौनपुर फुटवियर | जूते और चप्पल{% else %}Jaunpur Footwear | Shoes & Slippers{% endif %}{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="description" content="{% if is_hindi %}जौनपुर में जूते, चप्पल और सैंडल खरीदें। स्थानीय दुकानों से उपलब्धता देखें।{% else %}Buy shoes, slippers, sandals, school shoes and sports shoes in Jaunpur. Aqualite, Campus, Sparx and more.{% endif %}">
+    <meta name="description" content="{% block page_description %}{% if is_hindi %}जौनपुर में जूते, चप्पल और सैंडल खरीदें। स्थानीय दुकानों से उपलब्धता देखें।{% else %}Buy shoes, slippers, sandals, school shoes and sports shoes in Jaunpur. Aqualite, Campus, Sparx and more.{% endif %}{% endblock %}">
+    <link rel="canonical" href="{% block page_canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
+    {% block page_structured_data %}{% endblock %}
 
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>

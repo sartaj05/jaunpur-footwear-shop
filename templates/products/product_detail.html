@@ -1,4 +1,8 @@
 {% extends 'base.html' %}
+{% block page_title %}{{ product.name }} shoes in Jaunpur | Jaunpur Footwear{% endblock %}
+{% block page_description %}{{ seo_description|truncatechars:155 }}{% endblock %}
+{% block page_canonical %}{{ canonical_url }}{% endblock %}
+{% block page_structured_data %}<script type="application/ld+json">{{ structured_data|safe }}</script>{% endblock %}
 
 {% block content %}
 

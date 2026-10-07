@@ -5,9 +5,12 @@ from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
 from django.db.models import Avg
 from django.db.models import Q
+from django.urls import reverse
+import json
 import re
 from .models import Product, Brand, Category, ProductReview, WishlistItem
 from .search import product_search_query
+from shops.inventory import local_available_stock
 
 
 def home(request):
@@ -41,6 +44,7 @@ def product_list(request):
     brand = request.GET.get('brand')
     category = request.GET.get('category')
     size = request.GET.get('size')
+    in_stock = request.GET.get('in_stock') == '1'
     pincode = request.GET.get('pincode', '').strip() or request.session.get('delivery_pincode', '')
     if not pincode and request.user.is_authenticated:
         pincode = getattr(getattr(request.user, 'customerprofile', None), 'pincode', '')
@@ -66,6 +70,15 @@ def product_list(request):
     else:
         pincode = ''
 
+    if in_stock:
+        available_products = []
+        for product in products.prefetch_related('variants'):
+            active_variants = [variant for variant in product.variants.all() if variant.is_active]
+            stock_owners = active_variants or [product]
+            if any(local_available_stock(stock_owner) > 0 for stock_owner in stock_owners):
+                available_products.append(product)
+        products = available_products
+
     for product in products:
         product.display_price = product.final_price(pincode=pincode)
         product.has_discount = product.display_price < product.price
@@ -76,6 +89,7 @@ def product_list(request):
         'categories': categories,
         'pincode': pincode,
         'search': search,
+        'in_stock': in_stock,
     })
 
 
@@ -100,6 +114,31 @@ def product_detail(request, pk):
         variant.display_price = variant.final_price(pincode=pincode)
     reviews = product.reviews.select_related('user')
     average_rating = reviews.aggregate(Avg('rating'))['rating__avg']
+    active_variants = [variant for variant in variants if variant.is_active]
+    stock_owners = active_variants or [product]
+    available_stock = sum(local_available_stock(owner) for owner in stock_owners)
+    canonical_url = request.build_absolute_uri(reverse('product_detail', kwargs={'pk': product.pk}))
+    product_description = product.description_hi if request.session.get('site_language') == 'hi' and product.description_hi else product.description
+    schema_data = {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        'name': product.name_hi if request.session.get('site_language') == 'hi' and product.name_hi else product.name,
+        'description': product_description,
+        'image': request.build_absolute_uri(product.image.url) if product.image else '',
+        'sku': product.seller_sku or str(product.pk),
+        'brand': {'@type': 'Brand', 'name': product.brand.name},
+        'offers': {
+            '@type': 'Offer',
+            'url': canonical_url,
+            'priceCurrency': 'INR',
+            'price': str(product.display_price),
+            'availability': 'https://schema.org/InStock' if available_stock else 'https://schema.org/OutOfStock',
+            'itemCondition': 'https://schema.org/NewCondition',
+        },
+    }
+    if average_rating:
+        schema_data['aggregateRating'] = {'@type': 'AggregateRating', 'ratingValue': round(average_rating, 1), 'reviewCount': reviews.count()}
+    structured_data = json.dumps(schema_data, ensure_ascii=False).replace('&', '\\u0026').replace('<', '\\u003c').replace('>', '\\u003e')
 
     return render(request, 'products/product_detail.html', {
         'product': product,
@@ -108,6 +147,9 @@ def product_detail(request, pk):
         'reviews': reviews,
         'average_rating': average_rating,
         'pincode': pincode,
+        'canonical_url': canonical_url,
+        'seo_description': product_description[:300],
+        'structured_data': structured_data,
         'is_wishlisted': (
             request.user.is_authenticated
             and WishlistItem.objects.filter(user=request.user, product=product).exists()
