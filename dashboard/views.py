@@ -221,6 +221,9 @@ def update_order_status(request, pk):
             order.status = new_status
             order.save(update_fields=['status'])
             if new_status == 'delivered':
+                delivered_at = timezone.now()
+                order.seller_orders.exclude(status='delivered').update(status='delivered', delivered_at=delivered_at)
+                order.seller_orders.filter(status='delivered', delivered_at__isnull=True).update(delivered_at=delivered_at)
                 award_loyalty_for_order(order)
             OrderTrackingEvent.objects.create(
                 order=order,

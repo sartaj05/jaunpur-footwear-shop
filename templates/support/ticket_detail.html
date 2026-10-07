@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="page-banner"><h1>Support request #{{ ticket.id }}</h1><p>{{ ticket.get_status_display }} · {{ ticket.get_category_display }}{% if ticket.order_id %} · Order #{{ ticket.order_id }}{% endif %}</p></section>
+<section class="page-banner"><h1>Support request #{{ ticket.id }}</h1><p>{{ ticket.get_status_display }} · {{ ticket.get_category_display }}{% if ticket.order_id %} · Order #{{ ticket.order_id }}{% endif %}{% if ticket.shop %} · {{ ticket.shop.name }}{% endif %}</p></section>
 <section class="orders-page">
     <article class="order-card"><h2>{{ ticket.subject }}</h2><p>{{ ticket.description|linebreaksbr }}</p><small>Opened {{ ticket.created_at }}</small></article>
     <h2>Conversation</h2>

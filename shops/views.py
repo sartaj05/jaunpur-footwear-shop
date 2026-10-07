@@ -34,6 +34,7 @@ from .models import MarketplaceChannelOrder, MarketplaceConnection, MarketplaceP
 from .inventory import local_available_stock, update_mapping_allocation
 from .ondc_adapter import check_participant_connection
 from .settlements import import_settlement_statement
+from .performance import performance_for_shops
 from .marketplace_auth import (
     MarketplaceAuthorizationError,
     encrypt_marketplace_token,
@@ -117,6 +118,10 @@ def shop_directory(request):
         pincode = ''
     area_names = ShopCoverage.objects.filter(shop__status='approved', is_active=True).exclude(area_name='').values_list('area_name', flat=True).distinct()
     areas = sorted({(slugify(area), area) for area in area_names if slugify(area)}, key=lambda item: item[1].casefold())
+    shops = list(shops)
+    service_metrics = performance_for_shops(shops, since=timezone.now() - timedelta(days=90))
+    for shop in shops:
+        shop.service_metrics = service_metrics[shop.pk]
     return render(request, 'shops/directory.html', {'shops': shops, 'pincode': pincode, 'search': search, 'areas': areas})
 
 
@@ -164,6 +169,7 @@ def shop_page(request, slug):
         },
         'areaServed': list(shop.coverage_areas.filter(is_active=True).values_list('area_name', flat=True)),
     })
+    service_metrics = performance_for_shops([shop], since=timezone.now() - timedelta(days=90))[shop.pk]
     return render(request, 'shops/detail.html', {
         'shop': shop,
         'products': products,
@@ -178,6 +184,7 @@ def shop_page(request, slug):
         'stock_only': stock_only,
         'canonical_url': canonical_url,
         'shop_schema': shop_schema,
+        'service_metrics': service_metrics,
     })
 
 
@@ -190,6 +197,9 @@ def shop_area(request, area_slug):
         raise Http404('No approved Jaunpur shop coverage was found for that area.')
     area_name = matching_rows[0].area_name
     shops = list({row.shop_id: row.shop for row in matching_rows}.values())
+    service_metrics = performance_for_shops(shops, since=timezone.now() - timedelta(days=90))
+    for shop in shops:
+        shop.service_metrics = service_metrics[shop.pk]
     pincode_set = {row.pincode for row in matching_rows}
     product_rows = Product.objects.filter(shop_id__in=[shop.pk for shop in shops], is_active=True).select_related('shop', 'brand', 'category').prefetch_related('variants')
     available_products = []
@@ -359,6 +369,7 @@ def seller_dashboard(request):
     if period_days not in {7, 30, 90}:
         period_days = 30
     period_start = timezone.now() - timedelta(days=period_days)
+    service_metrics = performance_for_shops([shop], since=period_start)[shop.pk]
     period_orders = shop.seller_orders.filter(created_at__gte=period_start)
     paid_sales = period_orders.exclude(order__status='cancelled')
     return_count = ReturnRequest.objects.filter(
@@ -398,6 +409,7 @@ def seller_dashboard(request):
         'period_return_count': return_count,
         'period_sales_total': paid_sales.aggregate(total=Sum('sales_amount'))['total'] or Decimal('0.00'),
         'period_net_total': paid_sales.aggregate(total=Sum('net_amount'))['total'] or Decimal('0.00'),
+        'service_metrics': service_metrics,
     })
 
 
@@ -496,7 +508,11 @@ def update_seller_order_status(request, seller_order_id):
             messages.error(request, 'Choose a valid order status.')
         elif status != seller_order.status:
             seller_order.status = status
-            seller_order.save(update_fields=['status'])
+            update_fields = ['status']
+            if status == 'delivered':
+                seller_order.delivered_at = timezone.now()
+                update_fields.append('delivered_at')
+            seller_order.save(update_fields=update_fields)
             OrderTrackingEvent.objects.create(
                 order=seller_order.order,
                 status=status,

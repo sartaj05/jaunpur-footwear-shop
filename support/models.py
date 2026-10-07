@@ -20,6 +20,7 @@ class SupportTicket(models.Model):
     ]
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='support_tickets')
     order = models.ForeignKey('orders.Order', on_delete=models.SET_NULL, blank=True, null=True, related_name='support_tickets')
+    shop = models.ForeignKey('shops.Shop', on_delete=models.SET_NULL, blank=True, null=True, related_name='support_tickets')
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='assigned_support_tickets')
     subject = models.CharField(max_length=140)
     category = models.CharField(max_length=12, choices=CATEGORY_CHOICES, default='other')

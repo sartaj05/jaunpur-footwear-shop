@@ -803,7 +803,8 @@ def rider_deliveries(request):
                     assignment.save(update_fields=['status', 'delivered_to', 'note', 'delivered_at', 'proof_photo'])
                     seller_order = assignment.seller_order
                     seller_order.status = 'delivered'
-                    seller_order.save(update_fields=['status'])
+                    seller_order.delivered_at = assignment.delivered_at
+                    seller_order.save(update_fields=['status', 'delivered_at'])
                     order = seller_order.order
                     remaining = order.seller_orders.exclude(status='delivered').exists()
                     order.status = 'out_for_delivery' if remaining else 'delivered'

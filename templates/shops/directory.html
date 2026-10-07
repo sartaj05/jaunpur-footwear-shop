@@ -11,6 +11,7 @@
         <p>{{ shop.city }}, Jaunpur · {{ shop.pincode }}</p>
         {% if shop.opening_hours %}<p>{% if is_hindi %}समय:{% else %}Hours:{% endif %} {{ shop.opening_hours }}</p>{% endif %}
         {% if shop.description %}<p>{{ shop.description|truncatewords:24 }}</p>{% endif %}
+        <p>Recent service: {% if shop.service_metrics.average_rating is not None %}{{ shop.service_metrics.average_rating|floatformat:1 }}/5 from {{ shop.service_metrics.review_count }} reviews{% else %}No recent review sample{% endif %} · {% if shop.service_metrics.on_time_rate is not None %}{{ shop.service_metrics.on_time_rate|floatformat:1 }}% on time ({{ shop.service_metrics.on_time_sample_count }} scheduled){% else %}No on-time sample yet{% endif %} · {{ shop.service_metrics.cancellation_rate|floatformat:1 }}% cancellations from {{ shop.service_metrics.order_count }} orders</p>
         <a class="card-btn" href="{% url 'shop_page' shop.slug %}">{% if is_hindi %}दुकान देखें{% else %}View shop{% endif %}</a>
     </div></article>
     {% empty %}<p>{% if is_hindi %}अभी कोई स्थानीय दुकान स्वीकृत नहीं है।{% else %}No local shops have been approved yet.{% endif %} <a href="{% url 'shop_application' %}">{% if is_hindi %}अपनी दुकान सूचीबद्ध करने के लिए आवेदन करें{% else %}Apply to list your shop{% endif %}</a>.</p>{% endfor %}

@@ -14,9 +14,9 @@ class SupportMessageInline(admin.TabularInline):
 
 @admin.register(SupportTicket)
 class SupportTicketAdmin(admin.ModelAdmin):
-    list_display = ['id', 'subject', 'user', 'category', 'status', 'assigned_to', 'conversation', 'updated_at']
-    list_filter = ['status', 'category', 'updated_at']
-    search_fields = ['subject', 'user__username', 'user__email', 'order__id']
+    list_display = ['id', 'subject', 'user', 'shop', 'category', 'status', 'assigned_to', 'conversation', 'updated_at']
+    list_filter = ['status', 'category', 'shop', 'updated_at']
+    search_fields = ['subject', 'user__username', 'user__email', 'order__id', 'shop__name']
     list_editable = ['status', 'assigned_to']
     readonly_fields = ['user', 'order', 'subject', 'category', 'description', 'created_at', 'updated_at']
     inlines = [SupportMessageInline]

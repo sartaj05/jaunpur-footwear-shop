@@ -6,7 +6,7 @@
     {% for ticket in tickets %}
     <article class="order-card">
         <h2><a href="{% url 'support_detail' ticket.id %}">#{{ ticket.id }} · {{ ticket.subject }}</a></h2>
-        <p>{{ ticket.get_category_display }} · {{ ticket.get_status_display }}{% if ticket.order_id %} · Order #{{ ticket.order_id }}{% endif %}</p>
+        <p>{{ ticket.get_category_display }} · {{ ticket.get_status_display }}{% if ticket.order_id %} · Order #{{ ticket.order_id }}{% endif %}{% if ticket.shop %} · {{ ticket.shop.name }}{% endif %}</p>
         <small>Updated {{ ticket.updated_at }}</small>
     </article>
     {% empty %}<p>You have no support requests yet.</p>{% endfor %}

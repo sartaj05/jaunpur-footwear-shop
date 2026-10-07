@@ -141,7 +141,7 @@ class PaymentAttemptAdmin(admin.ModelAdmin):
 
 @admin.register(SellerOrder)
 class SellerOrderAdmin(admin.ModelAdmin):
-    list_display = ['id', 'order', 'shop', 'sales_amount', 'commission_amount', 'net_amount', 'status', 'payout_status', 'created_at']
+    list_display = ['id', 'order', 'shop', 'sales_amount', 'commission_amount', 'net_amount', 'status', 'delivered_at', 'payout_status', 'created_at']
     list_filter = ['status', 'payout_status', 'created_at']
     search_fields = ['shop__name', 'order__id']
 
