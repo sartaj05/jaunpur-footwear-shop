@@ -24,6 +24,7 @@ from .reservations import expire_pending_stock_reservations
 from shops.models import ShopCoverage, ShopFulfillmentSlot
 from shops.inventory import local_available_stock
 from accounts.models import ReferralReward
+from accounts.models import CustomerAddress
 from accounts.services import award_loyalty_for_order
 
 
@@ -241,7 +242,17 @@ def checkout(request):
     if not items.exists():
         return redirect('cart')
 
-    pincode = request.session.get('delivery_pincode', '')
+    saved_addresses = CustomerAddress.objects.filter(user=request.user)
+    selected_address = None
+    selected_address_id = request.POST.get('saved_address_id', '').strip() if request.method == 'POST' else ''
+    if selected_address_id:
+        selected_address = saved_addresses.filter(pk=selected_address_id).first()
+        if not selected_address:
+            messages.error(request, 'Choose one of your saved delivery addresses or enter an address manually.')
+            return redirect('checkout')
+    elif request.method != 'POST':
+        selected_address = saved_addresses.filter(is_default=True).first()
+    pincode = selected_address.pincode if selected_address else request.session.get('delivery_pincode', '')
     total = sum(item.total_price(pincode=pincode) for item in items)
     coupon_code = request.session.get('coupon_code', '')
     coupon = Coupon.objects.filter(code__iexact=coupon_code).first() if coupon_code else None
@@ -258,7 +269,7 @@ def checkout(request):
     shipping_amount = sum((seller['shipping_preview'] for seller in checkout_sellers), Decimal('0.00'))
 
     if request.method == 'POST' and request.POST.get('action') == 'estimate_delivery':
-        submitted_pincode = request.POST.get('pincode', '').strip()
+        submitted_pincode = selected_address.pincode if selected_address else request.POST.get('pincode', '').strip()
         if not re.fullmatch(r'[1-9][0-9]{5}', submitted_pincode):
             messages.error(request, 'Enter a valid 6-digit Indian PIN code.')
         else:
@@ -275,7 +286,13 @@ def checkout(request):
             messages.error(request, 'Online payments are not configured yet. Please choose Cash on Delivery.')
             return redirect('checkout')
 
-        pincode = request.POST.get('pincode', '').strip()
+        checkout_name = selected_address.recipient_name if selected_address else request.POST.get('full_name', '').strip()
+        checkout_mobile = selected_address.mobile if selected_address else request.POST.get('mobile', '').strip()
+        checkout_address = selected_address.address if selected_address else request.POST.get('address', '').strip()
+        pincode = selected_address.pincode if selected_address else request.POST.get('pincode', '').strip()
+        if not checkout_name or not checkout_address or not re.fullmatch(r'[+0-9 ()-]{10,18}', checkout_mobile):
+            messages.error(request, 'Enter a recipient name, complete delivery address, and valid mobile number.')
+            return redirect('checkout')
         if not re.fullmatch(r'[1-9][0-9]{5}', pincode):
             messages.error(request, 'Enter a valid 6-digit Indian PIN code before placing the order.')
             return redirect('checkout')
@@ -320,9 +337,9 @@ def checkout(request):
 
             order = Order.objects.create(
                 user=request.user,
-                full_name=request.POST.get('full_name'),
-                mobile=request.POST.get('mobile'),
-                address=request.POST.get('address'),
+                full_name=checkout_name,
+                mobile=checkout_mobile,
+                address=checkout_address,
                 delivery_pincode=pincode,
                 shipping_amount=locked_shipping,
                 total_amount=locked_subtotal - locked_discount + locked_shipping,
@@ -460,6 +477,8 @@ def checkout(request):
         'grand_total': total - discount + shipping_amount,
         'coupon_code': coupon_code,
         'pincode': pincode,
+        'saved_addresses': saved_addresses,
+        'selected_address': selected_address,
         'shipping_amount': shipping_amount,
         'base_total': total - discount,
         'checkout_sellers': checkout_sellers,

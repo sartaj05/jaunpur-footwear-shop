@@ -44,6 +44,7 @@
                 {% if user.footwear_shop.status == 'approved' %}<a href="{% url 'seller_dashboard' %}">Seller dashboard</a>{% endif %}
                 <a href="{% url 'referrals' %}">{% if is_hindi %}दोस्तों को बुलाएं{% else %}Refer a friend{% endif %}</a>
                 <a href="{% url 'customer_preferences' %}">Jaunpur rewards & preferences</a>
+                <a href="{% url 'address_book' %}">Delivery addresses</a>
                 <a href="{% url 'cart' %}">Cart</a>
                 <a href="{% url 'wishlist' %}">Wishlist</a>
                 <a href="{% url 'my_orders' %}">My Orders</a>

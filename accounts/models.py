@@ -18,6 +18,25 @@ class CustomerProfile(models.Model):
         return self.user.username
 
 
+class CustomerAddress(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_addresses')
+    label = models.CharField(max_length=40, default='Home')
+    recipient_name = models.CharField(max_length=150)
+    mobile = models.CharField(max_length=18)
+    address = models.TextField(max_length=1000)
+    city = models.CharField(max_length=100, default='Jaunpur')
+    pincode = models.CharField(max_length=6)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_default', 'label', 'id']
+
+    def __str__(self):
+        return f'{self.label} · {self.recipient_name} · {self.pincode}'
+
+
 class ReferralCode(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referral_code')
     code = models.CharField(max_length=16, unique=True, blank=True)

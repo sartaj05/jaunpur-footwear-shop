@@ -4,7 +4,7 @@ import secrets
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.db import transaction
@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from orders.models import Coupon
 
-from .models import CustomerProfile, LoyaltyAccount, LoyaltyTransaction, ReferralCode, ReferralReward
+from .models import CustomerAddress, CustomerProfile, LoyaltyAccount, LoyaltyTransaction, ReferralCode, ReferralReward
 
 
 def register_view(request):
@@ -164,4 +164,81 @@ def customer_preferences(request):
         'loyalty_account': loyalty_account,
         'loyalty_transactions': loyalty_account.transactions.all()[:20],
         'personal_coupons': request.user.reserved_coupons.filter(is_active=True).order_by('-id'),
+    })
+
+
+@login_required
+def address_book(request):
+    addresses = CustomerAddress.objects.filter(user=request.user)
+    if request.method == 'POST':
+        action = request.POST.get('action', 'save')
+        if action == 'delete':
+            address = get_object_or_404(addresses, pk=request.POST.get('address_id'))
+            was_default = address.is_default
+            address.delete()
+            if was_default:
+                next_address = addresses.first()
+                if next_address:
+                    next_address.is_default = True
+                    next_address.save(update_fields=['is_default', 'updated_at'])
+            messages.success(request, 'Saved delivery address removed.')
+            return redirect('address_book')
+        if action == 'set_default':
+            address = get_object_or_404(addresses, pk=request.POST.get('address_id'))
+            with transaction.atomic():
+                CustomerAddress.objects.filter(user=request.user, is_default=True).update(is_default=False)
+                address.is_default = True
+                address.save(update_fields=['is_default', 'updated_at'])
+            messages.success(request, f'{address.label} is now your default delivery address.')
+            return redirect('address_book')
+
+        address_id = request.POST.get('address_id', '').strip()
+        address = get_object_or_404(addresses, pk=address_id) if address_id else None
+        label = request.POST.get('label', '').strip()[:40] or 'Home'
+        recipient_name = request.POST.get('recipient_name', '').strip()
+        mobile = request.POST.get('mobile', '').strip()
+        address_text = request.POST.get('address', '').strip()
+        city = request.POST.get('city', 'Jaunpur').strip()[:100] or 'Jaunpur'
+        pincode = request.POST.get('pincode', '').strip()
+        if not recipient_name or not address_text or len(address_text) > 1000:
+            messages.error(request, 'Enter a recipient name and a complete address of up to 1,000 characters.')
+        elif not re.fullmatch(r'[+0-9 ()-]{10,18}', mobile):
+            messages.error(request, 'Enter a valid phone number.')
+        elif not re.fullmatch(r'[1-9][0-9]{5}', pincode):
+            messages.error(request, 'Enter a valid six-digit PIN code.')
+        elif not address and addresses.count() >= 10:
+            messages.error(request, 'You can save up to 10 delivery addresses.')
+        else:
+            make_default = request.POST.get('is_default') == 'on' or not addresses.exists()
+            with transaction.atomic():
+                if make_default:
+                    CustomerAddress.objects.filter(user=request.user, is_default=True).update(is_default=False)
+                if address:
+                    address.label = label
+                    address.recipient_name = recipient_name
+                    address.mobile = mobile
+                    address.address = address_text
+                    address.city = city
+                    address.pincode = pincode
+                    address.is_default = make_default or address.is_default
+                    address.save()
+                else:
+                    CustomerAddress.objects.create(
+                        user=request.user,
+                        label=label,
+                        recipient_name=recipient_name,
+                        mobile=mobile,
+                        address=address_text,
+                        city=city,
+                        pincode=pincode,
+                        is_default=make_default,
+                    )
+            messages.success(request, 'Delivery address saved to your Jaunpur account.')
+            return redirect('address_book')
+
+    edit_id = request.GET.get('edit', '')
+    editing_address = addresses.filter(pk=edit_id).first() if edit_id else None
+    return render(request, 'accounts/address_book.html', {
+        'addresses': addresses,
+        'editing_address': editing_address,
     })

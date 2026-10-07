@@ -29,22 +29,33 @@
 
             <div class="form-group">
                 <label>{% if is_hindi %}पूरा नाम{% else %}Full Name{% endif %}</label>
-                <input type="text" name="full_name" placeholder="Enter full name" required>
+                <input id="checkoutName" type="text" name="full_name" value="{{ selected_address.recipient_name|default:'' }}" placeholder="Enter full name" required>
             </div>
 
             <div class="form-group">
                 <label>{% if is_hindi %}मोबाइल नंबर{% else %}Mobile Number{% endif %}</label>
-                <input type="text" name="mobile" placeholder="Enter mobile number" required>
+                <input id="checkoutMobile" type="text" name="mobile" value="{{ selected_address.mobile|default:'' }}" placeholder="Enter mobile number" required>
             </div>
 
             <div class="form-group">
                 <label>{% if is_hindi %}पूरा पता{% else %}Full Address{% endif %}</label>
-                <textarea name="address" placeholder="House no, area, landmark, Jaunpur" required></textarea>
+                <textarea id="checkoutAddress" name="address" placeholder="House no, area, landmark, Jaunpur" required>{{ selected_address.address|default:'' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="savedAddress">Saved delivery address</label>
+                <select id="savedAddress" name="saved_address_id">
+                    <option value="">Enter address manually</option>
+                    {% for saved in saved_addresses %}
+                    <option value="{{ saved.id }}" data-name="{{ saved.recipient_name|escape }}" data-mobile="{{ saved.mobile|escape }}" data-address="{{ saved.address|escape }}" data-pincode="{{ saved.pincode }}" {% if selected_address.id == saved.id %}selected{% endif %}>{{ saved.label }}{% if saved.is_default %} (default){% endif %} · {{ saved.city }} {{ saved.pincode }}</option>
+                    {% endfor %}
+                </select>
+                <small><a href="{% url 'address_book' %}">Manage saved addresses</a></small>
             </div>
 
             <div class="form-group">
                 <label for="deliveryPincode">{% if is_hindi %}पिन कोड{% else %}PIN code{% endif %}</label>
-                <input id="deliveryPincode" type="text" name="pincode" value="{{ pincode }}" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" placeholder="6-digit PIN code" required>
+                <input id="deliveryPincode" type="text" name="pincode" value="{% if selected_address %}{{ selected_address.pincode }}{% else %}{{ pincode }}{% endif %}" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" placeholder="6-digit PIN code" required>
             </div>
 
             <section class="checkout-form-card fulfillment-options">
@@ -150,6 +161,19 @@
         updateSlots();
     });
     updateGrandTotal();
+    const savedAddress = document.getElementById('savedAddress');
+    savedAddress.addEventListener('change', function () {
+        const selected = savedAddress.selectedOptions[0];
+        document.getElementById('checkoutName').value = selected.dataset.name || '';
+        document.getElementById('checkoutMobile').value = selected.dataset.mobile || '';
+        document.getElementById('checkoutAddress').value = selected.dataset.address || '';
+        document.getElementById('deliveryPincode').value = selected.dataset.pincode || '';
+    });
+    ['checkoutName', 'checkoutMobile', 'checkoutAddress', 'deliveryPincode'].forEach(function (fieldId) {
+        document.getElementById(fieldId).addEventListener('input', function () {
+            savedAddress.value = '';
+        });
+    });
 </script>
 
 {% endblock %}

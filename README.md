@@ -13,6 +13,7 @@ The [feature catalog](docs/Jaunpur_Footwear_Feature_Catalog.docx) groups the cur
 - Browse and search footwear; filter by brand, category, and size, including English/Hindi catalog matches.
 - View Jaunpur shop storefronts, delivery PIN-code coverage, fees, delivery estimates, and available fulfillment slots.
 - Manage a cart with size/color variants, apply coupons, and choose Cash on Delivery or configured Razorpay checkout.
+- Save up to ten customer delivery addresses, select one at checkout, and validate delivery against each Jaunpur shop's PIN-code coverage.
 - Reserve stock for a configurable payment window (15 minutes by default); Celery Beat cancels expired unpaid Razorpay orders and releases stock.
 - Use wishlists and the shoe-size finder; submit product reviews and eligible delivered-shop reviews.
 - View orders and status timelines, download a personal order receipt PDF, and request returns or exchanges.

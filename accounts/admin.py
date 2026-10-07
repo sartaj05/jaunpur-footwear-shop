@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CustomerProfile, LoyaltyAccount, LoyaltyTransaction, ReferralCode, ReferralReward
+from .models import CustomerAddress, CustomerProfile, LoyaltyAccount, LoyaltyTransaction, ReferralCode, ReferralReward
 
 
 @admin.register(CustomerProfile)
@@ -7,6 +7,13 @@ class CustomerProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'mobile', 'city', 'pincode', 'preferred_language', 'whatsapp_order_updates']
     list_filter = ['city', 'preferred_language', 'whatsapp_order_updates']
     search_fields = ['user__username', 'mobile']
+
+
+@admin.register(CustomerAddress)
+class CustomerAddressAdmin(admin.ModelAdmin):
+    list_display = ['label', 'recipient_name', 'user', 'city', 'pincode', 'is_default']
+    list_filter = ['city', 'pincode', 'is_default']
+    search_fields = ['recipient_name', 'user__username', 'mobile', 'pincode', 'address']
 
 
 @admin.register(ReferralCode)
