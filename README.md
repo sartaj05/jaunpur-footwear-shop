@@ -33,7 +33,8 @@ The [feature catalog](docs/Jaunpur_Footwear_Feature_Catalog.docx) groups the cur
 
 ### Staff and operations
 
-- Django admin and staff dashboards for seller approval, catalog, order status, customers, stock alerts, and sales reports.
+- Django admin and staff dashboards for seller approval, catalog, order status, customers, stock alerts, sales reports, and production operations alerts.
+- Scheduled operations checks for failed jobs and payment webhooks, manual refund review, backup freshness, and recorded database/media restore drills. Configure backup path and alert email recipients in deployment settings.
 - Staff-only sales CSV export, staff action audit records, and visible background job run outcomes.
 - Customer returns/exchanges, support tickets, seller verification, commissions, and payout oversight.
 - Razorpay webhook verification with signature checks and duplicate-event protection; eligible received-return refunds can be queued for staff review.

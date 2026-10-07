@@ -252,7 +252,15 @@ CELERY_BEAT_SCHEDULE = {
         "task": "orders.tasks.sync_marketplace_channels_task",
         "schedule": 1800.0,
     },
+    "production-operations-check-every-15-minutes": {
+        "task": "dashboard.tasks.check_production_operations_task",
+        "schedule": 900.0,
+    },
 }
+BACKUP_HEALTHCHECK_PATH = os.environ.get('BACKUP_HEALTHCHECK_PATH', '').strip()
+BACKUP_MAX_AGE_HOURS = int(os.environ.get('BACKUP_MAX_AGE_HOURS', '36'))
+BACKUP_RESTORE_CHECK_INTERVAL_DAYS = int(os.environ.get('BACKUP_RESTORE_CHECK_INTERVAL_DAYS', '90'))
+OPERATIONS_ALERT_EMAILS = [email.strip() for email in os.environ.get('OPERATIONS_ALERT_EMAILS', '').split(',') if email.strip()]
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'

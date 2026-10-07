@@ -33,6 +33,11 @@
         <h3>Low Stock</h3>
         <h2>{{ low_stock_products }}</h2>
     </div>
+
+    <div class="card danger">
+        <h3>Open Operations Alerts</h3>
+        <h2>{{ open_system_alerts }}</h2>
+    </div>
 </div>
 
 <div class="topbar">
@@ -40,6 +45,7 @@
     <a href="{% url 'dashboard_orders' %}" class="btn">View All Orders</a>
     <a href="{% url 'delivery_dispatch' %}" class="btn">Assign Jaunpur deliveries</a>
     <a href="{% url 'order_cancellations' %}" class="btn">Cancellation & refunds</a>
+    <a href="{% url 'operations_dashboard' %}" class="btn">Review operational alerts</a>
 </div>
 
 <table>

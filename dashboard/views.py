@@ -1,6 +1,7 @@
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum
 from django.db.models.functions import TruncDate
@@ -18,6 +19,8 @@ from django.db import transaction
 from django.http import HttpResponse
 import csv
 from decimal import Decimal
+from .models import RecoveryCheck, SystemAlert
+from .operations import publish_alert
 
 
 @staff_member_required
@@ -33,6 +36,7 @@ def superadmin_dashboard(request):
             + ProductVariant.objects.filter(is_active=True, stock__lte=F('low_stock_threshold')).count()
         ),
         'recent_orders': Order.objects.select_related('user').order_by('-created_at')[:8],
+        'open_system_alerts': SystemAlert.objects.exclude(state='resolved').count(),
     }
     return render(request, 'dashboard/superadmin_dashboard.html', context)
 
@@ -392,6 +396,70 @@ def order_cancellations(request):
                 messages.info(request, 'This cancellation request has already moved past that action.')
         return redirect('order_cancellations')
     return render(request, 'dashboard/order_cancellations.html', {'cancellation_requests': requests})
+
+
+@staff_member_required
+def operations_dashboard(request):
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        if action in {'acknowledge', 'resolve'}:
+            try:
+                alert_id = int(request.POST.get('alert_id', ''))
+            except (TypeError, ValueError):
+                alert_id = 0
+            alert = get_object_or_404(SystemAlert, pk=alert_id)
+            if action == 'acknowledge' and alert.state == 'open':
+                alert.state = 'acknowledged'
+                alert.acknowledged_by = request.user
+                alert.acknowledged_at = timezone.now()
+                alert.save(update_fields=['state', 'acknowledged_by', 'acknowledged_at', 'last_seen_at'])
+                messages.success(request, 'Alert acknowledged and assigned to your staff account.')
+            elif action == 'resolve' and alert.state != 'resolved':
+                note = request.POST.get('resolution_note', '').strip()
+                if len(note) < 5:
+                    messages.error(request, 'Add a short recovery note before resolving an alert.')
+                else:
+                    alert.state = 'resolved'
+                    alert.resolved_by = request.user
+                    alert.resolved_at = timezone.now()
+                    alert.resolution_note = note[:2000]
+                    alert.save(update_fields=['state', 'resolved_by', 'resolved_at', 'resolution_note', 'last_seen_at'])
+                    messages.success(request, 'Alert resolution was recorded.')
+            return redirect('operations_dashboard')
+
+        if action == 'record_recovery_check':
+            check_type = request.POST.get('check_type', '')
+            status = request.POST.get('status', '')
+            details = request.POST.get('details', '').strip()
+            if check_type not in dict(RecoveryCheck.CHECK_CHOICES) or status not in dict(RecoveryCheck.STATUS_CHOICES) or len(details) < 8:
+                messages.error(request, 'Choose a recovery check and result, then record at least eight characters of evidence.')
+            else:
+                check = RecoveryCheck.objects.create(
+                    check_type=check_type,
+                    status=status,
+                    details=details[:2000],
+                    checked_by=request.user,
+                )
+                key = f'restore-check-{check_type}'
+                if status == 'failed':
+                    publish_alert(key, 'recovery', 'critical', f'{check.get_check_type_display()} failed', check.details)
+                    messages.error(request, 'Failed recovery check saved and a critical alert was opened.')
+                else:
+                    SystemAlert.objects.filter(dedupe_key=key, state__in=['open', 'acknowledged']).update(
+                        state='resolved',
+                        resolved_by=request.user,
+                        resolved_at=timezone.now(),
+                        resolution_note=f'Passed check recorded: {check.details[:1800]}',
+                    )
+                    messages.success(request, 'Passed recovery check saved to the operations audit trail.')
+            return redirect('operations_dashboard')
+    return render(request, 'dashboard/operations.html', {
+        'open_alerts': SystemAlert.objects.exclude(state='resolved')[:100],
+        'recent_alerts': SystemAlert.objects.all()[:100],
+        'recovery_checks': RecoveryCheck.objects.select_related('checked_by')[:30],
+        'check_types': RecoveryCheck.CHECK_CHOICES,
+        'production_mode': settings.IS_PRODUCTION,
+    })
 
 
 @staff_member_required

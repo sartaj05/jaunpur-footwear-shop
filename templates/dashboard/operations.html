@@ -1,0 +1,39 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block content %}
+<h1>Production operations</h1>
+<p>Recurring checks flag failed background work, payment webhook exceptions, refunds needing review, stale backups, and overdue restore drills.</p>
+{% if not production_mode %}<p>This environment is in development mode. Backup age and restore-drill alerts become active in production.</p>{% endif %}
+
+<h2>Open and acknowledged alerts</h2>
+{% for alert in open_alerts %}
+<section class="checkout-form-card">
+    <h3>{{ alert.get_severity_display }} · {{ alert.title }}</h3>
+    <p>{{ alert.details }}</p>
+    <p>{{ alert.get_state_display }} · first seen {{ alert.first_seen_at|date:'M j, Y g:i A' }} · last seen {{ alert.last_seen_at|date:'M j, Y g:i A' }}</p>
+    {% if alert.state == 'open' %}<form method="post">{% csrf_token %}<input type="hidden" name="alert_id" value="{{ alert.id }}"><button class="secondary-btn" name="action" value="acknowledge">Acknowledge</button></form>{% endif %}
+    <form method="post" class="checkout-form-card">{% csrf_token %}
+        <input type="hidden" name="alert_id" value="{{ alert.id }}">
+        <label for="resolve-{{ alert.id }}">Recovery action and evidence</label>
+        <textarea id="resolve-{{ alert.id }}" name="resolution_note" maxlength="2000" required></textarea>
+        <button class="primary-btn" name="action" value="resolve">Record recovery and resolve</button>
+    </form>
+</section>
+{% empty %}<p>No open operations alerts.</p>{% endfor %}
+
+<h2>Record a recovery check</h2>
+<p>Record the actual restore or reconciliation result after completing it in your deployment environment.</p>
+<form method="post" class="checkout-form-card">{% csrf_token %}
+    <input type="hidden" name="action" value="record_recovery_check">
+    <div class="form-group"><label for="check-type">Check</label><select id="check-type" name="check_type" required>{% for value,label in check_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+    <div class="form-group"><label for="check-status">Result</label><select id="check-status" name="status" required><option value="passed">Passed</option><option value="failed">Failed</option></select></div>
+    <div class="form-group"><label for="check-evidence">Evidence and follow-up</label><textarea id="check-evidence" name="details" minlength="8" maxlength="2000" required></textarea></div>
+    <button class="primary-btn">Save recovery check</button>
+</form>
+
+<h2>Recent recovery checks</h2>
+{% for check in recovery_checks %}<section class="checkout-form-card"><strong>{{ check.get_check_type_display }} · {{ check.get_status_display }}</strong><p>{{ check.checked_at|date:'M j, Y g:i A' }} by {{ check.checked_by|default:'staff account removed' }}</p><p>{{ check.details }}</p></section>{% empty %}<p>No recovery checks recorded yet.</p>{% endfor %}
+
+<h2>Recent alert history</h2>
+{% for alert in recent_alerts %}{% if alert.state == 'resolved' %}<section class="checkout-form-card"><strong>{{ alert.title }}</strong><p>Resolved {{ alert.resolved_at|date:'M j, Y g:i A' }}{% if alert.resolution_note %} · {{ alert.resolution_note }}{% endif %}</p></section>{% endif %}{% empty %}<p>No alerts have been recorded.</p>{% endfor %}
+{% endblock %}
