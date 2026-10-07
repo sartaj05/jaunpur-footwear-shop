@@ -10,7 +10,7 @@ from decimal import Decimal
 import re
 import uuid
 from products.models import Product, ProductVariant
-from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, Order, OrderCancellationRequest, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
+from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, NotificationDelivery, Order, OrderCancellationRequest, OrderItem, OrderTrackingEvent, PaymentAttempt, ReturnRequest, SellerOrder
 from .tasks import send_order_confirmation_task, send_order_status_update_task
 from footwear.task_dispatch import dispatch_background_task
 from .payments import (
@@ -621,6 +621,26 @@ def my_orders(request):
         'seller_orders__delivery_assignment__run__rider__user',
     ).order_by('-created_at')
     return render(request, 'orders/my_orders.html', {'orders': orders})
+
+
+@login_required
+def notification_center(request):
+    deliveries = NotificationDelivery.objects.filter(user=request.user).select_related('order')
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        if action == 'mark_read':
+            delivery = get_object_or_404(deliveries, pk=request.POST.get('delivery_id'))
+            delivery.is_read = True
+            delivery.save(update_fields=['is_read'])
+            messages.success(request, 'Notification marked as read.')
+        elif action == 'mark_all_read':
+            deliveries.filter(is_read=False).update(is_read=True)
+            messages.success(request, 'All notifications were marked as read.')
+        return redirect('notification_center')
+    return render(request, 'orders/notification_center.html', {
+        'deliveries': deliveries,
+        'unread_count': deliveries.filter(is_read=False).count(),
+    })
 
 
 @login_required

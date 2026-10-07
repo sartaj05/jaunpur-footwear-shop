@@ -121,9 +121,10 @@ def customer_preferences(request):
             profile.pincode = pincode
             profile.mobile = mobile
             profile.preferred_language = request.POST.get('preferred_language', 'en') if request.POST.get('preferred_language') in ('en', 'hi') else 'en'
+            profile.email_order_updates = request.POST.get('email_order_updates') == 'on'
             profile.whatsapp_order_updates = request.POST.get('whatsapp_order_updates') == 'on'
             profile.save(update_fields=[
-                'pincode', 'mobile', 'preferred_language', 'whatsapp_order_updates',
+                'pincode', 'mobile', 'preferred_language', 'email_order_updates', 'whatsapp_order_updates',
             ])
             if pincode:
                 request.session['delivery_pincode'] = pincode

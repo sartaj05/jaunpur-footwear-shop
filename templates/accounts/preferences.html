@@ -6,6 +6,7 @@
         <div class="form-group"><label>{% if is_hindi %}डिलीवरी के लिए फ़ोन नंबर{% else %}Phone number for delivery{% endif %}</label><input name="mobile" value="{{ profile.mobile }}" autocomplete="tel"></div>
         <div class="form-group"><label>{% if is_hindi %}जौनपुर डिलीवरी पिन कोड{% else %}Jaunpur delivery PIN code{% endif %}</label><input name="pincode" value="{{ profile.pincode }}" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6"></div>
         <div class="form-group"><label>{% if is_hindi %}पसंदीदा भाषा{% else %}Preferred language{% endif %}</label><select name="preferred_language"><option value="en" {% if profile.preferred_language == 'en' %}selected{% endif %}>English</option><option value="hi" {% if profile.preferred_language == 'hi' %}selected{% endif %}>हिन्दी</option></select></div>
+        <label class="form-group"><input type="checkbox" name="email_order_updates" {% if profile.email_order_updates %}checked{% endif %}> {% if is_hindi %}ईमेल से ऑर्डर अपडेट भेजें{% else %}Send me order updates by email{% endif %}</label>
         <label class="form-group"><input type="checkbox" name="whatsapp_order_updates" {% if profile.whatsapp_order_updates %}checked{% endif %}> {% if is_hindi %}मुझे व्हाट्सऐप पर ऑर्डर अपडेट भेजें। आप इसे यहाँ बंद कर सकते हैं।{% else %}Send me WhatsApp order status updates. I can turn this off here.{% endif %}</label>
         <button class="auth-btn">{% if is_hindi %}पसंद सेव करें{% else %}Save preferences{% endif %}</button>
     </form>

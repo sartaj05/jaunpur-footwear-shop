@@ -389,3 +389,27 @@ class SellerPayoutBatchItem(models.Model):
 
     def __str__(self):
         return f'Order #{self.seller_order.order_id} · ₹{self.payout_amount}'
+
+
+class NotificationDelivery(models.Model):
+    CHANNEL_CHOICES = [('email', 'Email'), ('whatsapp', 'WhatsApp')]
+    EVENT_CHOICES = [('order_confirmation', 'Order confirmation'), ('order_status', 'Order status update')]
+    STATUS_CHOICES = [('accepted', 'Accepted by provider'), ('failed', 'Failed'), ('skipped', 'Skipped by preference or setup')]
+
+    idempotency_key = models.CharField(max_length=220, unique=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notification_deliveries')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='notification_deliveries')
+    channel = models.CharField(max_length=10, choices=CHANNEL_CHOICES)
+    event_type = models.CharField(max_length=24, choices=EVENT_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    summary = models.CharField(max_length=240)
+    error_summary = models.CharField(max_length=300, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f'Order #{self.order_id} · {self.get_channel_display()} · {self.get_status_display()}'

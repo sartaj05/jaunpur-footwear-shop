@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.db import transaction
 from django.contrib import messages
-from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, PaymentWebhookEvent, ReturnRefundAttempt, ReturnRequest, SellerOrder, SellerPayoutBatch, SellerPayoutBatchItem
+from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, NotificationDelivery, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, PaymentWebhookEvent, ReturnRefundAttempt, ReturnRequest, SellerOrder, SellerPayoutBatch, SellerPayoutBatchItem
 from .tasks import process_return_refund_task
 from footwear.task_dispatch import dispatch_background_task
 
@@ -32,6 +32,17 @@ class OrderAdmin(admin.ModelAdmin):
 
 
 admin.site.register(CartItem)
+
+
+@admin.register(NotificationDelivery)
+class NotificationDeliveryAdmin(admin.ModelAdmin):
+    list_display = ['order', 'user', 'event_type', 'channel', 'status', 'created_at', 'accepted_at', 'is_read']
+    list_filter = ['event_type', 'channel', 'status', 'created_at']
+    search_fields = ['idempotency_key', 'user__username', 'order__id', 'summary', 'error_summary']
+    readonly_fields = ['idempotency_key', 'user', 'order', 'channel', 'event_type', 'status', 'summary', 'error_summary', 'created_at', 'accepted_at']
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(PaymentWebhookEvent)

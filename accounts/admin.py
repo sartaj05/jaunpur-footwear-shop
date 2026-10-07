@@ -4,8 +4,8 @@ from .models import CustomerAddress, CustomerProfile, LoyaltyAccount, LoyaltyTra
 
 @admin.register(CustomerProfile)
 class CustomerProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'mobile', 'city', 'pincode', 'preferred_language', 'whatsapp_order_updates']
-    list_filter = ['city', 'preferred_language', 'whatsapp_order_updates']
+    list_display = ['user', 'mobile', 'city', 'pincode', 'preferred_language', 'email_order_updates', 'whatsapp_order_updates']
+    list_filter = ['city', 'preferred_language', 'email_order_updates', 'whatsapp_order_updates']
     search_fields = ['user__username', 'mobile']
 
 

@@ -10,6 +10,7 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),
     path('coupons/apply/', views.apply_coupon, name='apply_coupon'),
     path('my-orders/', views.my_orders, name='my_orders'),
+    path('notifications/', views.notification_center, name='notification_center'),
     path('cancel/<int:order_id>/', views.request_order_cancellation, name='request_order_cancellation'),
     path('invoice/<int:order_id>/', order_invoice_pdf, name='order_invoice'),
     path('rider/deliveries/', views.rider_deliveries, name='rider_deliveries'),

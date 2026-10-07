@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% load localization_tags %}
+{% block content %}
+<section class="page-banner"><h1>{% if is_hindi %}सूचना केंद्र{% else %}Notification center{% endif %}</h1><p>{% if is_hindi %}ईमेल और व्हाट्सऐप पर ऑर्डर अपडेट की प्रदाता स्थिति देखें।{% else %}Review provider status for your order email and WhatsApp updates.{% endif %}</p></section>
+<section class="featured-section">
+    <p>{% if is_hindi %}बिना पढ़ी सूचनाएँ:{% else %}Unread notifications:{% endif %} {{ unread_count }}</p>
+    {% if unread_count %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="mark_all_read"><button class="secondary-btn">{% if is_hindi %}सभी को पढ़ा हुआ करें{% else %}Mark all as read{% endif %}</button></form>{% endif %}
+    {% for delivery in deliveries %}
+    <article class="checkout-form-card{% if not delivery.is_read %} unread-notification{% endif %}">
+        <h2>{% if is_hindi %}ऑर्डर #{{ delivery.order_id }} · {% if delivery.event_type == 'order_confirmation' %}ऑर्डर की पुष्टि{% else %}ऑर्डर स्थिति अपडेट{% endif %}{% else %}Order #{{ delivery.order_id }} · {{ delivery.get_event_type_display }}{% endif %}</h2>
+        <p><strong>{% if is_hindi %}{% if delivery.channel == 'email' %}ईमेल{% else %}व्हाट्सऐप{% endif %}{% else %}{{ delivery.get_channel_display }}{% endif %}</strong> · {% if is_hindi %}{{ delivery.status|hindi_status }}{% else %}{{ delivery.get_status_display }}{% endif %}</p>
+        <p>{{ delivery.summary }} · {{ delivery.created_at|date:'M j, Y g:i A' }}</p>
+        {% if delivery.error_summary %}<p>{{ delivery.error_summary }}</p>{% endif %}
+        {% if delivery.accepted_at %}<small>{% if is_hindi %}प्रदाता ने संदेश स्वीकार किया:{% else %}Provider accepted:{% endif %} {{ delivery.accepted_at|date:'M j, Y g:i A' }}</small>{% endif %}
+        {% if not delivery.is_read %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="mark_read"><input type="hidden" name="delivery_id" value="{{ delivery.id }}"><button class="secondary-btn">{% if is_hindi %}पढ़ा हुआ करें{% else %}Mark as read{% endif %}</button></form>{% endif %}
+    </article>
+    {% empty %}<p>{% if is_hindi %}अभी कोई ऑर्डर सूचना उपलब्ध नहीं है।{% else %}No order notifications yet.{% endif %}</p>{% endfor %}
+</section>
+{% endblock %}

@@ -23,6 +23,8 @@ _HINDI_STATUS = {
     'not_applicable': 'लागू नहीं',
     'processed': 'भेजा गया',
     'not_required': 'आवश्यक नहीं',
+    'accepted': 'प्रदाता द्वारा स्वीकार',
+    'skipped': 'पसंद या सेटअप के कारण नहीं भेजा',
 }
 
 

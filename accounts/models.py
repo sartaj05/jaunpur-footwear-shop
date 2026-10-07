@@ -12,6 +12,7 @@ class CustomerProfile(models.Model):
     city = models.CharField(max_length=100, default='Jaunpur')
     pincode = models.CharField(max_length=10, blank=True)
     preferred_language = models.CharField(max_length=2, choices=[('en', 'English'), ('hi', 'Hindi')], default='en')
+    email_order_updates = models.BooleanField(default=True)
     whatsapp_order_updates = models.BooleanField(default=False)
 
     def __str__(self):

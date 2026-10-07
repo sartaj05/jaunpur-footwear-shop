@@ -48,6 +48,7 @@
                 <a href="{% url 'cart' %}">{% if is_hindi %}कार्ट{% else %}Cart{% endif %}</a>
                 <a href="{% url 'wishlist' %}">{% if is_hindi %}पसंदीदा सूची{% else %}Wishlist{% endif %}</a>
                 <a href="{% url 'my_orders' %}">{% if is_hindi %}मेरे ऑर्डर{% else %}My Orders{% endif %}</a>
+                <a href="{% url 'notification_center' %}">{% if is_hindi %}सूचना केंद्र{% else %}Notification center{% endif %}</a>
                 <a href="{% url 'support_list' %}">{% if is_hindi %}सहायता{% else %}Help & support{% endif %}</a>
                 {% if user.delivery_rider_profile.is_active %}<a href="{% url 'rider_deliveries' %}">{% if is_hindi %}राइडर डिलीवरी{% else %}Rider deliveries{% endif %}</a>{% endif %}
                 <a href="{% url 'logout' %}" class="logout-link">{% if is_hindi %}लॉगआउट{% else %}Logout{% endif %}</a>

@@ -6,9 +6,10 @@ from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.utils import timezone
 
 from accounts.models import CustomerProfile
-from .models import Order
+from .models import NotificationDelivery, Order
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,43 @@ _HINDI_ORDER_STATUS = {
     'shipped': 'भेज दिया गया', 'out_for_delivery': 'डिलीवरी के लिए निकला',
     'delivered': 'डिलीवर हो गया', 'cancelled': 'रद्द',
 }
+
+
+def _record_channel_delivery(order, event_type, channel, summary, enabled, send_message):
+    state_suffix = order.status if event_type == 'order_status' else 'placed'
+    idempotency_key = f'order-{order.pk}:{event_type}:{state_suffix}:{channel}'
+    existing = NotificationDelivery.objects.filter(idempotency_key=idempotency_key).first()
+    if existing and existing.status == 'accepted':
+        return True
+    status = 'skipped'
+    error_summary = ''
+    accepted_at = None
+    if enabled:
+        try:
+            accepted = bool(send_message())
+        except Exception:
+            logger.exception('Notification provider raised an error for order %s through %s.', order.pk, channel)
+            accepted = False
+        if accepted:
+            status = 'accepted'
+            accepted_at = timezone.now()
+        else:
+            status = 'failed'
+            error_summary = 'The configured provider did not accept this message.'
+    NotificationDelivery.objects.update_or_create(
+        idempotency_key=idempotency_key,
+        defaults={
+            'user_id': order.user_id,
+            'order': order,
+            'channel': channel,
+            'event_type': event_type,
+            'status': status,
+            'summary': summary[:240],
+            'error_summary': error_summary,
+            'accepted_at': accepted_at,
+        },
+    )
+    return status in {'accepted', 'skipped'}
 
 
 def send_whatsapp_template(phone, template_name, body_parameters, language_code='en_US'):
@@ -66,23 +104,28 @@ def send_whatsapp_template(phone, template_name, body_parameters, language_code=
         return False
 
 
-def _send_order_whatsapp(order, profile):
-    if not profile or not profile.whatsapp_order_updates:
-        return True
-    if not all((
+def _send_order_whatsapp(order, profile, event_type, summary):
+    provider_configured = all((
         settings.WHATSAPP_GRAPH_API_VERSION,
         settings.WHATSAPP_PHONE_NUMBER_ID,
         settings.WHATSAPP_ACCESS_TOKEN,
         settings.WHATSAPP_ORDER_TEMPLATE,
-    )):
-        return True
-    language = 'hi' if profile.preferred_language == 'hi' else 'en_US'
+    ))
+    enabled = bool(profile and profile.whatsapp_order_updates and provider_configured)
+    language = 'hi' if profile and profile.preferred_language == 'hi' else 'en_US'
     status_display = _HINDI_ORDER_STATUS.get(order.status, order.get_status_display()) if language == 'hi' else order.get_status_display()
-    return send_whatsapp_template(
-        order.mobile or profile.mobile,
-        settings.WHATSAPP_ORDER_TEMPLATE,
-        [order.pk, order.full_name, status_display],
-        language_code=language,
+    return _record_channel_delivery(
+        order,
+        event_type,
+        'whatsapp',
+        summary,
+        enabled,
+        lambda: send_whatsapp_template(
+            order.mobile or (profile.mobile if profile else ''),
+            settings.WHATSAPP_ORDER_TEMPLATE,
+            [order.pk, order.full_name, status_display],
+            language_code=language,
+        ),
     )
 
 
@@ -109,17 +152,17 @@ def send_order_confirmation(order_id):
             f'Total: ₹{order.total_amount}', f'Current status: {status_display}',
         ])
         subject = f'Order #{order.pk} received'
-    delivered = []
-    if order.user.email:
-        delivered.append(send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [order.user.email],
-            fail_silently=False,
-        ) == 1)
-    delivered.append(_send_order_whatsapp(order, profile))
-    return all(delivered)
+    email_enabled = bool(order.user.email and (profile is None or profile.email_order_updates))
+    email_delivered = _record_channel_delivery(
+        order,
+        'order_confirmation',
+        'email',
+        subject,
+        email_enabled,
+        lambda: send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [order.user.email], fail_silently=False) == 1,
+    )
+    whatsapp_delivered = _send_order_whatsapp(order, profile, 'order_confirmation', subject)
+    return email_delivered and whatsapp_delivered
 
 
 def send_order_status_update(order_id):
@@ -132,14 +175,14 @@ def send_order_status_update(order_id):
     status_display = _HINDI_ORDER_STATUS.get(order.status, order.get_status_display()) if hindi else order.get_status_display()
     subject = f'ऑर्डर #{order.pk} अपडेट' if hindi else f'Order #{order.pk} update'
     body = f'आपका ऑर्डर #{order.pk} अब {status_display} स्थिति में है।' if hindi else f'Your order #{order.pk} is now {status_display}.'
-    delivered = []
-    if order.user.email:
-        delivered.append(send_mail(
-            subject,
-            body,
-            settings.DEFAULT_FROM_EMAIL,
-            [order.user.email],
-            fail_silently=False,
-        ) == 1)
-    delivered.append(_send_order_whatsapp(order, profile))
-    return all(delivered)
+    email_enabled = bool(order.user.email and (profile is None or profile.email_order_updates))
+    email_delivered = _record_channel_delivery(
+        order,
+        'order_status',
+        'email',
+        subject,
+        email_enabled,
+        lambda: send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [order.user.email], fail_silently=False) == 1,
+    )
+    whatsapp_delivered = _send_order_whatsapp(order, profile, 'order_status', subject)
+    return email_delivered and whatsapp_delivered
