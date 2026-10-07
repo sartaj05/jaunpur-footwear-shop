@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="page-banner"><h1>Jaunpur footwear shops</h1><p>Explore approved local shops and the footwear they stock.</p></section>
-<form method="get" class="checkout-form-card"><label for="shopPincode">Find shops delivering to your PIN code</label><input id="shopPincode" name="pincode" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" value="{{ pincode }}" placeholder="6-digit PIN code"><button class="primary-btn">Find local shops</button></form>
+<section class="page-banner"><h1>{% if is_hindi %}जौनपुर फुटवियर दुकानें{% else %}Jaunpur footwear shops{% endif %}</h1><p>{% if is_hindi %}स्वीकृत स्थानीय दुकानों और उनके जूते देखें।{% else %}Explore approved local shops and the footwear they stock.{% endif %}</p></section>
+<form method="get" class="checkout-form-card"><label for="shopPincode">{% if is_hindi %}अपने पिन कोड पर डिलीवरी देने वाली दुकानें खोजें{% else %}Find shops delivering to your PIN code{% endif %}</label><input id="shopPincode" name="pincode" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" value="{{ pincode }}" placeholder="6-digit PIN code"><button class="primary-btn">{% if is_hindi %}स्थानीय दुकानें खोजें{% else %}Find local shops{% endif %}</button></form>
 <section class="featured-section"><div class="product-grid">
     {% for shop in shops %}
     <article class="product-card"><div class="product-info">
         {% if shop.logo %}<img src="{{ shop.logo.url }}" alt="{{ shop.name }}" width="100">{% endif %}
-        <h2><a href="{% url 'shop_page' shop.slug %}">{{ shop.name }}</a>{% if shop.verification_status == 'verified' %} <span class="verified-badge">Verified Jaunpur Shop</span>{% endif %}</h2>
+        <h2><a href="{% url 'shop_page' shop.slug %}">{{ shop.name }}</a>{% if shop.verification_status == 'verified' %} <span class="verified-badge">{% if is_hindi %}जौनपुर की सत्यापित दुकान{% else %}Verified Jaunpur Shop{% endif %}</span>{% endif %}</h2>
         <p>{{ shop.city }}, Jaunpur · {{ shop.pincode }}</p>
-        {% if shop.opening_hours %}<p>Hours: {{ shop.opening_hours }}</p>{% endif %}
+        {% if shop.opening_hours %}<p>{% if is_hindi %}समय:{% else %}Hours:{% endif %} {{ shop.opening_hours }}</p>{% endif %}
         {% if shop.description %}<p>{{ shop.description|truncatewords:24 }}</p>{% endif %}
-        <a class="card-btn" href="{% url 'shop_page' shop.slug %}">View shop</a>
+        <a class="card-btn" href="{% url 'shop_page' shop.slug %}">{% if is_hindi %}दुकान देखें{% else %}View shop{% endif %}</a>
     </div></article>
-    {% empty %}<p>No local shops have been approved yet. <a href="{% url 'shop_application' %}">Apply to list your shop</a>.</p>{% endfor %}
+    {% empty %}<p>{% if is_hindi %}अभी कोई स्थानीय दुकान स्वीकृत नहीं है।{% else %}No local shops have been approved yet.{% endif %} <a href="{% url 'shop_application' %}">{% if is_hindi %}अपनी दुकान सूचीबद्ध करने के लिए आवेदन करें{% else %}Apply to list your shop{% endif %}</a>.</p>{% endfor %}
 </div></section>
 {% endblock %}

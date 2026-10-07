@@ -16,6 +16,7 @@ The [feature catalog](docs/Jaunpur_Footwear_Feature_Catalog.docx) groups the cur
 - Save up to ten customer delivery addresses, select one at checkout, and validate delivery against each Jaunpur shop's PIN-code coverage.
 - Reserve stock for a configurable payment window (15 minutes by default); Celery Beat cancels expired unpaid Razorpay orders and releases stock.
 - Use wishlists and the shoe-size finder; submit product reviews and eligible delivered-shop reviews.
+- Choose English or Hindi across the customer storefront, account forms, cart, checkout, saved addresses, order tracking, and size finder; transactional email and opt-in WhatsApp updates use the customer's language preference.
 - View orders and status timelines, download a personal order receipt PDF, and request returns or exchanges.
 - Request cancellation before shop fulfillment starts and follow staff review plus externally recorded refund progress.
 - Receive email status updates and opt-in English/Hindi WhatsApp updates when Meta Cloud API settings are configured.

@@ -1,34 +1,34 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="page-banner"><h1>Delivery address book</h1><p>Save up to ten addresses for Jaunpur deliveries. Checkout confirms that each selected shop serves the PIN code.</p></section>
+<section class="page-banner"><h1>{% if is_hindi %}डिलीवरी पता पुस्तिका{% else %}Delivery address book{% endif %}</h1><p>{% if is_hindi %}जौनपुर डिलीवरी के लिए दस पते सेव करें। चेकआउट पर चुनी दुकान के पिन कोड कवरेज की पुष्टि होगी।{% else %}Save up to ten addresses for Jaunpur deliveries. Checkout confirms that each selected shop serves the PIN code.{% endif %}</p></section>
 
 <section class="checkout-page">
     <div class="checkout-form-card">
-        <h2>{% if editing_address %}Edit address{% else %}Add an address{% endif %}</h2>
+        <h2>{% if is_hindi %}{% if editing_address %}पता बदलें{% else %}पता जोड़ें{% endif %}{% else %}{% if editing_address %}Edit address{% else %}Add an address{% endif %}{% endif %}</h2>
         <form method="post">{% csrf_token %}
             {% if editing_address %}<input type="hidden" name="address_id" value="{{ editing_address.id }}">{% endif %}
-            <div class="form-group"><label for="address-label">Label</label><input id="address-label" name="label" maxlength="40" value="{{ editing_address.label|default:'Home' }}" required></div>
-            <div class="form-group"><label for="recipient-name">Recipient name</label><input id="recipient-name" name="recipient_name" maxlength="150" value="{{ editing_address.recipient_name|default:'' }}" required></div>
-            <div class="form-group"><label for="address-mobile">Mobile</label><input id="address-mobile" name="mobile" maxlength="18" inputmode="tel" value="{{ editing_address.mobile|default:'' }}" required></div>
-            <div class="form-group"><label for="address-lines">Full address</label><textarea id="address-lines" name="address" maxlength="1000" required>{{ editing_address.address|default:'' }}</textarea></div>
-            <div class="form-group"><label for="address-city">City / area</label><input id="address-city" name="city" maxlength="100" value="{{ editing_address.city|default:'Jaunpur' }}" required></div>
-            <div class="form-group"><label for="address-pincode">PIN code</label><input id="address-pincode" name="pincode" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" value="{{ editing_address.pincode|default:'' }}" required></div>
-            <label><input type="checkbox" name="is_default" {% if editing_address.is_default %}checked{% endif %}> Set as default address</label>
-            <button class="primary-btn" name="action" value="save">Save address</button>
-            {% if editing_address %}<a class="secondary-btn" href="{% url 'address_book' %}">Stop editing</a>{% endif %}
+            <div class="form-group"><label for="address-label">{% if is_hindi %}पते का नाम{% else %}Label{% endif %}</label><input id="address-label" name="label" maxlength="40" value="{{ editing_address.label|default:'Home' }}" required></div>
+            <div class="form-group"><label for="recipient-name">{% if is_hindi %}प्राप्तकर्ता का नाम{% else %}Recipient name{% endif %}</label><input id="recipient-name" name="recipient_name" maxlength="150" value="{{ editing_address.recipient_name|default:'' }}" required></div>
+            <div class="form-group"><label for="address-mobile">{% if is_hindi %}मोबाइल{% else %}Mobile{% endif %}</label><input id="address-mobile" name="mobile" maxlength="18" inputmode="tel" value="{{ editing_address.mobile|default:'' }}" required></div>
+            <div class="form-group"><label for="address-lines">{% if is_hindi %}पूरा पता{% else %}Full address{% endif %}</label><textarea id="address-lines" name="address" maxlength="1000" required>{{ editing_address.address|default:'' }}</textarea></div>
+            <div class="form-group"><label for="address-city">{% if is_hindi %}शहर / इलाका{% else %}City / area{% endif %}</label><input id="address-city" name="city" maxlength="100" value="{{ editing_address.city|default:'Jaunpur' }}" required></div>
+            <div class="form-group"><label for="address-pincode">{% if is_hindi %}पिन कोड{% else %}PIN code{% endif %}</label><input id="address-pincode" name="pincode" inputmode="numeric" pattern="[1-9][0-9]{5}" maxlength="6" value="{{ editing_address.pincode|default:'' }}" required></div>
+            <label><input type="checkbox" name="is_default" {% if editing_address.is_default %}checked{% endif %}> {% if is_hindi %}डिफ़ॉल्ट पता बनाएँ{% else %}Set as default address{% endif %}</label>
+            <button class="primary-btn" name="action" value="save">{% if is_hindi %}पता सेव करें{% else %}Save address{% endif %}</button>
+            {% if editing_address %}<a class="secondary-btn" href="{% url 'address_book' %}">{% if is_hindi %}संपादन रोकें{% else %}Stop editing{% endif %}</a>{% endif %}
         </form>
     </div>
     <div>
-        <h2>Your saved addresses</h2>
+        <h2>{% if is_hindi %}आपके सेव किए पते{% else %}Your saved addresses{% endif %}</h2>
         {% for address in addresses %}<article class="checkout-form-card">
-            <h3>{{ address.label }}{% if address.is_default %} · Default{% endif %}</h3>
+            <h3>{{ address.label }}{% if address.is_default %} · {% if is_hindi %}डिफ़ॉल्ट{% else %}Default{% endif %}{% endif %}</h3>
             <p>{{ address.recipient_name }} · {{ address.mobile }}</p>
             <p>{{ address.address }}, {{ address.city }} · {{ address.pincode }}</p>
-            <a class="secondary-btn" href="{% url 'address_book' %}?edit={{ address.id }}">Edit</a>
-            {% if not address.is_default %}<form method="post" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="set_default"><input type="hidden" name="address_id" value="{{ address.id }}"><button class="secondary-btn">Make default</button></form>{% endif %}
-            <form method="post" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="address_id" value="{{ address.id }}"><button class="secondary-btn">Remove</button></form>
-        </article>{% empty %}<p>No saved delivery addresses yet.</p>{% endfor %}
+            <a class="secondary-btn" href="{% url 'address_book' %}?edit={{ address.id }}">{% if is_hindi %}बदलें{% else %}Edit{% endif %}</a>
+            {% if not address.is_default %}<form method="post" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="set_default"><input type="hidden" name="address_id" value="{{ address.id }}"><button class="secondary-btn">{% if is_hindi %}डिफ़ॉल्ट बनाएँ{% else %}Make default{% endif %}</button></form>{% endif %}
+            <form method="post" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="address_id" value="{{ address.id }}"><button class="secondary-btn">{% if is_hindi %}हटाएँ{% else %}Remove{% endif %}</button></form>
+        </article>{% empty %}<p>{% if is_hindi %}अभी कोई डिलीवरी पता सेव नहीं है।{% else %}No saved delivery addresses yet.{% endif %}</p>{% endfor %}
     </div>
 </section>
 {% endblock %}

@@ -2,8 +2,8 @@
 
 {% block content %}
 <section class="page-banner">
-    <h1>My Wishlist</h1>
-    <p>Footwear you saved for later</p>
+    <h1>{% if is_hindi %}मेरी पसंदीदा सूची{% else %}My Wishlist{% endif %}</h1>
+    <p>{% if is_hindi %}बाद में देखने के लिए सेव किए गए जूते{% else %}Footwear you saved for later{% endif %}</p>
 </section>
 
 <section class="products-area wishlist-page">
@@ -17,17 +17,17 @@
                 <p class="brand-name">{{ item.product.brand.name }}</p>
                 <h3>{{ item.product.name }}</h3>
                 <p class="price"><strong>₹{{ item.product.display_price }}</strong></p>
-                <a href="{% url 'product_detail' item.product.id %}" class="card-btn">View Details</a>
+                <a href="{% url 'product_detail' item.product.id %}" class="card-btn">{% if is_hindi %}विवरण देखें{% else %}View Details{% endif %}</a>
                 <form method="post" action="{% url 'remove_from_wishlist' item.product.id %}">
-                    {% csrf_token %}<button class="remove-btn" type="submit">Remove</button>
+                    {% csrf_token %}<button class="remove-btn" type="submit">{% if is_hindi %}हटाएँ{% else %}Remove{% endif %}</button>
                 </form>
             </div>
         </article>
         {% empty %}
         <div class="empty-box">
-            <h3>Your wishlist is empty</h3>
-            <p>Save a product from its details page to find it here.</p>
-            <a href="{% url 'product_list' %}" class="primary-btn">Browse footwear</a>
+            <h3>{% if is_hindi %}आपकी पसंदीदा सूची खाली है{% else %}Your wishlist is empty{% endif %}</h3>
+            <p>{% if is_hindi %}यहाँ देखने के लिए किसी उत्पाद के विवरण पेज से उसे सेव करें।{% else %}Save a product from its details page to find it here.{% endif %}</p>
+            <a href="{% url 'product_list' %}" class="primary-btn">{% if is_hindi %}फुटवियर देखें{% else %}Browse footwear{% endif %}</a>
         </div>
         {% endfor %}
     </div>

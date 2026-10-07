@@ -12,7 +12,7 @@
         <h1>{% if is_hindi and product.name_hi %}{{ product.name_hi }}{% else %}{{ product.name }}{% endif %}</h1>
 
         <p class="detail-category">
-            {{ product.category.name }} • {{ product.get_gender_display }}
+            {{ product.category.name }} • {% if is_hindi and product.gender == 'men' %}पुरुष{% elif is_hindi and product.gender == 'women' %}महिला{% elif is_hindi and product.gender == 'kids' %}बच्चे{% elif is_hindi and product.gender == 'unisex' %}यूनिसेक्स{% else %}{{ product.get_gender_display }}{% endif %}
         </p>
 
         <div class="detail-price">
@@ -27,11 +27,11 @@
         {% if user.is_authenticated %}
             {% if is_wishlisted %}
             <form method="post" action="{% url 'remove_from_wishlist' product.id %}">
-                {% csrf_token %}<button class="secondary-btn" type="submit">Remove from Wishlist</button>
+                {% csrf_token %}<button class="secondary-btn" type="submit">{% if is_hindi %}पसंदीदा सूची से हटाएँ{% else %}Remove from Wishlist{% endif %}</button>
             </form>
             {% else %}
             <form method="post" action="{% url 'add_to_wishlist' product.id %}">
-                {% csrf_token %}<button class="secondary-btn" type="submit">Save to Wishlist</button>
+                {% csrf_token %}<button class="secondary-btn" type="submit">{% if is_hindi %}पसंदीदा सूची में सेव करें{% else %}Save to Wishlist{% endif %}</button>
             </form>
             {% endif %}
         {% endif %}
@@ -41,16 +41,16 @@
         <div class="product-rating-summary">
             <strong>{% if is_hindi %}ग्राहक रेटिंग:{% else %}Customer rating:{% endif %}</strong>
             {% if average_rating %}{{ average_rating|floatformat:1 }} / 5{% else %}{% if is_hindi %}अभी रेटिंग नहीं{% else %}No ratings yet{% endif %}{% endif %}
-            <span>({{ reviews|length }} reviews)</span>
+            <span>({{ reviews|length }} {% if is_hindi %}समीक्षाएँ{% else %}reviews{% endif %})</span>
         </div>
 
         <form method="post" action="{% url 'add_to_cart' product.id %}" class="cart-form">
             {% csrf_token %}
 
             {% if variants %}
-            <label for="variantChoice">Size and color</label>
+            <label for="variantChoice">{% if is_hindi %}साइज़ और रंग{% else %}Size and color{% endif %}</label>
             <select name="variant_id" id="variantChoice" required>
-                <option value="">Choose a size and color</option>
+                <option value="">{% if is_hindi %}साइज़ और रंग चुनें{% else %}Choose a size and color{% endif %}</option>
                 {% for variant in variants %}
                 <option value="{{ variant.id }}" {% if variant.stock < 1 %}disabled{% endif %}>
                     {{ variant.size }} / {{ variant.color }} · ₹{{ variant.display_price }}{% if variant.stock < 1 %} — Out of stock{% endif %}
@@ -58,7 +58,7 @@
                 {% endfor %}
             </select>
             {% else %}
-            <label>Select Size</label>
+            <label>{% if is_hindi %}साइज़ चुनें{% else %}Select Size{% endif %}</label>
             <div class="size-options">
                 {% for size in sizes %}
                 <label class="size-box">
@@ -69,20 +69,20 @@
             </div>
             {% endif %}
 
-            <label>Quantity</label>
+            <label>{% if is_hindi %}मात्रा{% else %}Quantity{% endif %}</label>
             <div class="qty-box">
                 <button type="button" id="qtyMinus">-</button>
                 <input type="number" name="quantity" id="quantityInput" value="1" min="1">
                 <button type="button" id="qtyPlus">+</button>
             </div>
 
-            <button class="primary-btn full-btn">Add to Cart</button>
+            <button class="primary-btn full-btn">{% if is_hindi %}कार्ट में जोड़ें{% else %}Add to Cart{% endif %}</button>
         </form>
 
         <a class="whatsapp-order"
            target="_blank"
            href="https://wa.me/91YOURNUMBER?text=I want to order {{ product.name }}">
-            Order on WhatsApp
+            {% if is_hindi %}व्हाट्सऐप पर ऑर्डर करें{% else %}Order on WhatsApp{% endif %}
         </a>
 
         <div class="detail-note">

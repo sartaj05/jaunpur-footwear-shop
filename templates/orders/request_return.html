@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="page-banner"><h1>Return or exchange order #{{ order.id }}</h1><p>Requests are accepted within {{ RETURN_WINDOW_DAYS|default:'7' }} days of delivery.</p></section>
+<section class="page-banner"><h1>{% if is_hindi %}ऑर्डर #{{ order.id }} की वापसी या एक्सचेंज{% else %}Return or exchange order #{{ order.id }}{% endif %}</h1><p>{% if is_hindi %}डिलीवरी के {{ RETURN_WINDOW_DAYS|default:'7' }} दिनों के भीतर अनुरोध स्वीकार हैं।{% else %}Requests are accepted within {{ RETURN_WINDOW_DAYS|default:'7' }} days of delivery.{% endif %}</p></section>
 <section class="checkout-page"><div class="checkout-form-card"><form method="post">{% csrf_token %}
-    <div class="form-group"><label for="orderItem">Choose the item</label><select id="orderItem" name="order_item" required><option value="">Select one item</option>{% for item in order.items.all %}<option value="{{ item.id }}">{{ item.product_name }} · size {{ item.size }}{% if item.color %} / {{ item.color }}{% endif %} · quantity {{ item.quantity }}</option>{% endfor %}</select></div>
-    <div class="form-group"><label for="requestType">Request type</label><select id="requestType" name="request_type" required><option value="return">Return</option><option value="exchange">Exchange size</option></select></div>
-    <div class="form-group" id="exchangeSizeGroup"><label for="exchangeSize">Requested size</label><input id="exchangeSize" name="exchange_size" maxlength="10" placeholder="Enter an available size"></div>
-    <div class="form-group"><label for="returnReason">Reason</label><textarea id="returnReason" name="reason" required></textarea></div>
-    <label class="form-group"><input type="checkbox" name="pickup_required" checked> I need local pickup from my Jaunpur delivery address</label>
-    <button class="auth-btn" type="submit">Send request</button>
+    <div class="form-group"><label for="orderItem">{% if is_hindi %}सामान चुनें{% else %}Choose the item{% endif %}</label><select id="orderItem" name="order_item" required><option value="">{% if is_hindi %}एक सामान चुनें{% else %}Select one item{% endif %}</option>{% for item in order.items.all %}<option value="{{ item.id }}">{{ item.product_name }} · {% if is_hindi %}साइज़{% else %}size{% endif %} {{ item.size }}{% if item.color %} / {{ item.color }}{% endif %} · {% if is_hindi %}मात्रा{% else %}quantity{% endif %} {{ item.quantity }}</option>{% endfor %}</select></div>
+    <div class="form-group"><label for="requestType">{% if is_hindi %}अनुरोध का प्रकार{% else %}Request type{% endif %}</label><select id="requestType" name="request_type" required><option value="return">{% if is_hindi %}वापसी{% else %}Return{% endif %}</option><option value="exchange">{% if is_hindi %}साइज़ एक्सचेंज{% else %}Exchange size{% endif %}</option></select></div>
+    <div class="form-group" id="exchangeSizeGroup"><label for="exchangeSize">{% if is_hindi %}माँगा गया साइज़{% else %}Requested size{% endif %}</label><input id="exchangeSize" name="exchange_size" maxlength="10" placeholder="{% if is_hindi %}उपलब्ध साइज़ दर्ज करें{% else %}Enter an available size{% endif %}"></div>
+    <div class="form-group"><label for="returnReason">{% if is_hindi %}कारण{% else %}Reason{% endif %}</label><textarea id="returnReason" name="reason" required></textarea></div>
+    <label class="form-group"><input type="checkbox" name="pickup_required" checked> {% if is_hindi %}जौनपुर डिलीवरी पते से स्थानीय पिकअप चाहिए{% else %}I need local pickup from my Jaunpur delivery address{% endif %}</label>
+    <button class="auth-btn" type="submit">{% if is_hindi %}अनुरोध भेजें{% else %}Send request{% endif %}</button>
 </form></div></section>
 <script>
 (() => {

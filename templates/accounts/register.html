@@ -8,23 +8,22 @@
 
         <div class="auth-left">
             <div class="auth-icon">👟</div>
-            <h1>Create Customer Account</h1>
+            <h1>{% if is_hindi %}ग्राहक खाता बनाएँ{% else %}Create Customer Account{% endif %}</h1>
             <p>
-                Register and order shoes, slippers, sandals and sports footwear
-                from Jaunpur Footwear.
+                {% if is_hindi %}जौनपुर फुटवियर से जूते, चप्पल और सैंडल खरीदने के लिए पंजीकरण करें।{% else %}Register and order shoes, slippers, sandals and sports footwear from Jaunpur Footwear.{% endif %}
             </p>
 
             <ul>
-                <li>✅ Fast local delivery</li>
-                <li>✅ Perfect size finder</li>
-                <li>✅ WhatsApp order support</li>
-                <li>✅ Cash on delivery</li>
+                <li>✅ {% if is_hindi %}तेज़ स्थानीय डिलीवरी{% else %}Fast local delivery{% endif %}</li>
+                <li>✅ {% if is_hindi %}सही साइज़ खोजक{% else %}Perfect size finder{% endif %}</li>
+                <li>✅ {% if is_hindi %}व्हाट्सऐप ऑर्डर सहायता{% else %}WhatsApp order support{% endif %}</li>
+                <li>✅ {% if is_hindi %}कैश ऑन डिलीवरी{% else %}Cash on delivery{% endif %}</li>
             </ul>
         </div>
 
         <div class="auth-right">
-            <h2>Register</h2>
-            <p class="auth-subtitle">Create your account in few seconds</p>
+            <h2>{% if is_hindi %}रजिस्टर करें{% else %}Register{% endif %}</h2>
+            <p class="auth-subtitle">{% if is_hindi %}कुछ ही सेकंड में खाता बनाएँ{% else %}Create your account in few seconds{% endif %}</p>
 
             {% if error %}
             <div class="error-box">{{ error }}</div>
@@ -34,41 +33,41 @@
                 {% csrf_token %}
 
                 <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" name="username" placeholder="Enter username" required>
+                    <label>{% if is_hindi %}यूज़रनेम{% else %}Username{% endif %}</label>
+                    <input type="text" name="username" placeholder="{% if is_hindi %}यूज़रनेम दर्ज करें{% else %}Enter username{% endif %}" required>
                 </div>
 
                 <div class="form-group">
-                    <label>Mobile Number</label>
-                    <input type="text" name="mobile" placeholder="Enter mobile number" required>
+                    <label>{% if is_hindi %}मोबाइल नंबर{% else %}Mobile Number{% endif %}</label>
+                    <input type="text" name="mobile" placeholder="{% if is_hindi %}मोबाइल नंबर दर्ज करें{% else %}Enter mobile number{% endif %}" required>
                 </div>
 
                 <div class="form-group">
-                    <label>Email for order updates</label>
+                    <label>{% if is_hindi %}ऑर्डर अपडेट के लिए ईमेल{% else %}Email for order updates{% endif %}</label>
                     <input type="email" name="email" placeholder="you@example.com" autocomplete="email">
                 </div>
 
                 <div class="form-group">
-                    <label>Full Address</label>
-                    <textarea name="address" placeholder="House no, area, Jaunpur..." required></textarea>
+                    <label>{% if is_hindi %}पूरा पता{% else %}Full Address{% endif %}</label>
+                    <textarea name="address" placeholder="{% if is_hindi %}मकान नंबर, इलाका, जौनपुर{% else %}House no, area, Jaunpur...{% endif %}" required></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" name="password" placeholder="Create password" required>
+                    <label>{% if is_hindi %}पासवर्ड{% else %}Password{% endif %}</label>
+                    <input type="password" name="password" placeholder="{% if is_hindi %}पासवर्ड बनाएँ{% else %}Create password{% endif %}" required>
                 </div>
 
                 <div class="form-group">
-                    <label>Jaunpur friend referral code (optional)</label>
+                    <label>{% if is_hindi %}जौनपुर मित्र रेफरल कोड (वैकल्पिक){% else %}Jaunpur friend referral code (optional){% endif %}</label>
                     <input type="text" name="referral_code" value="{{ referral_code }}" placeholder="JPXXXXXXXX">
                 </div>
 
-                <button type="submit" class="auth-btn">Create Account</button>
+                <button type="submit" class="auth-btn">{% if is_hindi %}खाता बनाएँ{% else %}Create Account{% endif %}</button>
             </form>
 
             <p class="auth-bottom">
-                Already have an account?
-                <a href="{% url 'login' %}">Login here</a>
+                {% if is_hindi %}पहले से खाता है?{% else %}Already have an account?{% endif %}
+                <a href="{% url 'login' %}">{% if is_hindi %}यहाँ लॉगिन करें{% else %}Login here{% endif %}</a>
             </p>
         </div>
 

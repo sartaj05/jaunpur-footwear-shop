@@ -12,6 +12,12 @@ from .models import Order
 
 logger = logging.getLogger(__name__)
 
+_HINDI_ORDER_STATUS = {
+    'pending': 'लंबित', 'confirmed': 'पुष्टि की गई', 'packed': 'पैक किया गया',
+    'shipped': 'भेज दिया गया', 'out_for_delivery': 'डिलीवरी के लिए निकला',
+    'delivered': 'डिलीवर हो गया', 'cancelled': 'रद्द',
+}
+
 
 def send_whatsapp_template(phone, template_name, body_parameters, language_code='en_US'):
     if not all((
@@ -71,10 +77,11 @@ def _send_order_whatsapp(order, profile):
     )):
         return True
     language = 'hi' if profile.preferred_language == 'hi' else 'en_US'
+    status_display = _HINDI_ORDER_STATUS.get(order.status, order.get_status_display()) if language == 'hi' else order.get_status_display()
     return send_whatsapp_template(
         order.mobile or profile.mobile,
         settings.WHATSAPP_ORDER_TEMPLATE,
-        [order.pk, order.full_name, order.get_status_display()],
+        [order.pk, order.full_name, status_display],
         language_code=language,
     )
 
@@ -83,30 +90,35 @@ def send_order_confirmation(order_id):
     order = Order.objects.select_related('user').prefetch_related('items').filter(pk=order_id).first()
     if not order:
         return True
-
-    item_lines = [
-        f'- {item.product_name} | size {item.size} | quantity {item.quantity}'
-        for item in order.items.all()
-    ]
-    message = '\n'.join([
-        f'Hello {order.full_name},',
-        '',
-        f'Your Jaunpur Footwear order #{order.pk} has been received.',
-        *item_lines,
-        '',
-        f'Total: ₹{order.total_amount}',
-        f'Current status: {order.get_status_display()}',
-    ])
+    profile = CustomerProfile.objects.filter(user_id=order.user_id).first()
+    hindi = bool(profile and profile.preferred_language == 'hi')
+    status_display = _HINDI_ORDER_STATUS.get(order.status, order.get_status_display()) if hindi else order.get_status_display()
+    if hindi:
+        item_lines = [f'- {item.product_name} | साइज़ {item.size} | मात्रा {item.quantity}' for item in order.items.all()]
+        message = '\n'.join([
+            f'नमस्ते {order.full_name},', '',
+            f'आपका जौनपुर फुटवियर ऑर्डर #{order.pk} प्राप्त हुआ।', *item_lines, '',
+            f'कुल: ₹{order.total_amount}', f'ऑर्डर स्थिति: {status_display}',
+        ])
+        subject = f'ऑर्डर #{order.pk} प्राप्त हुआ'
+    else:
+        item_lines = [f'- {item.product_name} | size {item.size} | quantity {item.quantity}' for item in order.items.all()]
+        message = '\n'.join([
+            f'Hello {order.full_name},', '',
+            f'Your Jaunpur Footwear order #{order.pk} has been received.', *item_lines, '',
+            f'Total: ₹{order.total_amount}', f'Current status: {status_display}',
+        ])
+        subject = f'Order #{order.pk} received'
     delivered = []
     if order.user.email:
         delivered.append(send_mail(
-            f'Order #{order.pk} received',
+            subject,
             message,
             settings.DEFAULT_FROM_EMAIL,
             [order.user.email],
             fail_silently=False,
         ) == 1)
-    delivered.append(_send_order_whatsapp(order, CustomerProfile.objects.filter(user_id=order.user_id).first()))
+    delivered.append(_send_order_whatsapp(order, profile))
     return all(delivered)
 
 
@@ -115,14 +127,19 @@ def send_order_status_update(order_id):
     if not order:
         return True
 
+    profile = CustomerProfile.objects.filter(user_id=order.user_id).first()
+    hindi = bool(profile and profile.preferred_language == 'hi')
+    status_display = _HINDI_ORDER_STATUS.get(order.status, order.get_status_display()) if hindi else order.get_status_display()
+    subject = f'ऑर्डर #{order.pk} अपडेट' if hindi else f'Order #{order.pk} update'
+    body = f'आपका ऑर्डर #{order.pk} अब {status_display} स्थिति में है।' if hindi else f'Your order #{order.pk} is now {status_display}.'
     delivered = []
     if order.user.email:
         delivered.append(send_mail(
-            f'Order #{order.pk} update',
-            f'Your order #{order.pk} is now {order.get_status_display()}.',
+            subject,
+            body,
             settings.DEFAULT_FROM_EMAIL,
             [order.user.email],
             fail_silently=False,
         ) == 1)
-    delivered.append(_send_order_whatsapp(order, CustomerProfile.objects.filter(user_id=order.user_id).first()))
+    delivered.append(_send_order_whatsapp(order, profile))
     return all(delivered)

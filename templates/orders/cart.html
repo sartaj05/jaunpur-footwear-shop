@@ -3,8 +3,8 @@
 {% block content %}
 
 <section class="page-banner">
-    <h1>My Cart</h1>
-    <p>Review your selected footwear before checkout</p>
+    <h1>{% if is_hindi %}मेरा कार्ट{% else %}My Cart{% endif %}</h1>
+    <p>{% if is_hindi %}चेकआउट से पहले अपने चुने हुए जूते देखें{% else %}Review your selected footwear before checkout{% endif %}</p>
 </section>
 
 <section class="cart-page">
@@ -14,13 +14,13 @@
         <table class="cart-table">
             <thead>
                 <tr>
-                    <th>Product</th>
-                    <th>Size</th>
-                    <th>Color</th>
-                    <th>Qty</th>
-                    <th>Price</th>
-                    <th>Total</th>
-                    <th>Remove</th>
+                    <th>{% if is_hindi %}उत्पाद{% else %}Product{% endif %}</th>
+                    <th>{% if is_hindi %}साइज़{% else %}Size{% endif %}</th>
+                    <th>{% if is_hindi %}रंग{% else %}Color{% endif %}</th>
+                    <th>{% if is_hindi %}मात्रा{% else %}Qty{% endif %}</th>
+                    <th>{% if is_hindi %}कीमत{% else %}Price{% endif %}</th>
+                    <th>{% if is_hindi %}कुल{% else %}Total{% endif %}</th>
+                    <th>{% if is_hindi %}हटाएँ{% else %}Remove{% endif %}</th>
                 </tr>
             </thead>
 
@@ -44,7 +44,7 @@
                     <td><strong>₹{{ item.current_total }}</strong></td>
                     <td>
                         <a href="{% url 'remove_cart_item' item.id %}" class="remove-btn">
-                            Remove
+                            {% if is_hindi %}हटाएँ{% else %}Remove{% endif %}
                         </a>
                     </td>
                 </tr>
@@ -54,34 +54,34 @@
     </div>
 
     <div class="cart-summary">
-        <h2>Order Summary</h2>
+        <h2>{% if is_hindi %}ऑर्डर सारांश{% else %}Order Summary{% endif %}</h2>
 
         <div class="summary-row">
-            <span>Total Items</span>
+            <span>{% if is_hindi %}कुल सामान{% else %}Total Items{% endif %}</span>
             <strong>{{ items|length }}</strong>
         </div>
 
         <div class="summary-row total">
-            <span>Total Amount</span>
+            <span>{% if is_hindi %}कुल राशि{% else %}Total Amount{% endif %}</span>
             <strong>₹{{ total }}</strong>
         </div>
 
         <a href="{% url 'checkout' %}" class="primary-btn full-btn">
-            Proceed to Checkout
+            {% if is_hindi %}चेकआउट करें{% else %}Proceed to Checkout{% endif %}
         </a>
 
         <a href="{% url 'product_list' %}" class="secondary-btn full-btn">
-            Continue Shopping
+            {% if is_hindi %}खरीदारी जारी रखें{% else %}Continue Shopping{% endif %}
         </a>
     </div>
 
     {% else %}
     <div class="empty-cart">
         <div class="empty-icon">🛒</div>
-        <h2>Your cart is empty</h2>
-        <p>Add shoes, slippers or sandals to your cart.</p>
+        <h2>{% if is_hindi %}आपका कार्ट खाली है{% else %}Your cart is empty{% endif %}</h2>
+        <p>{% if is_hindi %}अपने कार्ट में जूते, चप्पल या सैंडल जोड़ें।{% else %}Add shoes, slippers or sandals to your cart.{% endif %}</p>
         <a href="{% url 'product_list' %}" class="primary-btn">
-            Shop Products
+            {% if is_hindi %}उत्पाद देखें{% else %}Shop Products{% endif %}
         </a>
     </div>
     {% endif %}

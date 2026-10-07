@@ -10,27 +10,26 @@
         <div class="auth-left">
             <div class="auth-icon">👟</div>
 
-            <h1>Welcome Back</h1>
+            <h1>{% if is_hindi %}वापस स्वागत है{% else %}Welcome Back{% endif %}</h1>
 
             <p>
-                Login to your account and continue shopping shoes,
-                slippers, sandals and sports footwear from Jaunpur Footwear.
+                {% if is_hindi %}अपने खाते में लॉगिन करें और जौनपुर फुटवियर से जूते, चप्पल और सैंडल खरीदना जारी रखें।{% else %}Login to your account and continue shopping shoes, slippers, sandals and sports footwear from Jaunpur Footwear.{% endif %}
             </p>
 
             <ul>
-                <li>✅ Fast local delivery</li>
-                <li>✅ Easy reorder anytime</li>
-                <li>✅ Track your orders</li>
-                <li>✅ Cash on delivery available</li>
+                <li>✅ {% if is_hindi %}तेज़ स्थानीय डिलीवरी{% else %}Fast local delivery{% endif %}</li>
+                <li>✅ {% if is_hindi %}आसानी से दोबारा ऑर्डर करें{% else %}Easy reorder anytime{% endif %}</li>
+                <li>✅ {% if is_hindi %}अपने ऑर्डर ट्रैक करें{% else %}Track your orders{% endif %}</li>
+                <li>✅ {% if is_hindi %}कैश ऑन डिलीवरी उपलब्ध{% else %}Cash on delivery available{% endif %}</li>
             </ul>
         </div>
 
         <!-- Right Side -->
         <div class="auth-right">
 
-            <h2>Customer Login</h2>
+            <h2>{% if is_hindi %}ग्राहक लॉगिन{% else %}Customer Login{% endif %}</h2>
             <p class="auth-subtitle">
-                Enter your username and password
+                {% if is_hindi %}अपना यूज़रनेम और पासवर्ड दर्ज करें{% else %}Enter your username and password{% endif %}
             </p>
 
             {% if error %}
@@ -43,34 +42,34 @@
                 {% csrf_token %}
 
                 <div class="form-group">
-                    <label>Username</label>
+                    <label>{% if is_hindi %}यूज़रनेम{% else %}Username{% endif %}</label>
                     <input
                         type="text"
                         name="username"
-                        placeholder="Enter username"
+                        placeholder="{% if is_hindi %}यूज़रनेम दर्ज करें{% else %}Enter username{% endif %}"
                         required
                     >
                 </div>
 
                 <div class="form-group">
-                    <label>Password</label>
+                    <label>{% if is_hindi %}पासवर्ड{% else %}Password{% endif %}</label>
                     <input
                         type="password"
                         name="password"
-                        placeholder="Enter password"
+                        placeholder="{% if is_hindi %}पासवर्ड दर्ज करें{% else %}Enter password{% endif %}"
                         required
                     >
                 </div>
 
                 <button type="submit" class="auth-btn">
-                    Login Now
+                    {% if is_hindi %}अभी लॉगिन करें{% else %}Login Now{% endif %}
                 </button>
             </form>
 
             <p class="auth-bottom">
-                Don’t have an account?
+                {% if is_hindi %}खाता नहीं है?{% else %}Don’t have an account?{% endif %}
                 <a href="{% url 'register' %}">
-                    Create Account
+                    {% if is_hindi %}खाता बनाएँ{% else %}Create Account{% endif %}
                 </a>
             </p>
 

@@ -1414,12 +1414,16 @@ def export_ondc_catalog(request):
 
 
 def set_site_language(request, language):
-    if language in ('en', 'hi'):
-        request.session['site_language'] = language
+    supported_language = language if language in ('en', 'hi') else None
+    if supported_language:
+        request.session['site_language'] = supported_language
     next_url = request.GET.get('next', '/')
     if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
         next_url = reverse('home')
-    return redirect(next_url)
+    response = redirect(next_url)
+    if supported_language:
+        response.set_cookie(settings.LANGUAGE_COOKIE_NAME, supported_language, max_age=60 * 60 * 24 * 365, samesite='Lax')
+    return response
 
 
 @login_required

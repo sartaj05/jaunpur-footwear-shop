@@ -3,51 +3,51 @@
 {% block content %}
 
 <section class="page-banner">
-    <h1>Find Your Perfect Shoe Size</h1>
-    <p>Enter your foot measurement and get suggested Indian/UK size</p>
+    <h1>{% if is_hindi %}अपने लिए सही जूते का साइज़ खोजें{% else %}Find Your Perfect Shoe Size{% endif %}</h1>
+    <p>{% if is_hindi %}पैर का माप दर्ज करें और भारतीय/यूके साइज़ का सुझाव पाएँ{% else %}Enter your foot measurement and get suggested Indian/UK size{% endif %}</p>
 </section>
 
 <section class="size-wrapper">
     <div class="size-guide-card">
-        <h2>How to Measure?</h2>
+        <h2>{% if is_hindi %}माप कैसे लें?{% else %}How to Measure?{% endif %}</h2>
         <ol>
-            <li>Place your foot on white paper.</li>
-            <li>Mark heel and longest toe point.</li>
-            <li>Measure length in centimeter.</li>
-            <li>Enter value in form.</li>
+            <li>{% if is_hindi %}अपना पैर सफ़ेद कागज़ पर रखें।{% else %}Place your foot on white paper.{% endif %}</li>
+            <li>{% if is_hindi %}एड़ी और सबसे लंबे पैर के अंगूठे का निशान लगाएँ।{% else %}Mark heel and longest toe point.{% endif %}</li>
+            <li>{% if is_hindi %}लंबाई सेंटीमीटर में मापें।{% else %}Measure length in centimeter.{% endif %}</li>
+            <li>{% if is_hindi %}माप फ़ॉर्म में दर्ज करें।{% else %}Enter value in form.{% endif %}</li>
         </ol>
 
         <div class="measure-visual">
             🦶
-            <span>Heel to Toe Length</span>
+            <span>{% if is_hindi %}एड़ी से पैर के अंगूठे तक लंबाई{% else %}Heel to Toe Length{% endif %}</span>
         </div>
     </div>
 
     <div class="size-form-card">
-        <h2>Size Finder</h2>
+        <h2>{% if is_hindi %}साइज़ खोजक{% else %}Size Finder{% endif %}</h2>
 
         <form method="post">
             {% csrf_token %}
 
-            <label>Foot Length in CM</label>
+            <label>{% if is_hindi %}पैर की लंबाई (सेमी){% else %}Foot Length in CM{% endif %}</label>
             <input type="number" step="0.1" name="foot_length" placeholder="Example: 26" required>
 
-            <label>Foot Width in CM</label>
+            <label>{% if is_hindi %}पैर की चौड़ाई (सेमी){% else %}Foot Width in CM{% endif %}</label>
             <input type="number" step="0.1" name="foot_width" placeholder="Example: 9.5">
 
-            <label>Footwear Type</label>
+            <label>{% if is_hindi %}फुटवियर का प्रकार{% else %}Footwear Type{% endif %}</label>
             <select name="type">
-                <option value="shoe">Shoe</option>
-                <option value="slipper">Slipper</option>
-                <option value="sandal">Sandal</option>
+                <option value="shoe">{% if is_hindi %}जूता{% else %}Shoe{% endif %}</option>
+                <option value="slipper">{% if is_hindi %}चप्पल{% else %}Slipper{% endif %}</option>
+                <option value="sandal">{% if is_hindi %}सैंडल{% else %}Sandal{% endif %}</option>
             </select>
 
-            <button class="primary-btn full-btn">Find My Size</button>
+            <button class="primary-btn full-btn">{% if is_hindi %}मेरा साइज़ खोजें{% else %}Find My Size{% endif %}</button>
         </form>
 
         {% if suggested_size %}
         <div class="size-result">
-            <h3>Your Suggested Size</h3>
+            <h3>{% if is_hindi %}आपका सुझाया साइज़{% else %}Your Suggested Size{% endif %}</h3>
             <p>{{ suggested_size }}</p>
         </div>
         {% endif %}

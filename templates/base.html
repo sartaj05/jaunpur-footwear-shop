@@ -3,10 +3,10 @@
 <html lang="{{ site_language|default:'en' }}">
 <head>
     <meta charset="UTF-8">
-    <title>Jaunpur Footwear | Shoes & Slippers</title>
+    <title>{% if is_hindi %}जौनपुर फुटवियर | जूते और चप्पल{% else %}Jaunpur Footwear | Shoes & Slippers{% endif %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="description" content="Buy shoes, slippers, sandals, school shoes and sports shoes in Jaunpur. Aqualite, Campus, Sparx and more.">
+    <meta name="description" content="{% if is_hindi %}जौनपुर में जूते, चप्पल और सैंडल खरीदें। स्थानीय दुकानों से उपलब्धता देखें।{% else %}Buy shoes, slippers, sandals, school shoes and sports shoes in Jaunpur. Aqualite, Campus, Sparx and more.{% endif %}">
 
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
@@ -14,17 +14,17 @@
 
 <header class="site-header">
     <div class="top-strip">
-        <span>🚚 Local delivery in Jaunpur</span>
-        <span>📞 WhatsApp Order Available</span>
-        <span>👟 Perfect Size Finder</span>
+        <span>{% if is_hindi %}जौनपुर में स्थानीय डिलीवरी{% else %}🚚 Local delivery in Jaunpur{% endif %}</span>
+        <span>{% if is_hindi %}व्हाट्सऐप ऑर्डर उपलब्ध{% else %}📞 WhatsApp Order Available{% endif %}</span>
+        <span>{% if is_hindi %}सही साइज़ खोजें{% else %}👟 Perfect Size Finder{% endif %}</span>
     </div>
 
     <nav class="navbar">
         <a href="{% url 'home' %}" class="brand-logo">
             <span class="logo-icon">👟</span>
             <span>
-                <strong>Jaunpur Footwear</strong>
-                <small>Shoes • Slippers • Sandals</small>
+                <strong>{% if is_hindi %}जौनपुर फुटवियर{% else %}Jaunpur Footwear{% endif %}</strong>
+                <small>{% if is_hindi %}जूते · चप्पल · सैंडल{% else %}Shoes • Slippers • Sandals{% endif %}</small>
             </span>
         </a>
 
@@ -38,22 +38,22 @@
 
             {% if user.is_authenticated %}
                 {% if user.is_staff %}
-                    <a href="{% url 'superadmin_dashboard' %}" class="dashboard-link">Dashboard</a>
+                    <a href="{% url 'superadmin_dashboard' %}" class="dashboard-link">{% if is_hindi %}डैशबोर्ड{% else %}Dashboard{% endif %}</a>
                 {% endif %}
-                <a href="{% url 'shop_application' %}">Sell with us</a>
-                {% if user.footwear_shop.status == 'approved' %}<a href="{% url 'seller_dashboard' %}">Seller dashboard</a>{% endif %}
+                <a href="{% url 'shop_application' %}">{% if is_hindi %}हमारे साथ बेचें{% else %}Sell with us{% endif %}</a>
+                {% if user.footwear_shop.status == 'approved' %}<a href="{% url 'seller_dashboard' %}">{% if is_hindi %}दुकानदार डैशबोर्ड{% else %}Seller dashboard{% endif %}</a>{% endif %}
                 <a href="{% url 'referrals' %}">{% if is_hindi %}दोस्तों को बुलाएं{% else %}Refer a friend{% endif %}</a>
-                <a href="{% url 'customer_preferences' %}">Jaunpur rewards & preferences</a>
-                <a href="{% url 'address_book' %}">Delivery addresses</a>
-                <a href="{% url 'cart' %}">Cart</a>
-                <a href="{% url 'wishlist' %}">Wishlist</a>
-                <a href="{% url 'my_orders' %}">My Orders</a>
-                <a href="{% url 'support_list' %}">Help & support</a>
-                {% if user.delivery_rider_profile.is_active %}<a href="{% url 'rider_deliveries' %}">Rider deliveries</a>{% endif %}
-                <a href="{% url 'logout' %}" class="logout-link">Logout</a>
+                <a href="{% url 'customer_preferences' %}">{% if is_hindi %}जौनपुर रिवॉर्ड और पसंद{% else %}Jaunpur rewards & preferences{% endif %}</a>
+                <a href="{% url 'address_book' %}">{% if is_hindi %}डिलीवरी पते{% else %}Delivery addresses{% endif %}</a>
+                <a href="{% url 'cart' %}">{% if is_hindi %}कार्ट{% else %}Cart{% endif %}</a>
+                <a href="{% url 'wishlist' %}">{% if is_hindi %}पसंदीदा सूची{% else %}Wishlist{% endif %}</a>
+                <a href="{% url 'my_orders' %}">{% if is_hindi %}मेरे ऑर्डर{% else %}My Orders{% endif %}</a>
+                <a href="{% url 'support_list' %}">{% if is_hindi %}सहायता{% else %}Help & support{% endif %}</a>
+                {% if user.delivery_rider_profile.is_active %}<a href="{% url 'rider_deliveries' %}">{% if is_hindi %}राइडर डिलीवरी{% else %}Rider deliveries{% endif %}</a>{% endif %}
+                <a href="{% url 'logout' %}" class="logout-link">{% if is_hindi %}लॉगआउट{% else %}Logout{% endif %}</a>
             {% else %}
-                <a href="{% url 'login' %}">Login</a>
-                <a href="{% url 'register' %}" class="nav-btn">Register</a>
+                <a href="{% url 'login' %}">{% if is_hindi %}लॉगिन{% else %}Login{% endif %}</a>
+                <a href="{% url 'register' %}" class="nav-btn">{% if is_hindi %}खाता बनाएँ{% else %}Register{% endif %}</a>
             {% endif %}
             <span class="language-switch"><a href="{% url 'set_site_language' 'en' %}?next={{ request.get_full_path|urlencode }}">EN</a> / <a href="{% url 'set_site_language' 'hi' %}?next={{ request.get_full_path|urlencode }}">हिंदी</a></span>
         </div>
@@ -71,19 +71,19 @@
 
 <footer class="footer">
     <div>
-        <h3>Jaunpur Footwear</h3>
-        <p>Your local trusted shop for shoes, slippers, sandals and sports footwear.</p>
+        <h3>{% if is_hindi %}जौनपुर फुटवियर{% else %}Jaunpur Footwear{% endif %}</h3>
+        <p>{% if is_hindi %}जूते, चप्पल और स्पोर्ट्स फुटवियर के लिए आपकी स्थानीय दुकान।{% else %}Your local trusted shop for shoes, slippers, sandals and sports footwear.{% endif %}</p>
     </div>
 
     <div>
-        <h4>Shop</h4>
+        <h4>{% if is_hindi %}खरीदारी{% else %}Shop{% endif %}</h4>
         <p>Aqualite • Campus • Sparx • Bata • Paragon</p>
     </div>
 
     <div>
-        <h4>Contact</h4>
+        <h4>{% if is_hindi %}संपर्क{% else %}Contact{% endif %}</h4>
         <p>Jaunpur, Uttar Pradesh</p>
-        <p>WhatsApp: +91 XXXXX XXXXX</p>
+        <p>{% if is_hindi %}व्हाट्सऐप:{% else %}WhatsApp:{% endif %} +91 XXXXX XXXXX</p>
     </div>
 </footer>
 

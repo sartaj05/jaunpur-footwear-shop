@@ -2,18 +2,18 @@
 
 {% block content %}
 <section class="page-banner">
-    <h1>Pay for order #{{ order.id }}</h1>
-    <p>Complete payment securely with Razorpay.</p>
+    <h1>{% if is_hindi %}ऑर्डर #{{ order.id }} का भुगतान करें{% else %}Pay for order #{{ order.id }}{% endif %}</h1>
+    <p>{% if is_hindi %}Razorpay से सुरक्षित भुगतान पूरा करें।{% else %}Complete payment securely with Razorpay.{% endif %}</p>
 </section>
 
 <section class="checkout-page">
     <div class="checkout-form-card">
-        <p>Amount due: <strong>₹{{ order.total_amount }}</strong></p>
+        <p>{% if is_hindi %}देय राशि:{% else %}Amount due:{% endif %} <strong>₹{{ order.total_amount }}</strong></p>
         {% if order.stock_reservation_expires_at %}
-        <p>Please complete payment by <strong>{{ order.stock_reservation_expires_at|date:"j M Y, P" }}</strong>. Unpaid orders are cancelled and their stock is released automatically after this time.</p>
+        <p>{% if is_hindi %}<strong>{{ order.stock_reservation_expires_at|date:"j M Y, P" }}</strong> तक भुगतान पूरा करें। इसके बाद बिना भुगतान के ऑर्डर रद्द होगा और स्टॉक वापस उपलब्ध होगा।{% else %}Please complete payment by <strong>{{ order.stock_reservation_expires_at|date:"j M Y, P" }}</strong>. Unpaid orders are cancelled and their stock is released automatically after this time.{% endif %}</p>
         {% endif %}
-        <button id="payWithRazorpay" class="primary-btn" type="button">Pay with Razorpay</button>
-        <p><a href="{% url 'my_orders' %}">Return to my orders</a></p>
+        <button id="payWithRazorpay" class="primary-btn" type="button">{% if is_hindi %}Razorpay से भुगतान करें{% else %}Pay with Razorpay{% endif %}</button>
+        <p><a href="{% url 'my_orders' %}">{% if is_hindi %}मेरे ऑर्डर पर लौटें{% else %}Return to my orders{% endif %}</a></p>
     </div>
 </section>
 

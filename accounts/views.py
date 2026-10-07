@@ -4,6 +4,7 @@ import secrets
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
@@ -130,7 +131,9 @@ def customer_preferences(request):
                 request.session.pop('delivery_pincode', None)
             request.session['site_language'] = profile.preferred_language
             messages.success(request, 'Your Jaunpur delivery and WhatsApp preferences were saved.')
-            return redirect('customer_preferences')
+            response = redirect('customer_preferences')
+            response.set_cookie(settings.LANGUAGE_COOKIE_NAME, profile.preferred_language, max_age=60 * 60 * 24 * 365, samesite='Lax')
+            return response
     elif request.method == 'POST' and request.POST.get('action') == 'redeem_points':
         with transaction.atomic():
             loyalty_account = LoyaltyAccount.objects.select_for_update().get(pk=loyalty_account.pk)
