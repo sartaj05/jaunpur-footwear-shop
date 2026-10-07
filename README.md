@@ -31,7 +31,7 @@ The [feature catalog](docs/Jaunpur_Footwear_Feature_Catalog.docx) groups the cur
 - Review shop-specific orders created when checkout contains items from multiple shops.
 - View shop-scoped 7/30/90-day order, delivery, cancellation, return, sales, proceeds, and low-stock summaries.
 - Use pickup or local delivery workflows; staff can group rider routes by PIN cluster and record proof of delivery.
-- Review shop commission statements and payouts recorded by staff.
+- Review shop commission statements and audited payout batches with sales, commission, processed-return adjustments, transfer references, and staff history. Active return requests hold payout eligibility.
 
 ### Staff and operations
 

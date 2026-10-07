@@ -1,14 +1,46 @@
 {% extends 'dashboard/base_dashboard.html' %}
 {% block content %}
-<h1>Jaunpur shop payouts</h1>
-<p>Eligible net payouts total ₹{{ eligible_total }}. Mark a row paid only after transferring the amount outside this app.</p>
-<h2>Ready to pay</h2>
-{% for seller_order in eligible_orders %}<article class="form-card">
-    <h3>{{ seller_order.shop.name }} · customer order #{{ seller_order.order_id }}</h3>
-    <p>Delivered · {{ seller_order.order.payment_method }} · gross ₹{{ seller_order.sales_amount }} · commission ₹{{ seller_order.commission_amount }} · net ₹{{ seller_order.net_amount }}</p>
-    <form method="post">{% csrf_token %}<input type="hidden" name="seller_order_id" value="{{ seller_order.id }}"><label>Bank / UPI transaction reference</label><input name="payout_reference" required maxlength="120"><button class="btn">Record payout sent</button></form>
-</article>{% empty %}<p>No shop orders are ready for payout.</p>{% endfor %}
-<h2>Recently paid</h2>
+<h1>Jaunpur shop payout batches</h1>
+<p>Eligible payouts total ₹{{ eligible_total }}. Create one batch per shop, send the transfer using your bank or UPI service, then record its reference here.</p>
+
+<h2>Prepare a payout batch</h2>
+{% for group in payout_groups %}
+<section class="form-card">
+    <h3>{{ group.shop.name }}</h3>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="create_batch">
+        {% for row in group.orders %}
+        <label class="dispatch-order"><input type="checkbox" name="seller_orders" value="{{ row.seller_order.id }}">
+            Order #{{ row.seller_order.order_id }} · sales ₹{{ row.sales_amount }} · commission ₹{{ row.commission_amount }} · processed return adjustment ₹{{ row.return_adjustment }} · payout ₹{{ row.payout_amount }}
+        </label>
+        {% endfor %}
+        <p>Selected orders are reserved in a prepared batch until the batch is cancelled or its transfer is recorded. Open return/exchange requests are held from payout.</p>
+        <label>Batch note <textarea name="staff_note" maxlength="2000"></textarea></label>
+        <button class="btn">Prepare selected orders · up to ₹{{ group.total }}</button>
+    </form>
+</section>
+{% empty %}<p>No orders are ready for a payout batch.</p>{% endfor %}
+
+<h2>Prepared batches awaiting transfer record</h2>
+{% for batch in prepared_batches %}
+<section class="form-card">
+    <h3>{{ batch.shop.name }} · batch {{ batch.batch_code }}</h3>
+    <p>{{ batch.items.count }} order(s) · total ₹{{ batch.total_amount }} · prepared {{ batch.created_at|date:'M j, Y g:i A' }} by {{ batch.created_by|default:'staff account removed' }}</p>
+    {% for item in batch.items.all %}<p>Order #{{ item.seller_order.order_id }} · sales ₹{{ item.sales_amount }} · commission ₹{{ item.commission_amount }} · return adjustment ₹{{ item.return_adjustment }} · payout ₹{{ item.payout_amount }}</p>{% endfor %}
+    {% if batch.staff_note %}<p>Note: {{ batch.staff_note }}</p>{% endif %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="record_batch_transfer"><input type="hidden" name="batch_id" value="{{ batch.id }}">
+        <label>Bank / UPI transfer reference (enter after transfer)</label><input name="transfer_reference" maxlength="120" {% if batch.total_amount > 0 %}required{% endif %}>
+        <button class="btn">Record completed transfer</button>
+    </form>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="cancel_batch"><input type="hidden" name="batch_id" value="{{ batch.id }}"><label>Cancellation note (optional)</label><input name="staff_note" maxlength="2000"><button class="secondary-btn">Cancel prepared batch</button></form>
+</section>
+{% empty %}<p>No prepared payout batches are waiting.</p>{% endfor %}
+
+<h2>Batch audit history</h2>
+<table><thead><tr><th>Shop / batch</th><th>Orders</th><th>Amount</th><th>State</th><th>Transfer reference</th><th>Prepared / paid</th></tr></thead><tbody>
+{% for batch in recent_batches %}<tr><td>{{ batch.shop.name }}<br>{{ batch.batch_code }}</td><td>{% for item in batch.items.all %}#{{ item.seller_order.order_id }} · ₹{{ item.payout_amount }}<br>{% endfor %}</td><td>₹{{ batch.total_amount }}</td><td>{{ batch.get_status_display }}</td><td>{{ batch.transfer_reference|default:'—' }}</td><td>{{ batch.created_at|date:'M j, Y' }}{% if batch.paid_at %}<br>{{ batch.paid_at|date:'M j, Y g:i A' }} by {{ batch.paid_by|default:'staff account removed' }}{% endif %}</td></tr>{% empty %}<tr><td colspan="6">No payout batches recorded.</td></tr>{% endfor %}
+</tbody></table>
+
+<h2>Seller order payout ledger</h2>
 <table><thead><tr><th>Shop</th><th>Order</th><th>Net paid</th><th>Reference</th><th>Paid at</th></tr></thead><tbody>
 {% for seller_order in paid_orders %}<tr><td>{{ seller_order.shop.name|default:'Jaunpur Footwear' }}</td><td>#{{ seller_order.order_id }}</td><td>₹{{ seller_order.net_amount }}</td><td>{{ seller_order.payout_reference }}</td><td>{{ seller_order.paid_out_at }}</td></tr>{% empty %}<tr><td colspan="5">No payouts recorded.</td></tr>{% endfor %}
 </tbody></table>

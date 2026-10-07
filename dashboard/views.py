@@ -10,7 +10,8 @@ from datetime import date, timedelta
 import re
 
 from products.models import Product, ProductVariant, Brand, Category
-from orders.models import DeliveryAssignment, DeliveryRider, DeliveryRun, Order, OrderCancellationRequest, OrderItem, OrderTrackingEvent, PaymentAttempt, SellerOrder
+from orders.models import DeliveryAssignment, DeliveryRider, DeliveryRun, Order, OrderCancellationRequest, OrderItem, OrderTrackingEvent, PaymentAttempt, SellerOrder, SellerPayoutBatch, SellerPayoutBatchItem
+from orders.payouts import eligible_seller_orders, payout_snapshot
 from orders.tasks import send_order_status_update_task
 from footwear.task_dispatch import dispatch_background_task
 from orders.payments import release_order_inventory
@@ -287,42 +288,114 @@ def sales_reports(request):
 
 @staff_member_required
 def seller_payouts(request):
-    eligible = SellerOrder.objects.filter(
-        status='delivered',
-        payout_status='pending',
-        shop__isnull=False,
-    ).exclude(
-        order__status='cancelled',
-    ).filter(Q(order__payment_status='paid') | Q(order__payment_method='Cash on Delivery'))
     if request.method == 'POST':
-        reference = request.POST.get('payout_reference', '').strip()
-        if not reference:
-            messages.error(request, 'Enter the bank or UPI transfer reference before recording a payout.')
-        else:
+        action = request.POST.get('action', '')
+        if action == 'create_batch':
+            try:
+                selected_ids = [int(value) for value in request.POST.getlist('seller_orders')]
+            except (TypeError, ValueError):
+                selected_ids = []
+            if not selected_ids or len(selected_ids) != len(set(selected_ids)):
+                messages.error(request, 'Select one or more eligible orders for this payout batch.')
+                return redirect('seller_payouts')
             with transaction.atomic():
-                seller_order = get_object_or_404(
-                    SellerOrder.objects.select_for_update().select_related('order'),
-                    pk=request.POST.get('seller_order_id'),
+                selected = list(
+                    eligible_seller_orders().select_for_update().filter(pk__in=selected_ids)
+                    .select_related('shop', 'order').order_by('created_at')
                 )
-                payment_is_ready = (
-                    seller_order.order.payment_status == 'paid'
-                    or seller_order.order.payment_method == 'Cash on Delivery'
-                )
-                if seller_order.status != 'delivered' or seller_order.payout_status != 'pending' or not payment_is_ready:
-                    messages.error(request, 'This shop order is not eligible for payout yet.')
+                if len(selected) != len(selected_ids):
+                    messages.error(request, 'One or more selected orders are no longer eligible for payout.')
+                elif len({row.shop_id for row in selected}) != 1:
+                    messages.error(request, 'Create separate payout batches for each Jaunpur shop.')
                 else:
-                    seller_order.payout_status = 'paid'
-                    seller_order.payout_reference = reference
-                    seller_order.paid_out_at = timezone.now()
-                    seller_order.save(update_fields=['payout_status', 'payout_reference', 'paid_out_at'])
-                    messages.success(request, 'Payout marked as sent. Confirm the transfer in your bank or UPI account.')
+                    snapshots = [payout_snapshot(row) for row in selected]
+                    total_amount = sum((row['payout_amount'] for row in snapshots), Decimal('0.00'))
+                    batch = SellerPayoutBatch.objects.create(
+                        shop=selected[0].shop,
+                        total_amount=total_amount,
+                        created_by=request.user,
+                        staff_note=request.POST.get('staff_note', '').strip()[:2000],
+                    )
+                    SellerPayoutBatchItem.objects.bulk_create([
+                        SellerPayoutBatchItem(
+                            batch=batch,
+                            seller_order=row['seller_order'],
+                            sales_amount=row['sales_amount'],
+                            commission_amount=row['commission_amount'],
+                            return_adjustment=row['return_adjustment'],
+                            payout_amount=row['payout_amount'],
+                        ) for row in snapshots
+                    ])
+                    messages.success(request, f'Prepared payout batch {batch.batch_code} for {batch.shop.name}: ₹{total_amount}. Record its transfer after sending it.')
+        elif action == 'record_batch_transfer':
+            reference = request.POST.get('transfer_reference', '').strip()
+            try:
+                batch_id = int(request.POST.get('batch_id', ''))
+            except (TypeError, ValueError):
+                batch_id = 0
+            with transaction.atomic():
+                batch = get_object_or_404(SellerPayoutBatch.objects.select_for_update(), pk=batch_id)
+                batch_items = list(batch.items.select_related('seller_order__order').select_for_update())
+                if batch.status != 'prepared' or not batch_items:
+                    messages.error(request, 'This payout batch is no longer awaiting transfer.')
+                elif batch.total_amount > 0 and not reference:
+                    messages.error(request, 'Enter the bank or UPI reference after the transfer is complete.')
+                else:
+                    seller_orders = [item.seller_order for item in batch_items]
+                    current_eligibility = [
+                        seller_order.status == 'delivered'
+                        and seller_order.payout_status == 'pending'
+                        and seller_order.order.status != 'cancelled'
+                        and (seller_order.order.payment_status == 'paid' or seller_order.order.payment_method == 'Cash on Delivery')
+                        and not seller_order.items.filter(return_requests__status__in=['pending', 'approved', 'received']).exists()
+                        and payout_snapshot(seller_order)['payout_amount'] == item.payout_amount
+                        for item, seller_order in zip(batch_items, seller_orders)
+                    ]
+                    if not all(current_eligibility):
+                        messages.error(request, 'At least one order is no longer eligible. Cancel this batch and prepare a corrected batch.')
+                    else:
+                        reference = reference or 'No transfer due after return adjustment'
+                        for seller_order in seller_orders:
+                            seller_order.payout_status = 'paid'
+                            seller_order.payout_reference = reference[:120]
+                            seller_order.paid_out_at = timezone.now()
+                            seller_order.save(update_fields=['payout_status', 'payout_reference', 'paid_out_at'])
+                        batch.status = 'paid'
+                        batch.transfer_reference = reference[:120]
+                        batch.paid_by = request.user
+                        batch.paid_at = timezone.now()
+                        batch.save(update_fields=['status', 'transfer_reference', 'paid_by', 'paid_at'])
+                        messages.success(request, f'Payout batch {batch.batch_code} was recorded as transferred.')
+        elif action == 'cancel_batch':
+            try:
+                batch_id = int(request.POST.get('batch_id', ''))
+            except (TypeError, ValueError):
+                batch_id = 0
+            batch = get_object_or_404(SellerPayoutBatch, pk=batch_id)
+            if batch.status == 'prepared':
+                batch.status = 'cancelled'
+                batch.staff_note = request.POST.get('staff_note', '').strip()[:2000] or 'Prepared payout cancelled by staff.'
+                batch.save(update_fields=['status', 'staff_note'])
+                messages.success(request, f'Prepared batch {batch.batch_code} was cancelled; its orders are eligible to be batched again.')
+            else:
+                messages.error(request, 'Only prepared payout batches can be cancelled.')
         return redirect('seller_payouts')
 
+    eligible = eligible_seller_orders().select_related('shop', 'order').prefetch_related('items__return_requests').order_by('shop__name', 'created_at')
+    payout_groups = {}
+    for seller_order in eligible:
+        snapshot = payout_snapshot(seller_order)
+        group = payout_groups.setdefault(seller_order.shop_id, {'shop': seller_order.shop, 'orders': [], 'total': Decimal('0.00')})
+        group['orders'].append(snapshot)
+        group['total'] += snapshot['payout_amount']
+    batches = SellerPayoutBatch.objects.select_related('shop', 'created_by', 'paid_by').prefetch_related('items__seller_order__order').order_by('-created_at')[:100]
     paid = SellerOrder.objects.filter(payout_status='paid').select_related('shop', 'order').order_by('-paid_out_at')[:100]
     return render(request, 'dashboard/payouts.html', {
-        'eligible_orders': eligible.select_related('shop', 'order').order_by('created_at'),
+        'payout_groups': payout_groups.values(),
+        'prepared_batches': [batch for batch in batches if batch.status == 'prepared'],
+        'recent_batches': batches,
         'paid_orders': paid,
-        'eligible_total': eligible.aggregate(total=Sum('net_amount'))['total'] or 0,
+        'eligible_total': sum((group['total'] for group in payout_groups.values()), Decimal('0.00')),
     })
 
 

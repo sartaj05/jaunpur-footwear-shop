@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -347,3 +349,43 @@ class OrderCancellationRequest(models.Model):
 
     def __str__(self):
         return f'Cancellation for order #{self.order_id} · {self.get_status_display()}'
+
+
+class SellerPayoutBatch(models.Model):
+    STATUS_CHOICES = [('prepared', 'Prepared'), ('paid', 'Transfer recorded'), ('cancelled', 'Cancelled')]
+
+    shop = models.ForeignKey(Shop, on_delete=models.PROTECT, related_name='payout_batches')
+    batch_code = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='prepared')
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    transfer_reference = models.CharField(max_length=120, blank=True)
+    staff_note = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='created_seller_payout_batches')
+    paid_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='recorded_seller_payout_batches')
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f'{self.shop.name} · payout {self.batch_code}'
+
+
+class SellerPayoutBatchItem(models.Model):
+    batch = models.ForeignKey(SellerPayoutBatch, on_delete=models.CASCADE, related_name='items')
+    seller_order = models.ForeignKey(SellerOrder, on_delete=models.PROTECT, related_name='payout_batch_items')
+    sales_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    commission_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    return_adjustment = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    payout_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['seller_order__created_at', 'seller_order_id']
+        constraints = [
+            models.UniqueConstraint(fields=['batch', 'seller_order'], name='unique_seller_order_per_payout_batch'),
+        ]
+
+    def __str__(self):
+        return f'Order #{self.seller_order.order_id} · ₹{self.payout_amount}'

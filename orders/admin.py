@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.db import transaction
 from django.contrib import messages
-from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, PaymentWebhookEvent, ReturnRefundAttempt, ReturnRequest, SellerOrder
+from .models import CartItem, Coupon, DeliveryAssignment, DeliveryRate, DeliveryRider, DeliveryRun, Order, OrderItem, OrderTrackingEvent, PaymentAttempt, PaymentWebhookEvent, ReturnRefundAttempt, ReturnRequest, SellerOrder, SellerPayoutBatch, SellerPayoutBatchItem
 from .tasks import process_return_refund_task
 from footwear.task_dispatch import dispatch_background_task
 
@@ -133,6 +133,30 @@ class SellerOrderAdmin(admin.ModelAdmin):
     list_display = ['id', 'order', 'shop', 'sales_amount', 'commission_amount', 'net_amount', 'status', 'payout_status', 'created_at']
     list_filter = ['status', 'payout_status', 'created_at']
     search_fields = ['shop__name', 'order__id']
+
+
+class SellerPayoutBatchItemInline(admin.TabularInline):
+    model = SellerPayoutBatchItem
+    extra = 0
+    readonly_fields = ['seller_order', 'sales_amount', 'commission_amount', 'return_adjustment', 'payout_amount', 'created_at']
+
+
+@admin.register(SellerPayoutBatch)
+class SellerPayoutBatchAdmin(admin.ModelAdmin):
+    list_display = ['batch_code', 'shop', 'status', 'total_amount', 'transfer_reference', 'created_by', 'paid_by', 'created_at', 'paid_at']
+    list_filter = ['status', 'shop', 'created_at']
+    search_fields = ['batch_code', 'shop__name', 'transfer_reference']
+    readonly_fields = ['batch_code', 'status', 'total_amount', 'transfer_reference', 'created_by', 'paid_by', 'created_at', 'paid_at']
+    inlines = [SellerPayoutBatchItemInline]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(DeliveryRider)
