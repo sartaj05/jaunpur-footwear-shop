@@ -263,6 +263,19 @@ def remove_fulfillment_slot(request, slot_id):
 def seller_dashboard(request):
     shop = get_object_or_404(Shop, owner=request.user)
     products = shop.products.select_related('brand', 'category').order_by('-created_at')
+    try:
+        period_days = int(request.GET.get('days', '30'))
+    except (TypeError, ValueError):
+        period_days = 30
+    if period_days not in {7, 30, 90}:
+        period_days = 30
+    period_start = timezone.now() - timedelta(days=period_days)
+    period_orders = shop.seller_orders.filter(created_at__gte=period_start)
+    paid_sales = period_orders.exclude(order__status='cancelled')
+    return_count = ReturnRequest.objects.filter(
+        order_item__product__shop=shop,
+        requested_at__gte=period_start,
+    ).count()
     ready_payouts = shop.seller_orders.filter(status='delivered', payout_status='pending').filter(
         Q(order__payment_status='paid') | Q(order__payment_method='Cash on Delivery')
     ).exclude(order__status='cancelled')
@@ -289,6 +302,13 @@ def seller_dashboard(request):
         'shop_review_average': shop.reviews.filter(is_visible=True).aggregate(value=Avg('rating'))['value'],
         'shop_review_count': shop.reviews.filter(is_visible=True).count(),
         'low_stock_inventory': low_stock_inventory,
+        'period_days': period_days,
+        'period_order_count': period_orders.count(),
+        'period_delivered_count': period_orders.filter(status='delivered').count(),
+        'period_cancelled_count': period_orders.filter(order__status='cancelled').count(),
+        'period_return_count': return_count,
+        'period_sales_total': paid_sales.aggregate(total=Sum('sales_amount'))['total'] or Decimal('0.00'),
+        'period_net_total': paid_sales.aggregate(total=Sum('net_amount'))['total'] or Decimal('0.00'),
     })
 
 
