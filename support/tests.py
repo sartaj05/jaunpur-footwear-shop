@@ -5,6 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 
 from orders.models import Order
+from orders.models import SellerOrder
+from shops.models import Shop
 
 from .models import SupportMessage, SupportTicket
 
@@ -53,6 +55,46 @@ class CustomerSupportTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(SupportTicket.objects.filter(subject="Order issue").exists())
+
+    def test_customer_can_link_the_shop_that_handled_their_order(self):
+        owner = User.objects.create_user(username="seller-owner", password="test-password")
+        shop = Shop.objects.create(
+            owner=owner, name="Jaunpur Shop", phone="9000000002",
+            address="Jaunpur", pincode="222001", status="approved",
+        )
+        SellerOrder.objects.create(order=self.order, shop=shop)
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("support_create"), {
+            "subject": "Shop delivery question",
+            "category": "delivery",
+            "description": "Please check the delivery from this shop.",
+            "order_id": str(self.order.pk),
+            "shop_id": str(shop.pk),
+        })
+
+        self.assertEqual(response.status_code, 302)
+        ticket = SupportTicket.objects.get(subject="Shop delivery question")
+        self.assertEqual(ticket.shop, shop)
+
+    def test_customer_cannot_link_an_unrelated_shop_to_order(self):
+        owner = User.objects.create_user(username="unrelated-owner", password="test-password")
+        shop = Shop.objects.create(
+            owner=owner, name="Unrelated Shop", phone="9000000003",
+            address="Jaunpur", pincode="222002", status="approved",
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("support_create"), {
+            "subject": "Shop delivery question",
+            "category": "delivery",
+            "description": "Please check the delivery from this shop.",
+            "order_id": str(self.order.pk),
+            "shop_id": str(shop.pk),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(SupportTicket.objects.filter(subject="Shop delivery question").exists())
 
     def test_ticket_is_private_and_customer_can_reply(self):
         self.client.force_login(self.other)
