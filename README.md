@@ -1,145 +1,95 @@
 # Jaunpur Footwear Marketplace
 
-A Django marketplace prototype focused on footwear shops in Jaunpur, Uttar Pradesh. Customers can browse local catalogs, check size and color availability, place orders, and follow fulfillment. Sellers can manage shop catalogs and local orders, while staff review sellers and oversee marketplace operations.
+A Jaunpur-first, multi-seller footwear marketplace built with Django. Customers discover local shops, check shoe size/color availability, place orders and follow fulfillment. Sellers manage catalogs and local orders; staff review shops and coordinate operations.
 
-> **Project status:** The repository contains working Django features and automated tests, but a real public launch still needs production hosting, provider credentials, operational checks, and broader end-to-end validation. Amazon, Flipkart, Razorpay, WhatsApp, and ONDC capabilities depend on the setup and approvals described below.
+> **Repository status:** Strong portfolio/interview project after a short walkthrough and accurate explanation of integration boundaries. A public launch still needs a pinned production WSGI server, staging deployment, tested backup/restore, provider rehearsal and operational ownership.
 
-## Feature map
+## Why this project stands out
 
-The [feature catalog](docs/Jaunpur_Footwear_Feature_Catalog.docx) groups the current application into 25 documented capability areas across customers, sellers, staff/platform operations, and marketplace workflows.
+- Local marketplace workflows for Jaunpur shops, delivery PIN coverage, pickup and local delivery.
+- Multi-seller checkout, variants, shared stock reservations, seller-specific orders and audited payout batches.
+- Reliability work with transactions, expiring payment reservations, webhook verification, health checks and scheduled checks.
+- Interview depth in Django data boundaries, PostgreSQL row locks, Celery tasks, APIs and failure handling.
+- Clear distinction between application workflows and external-provider approval.
 
-### Customers
+## Current capabilities
 
-- Browse and search footwear; filter by brand, category, and size, including English/Hindi catalog matches.
-- View Jaunpur shop storefronts, delivery PIN-code coverage, fees, delivery estimates, and available fulfillment slots.
-- Search shops by name, area, or PIN code; browse indexable Jaunpur area pages and filter to locally available stock after marketplace reservations.
-- Publish canonical product/shop metadata, structured product and shop data, and public `/sitemap.xml` and `/robots.txt` routes.
-- Manage a cart with size/color variants, apply coupons, and choose Cash on Delivery or configured Razorpay checkout.
-- Save up to ten customer delivery addresses, select one at checkout, and validate delivery against each Jaunpur shop's PIN-code coverage.
-- Reserve stock for a configurable payment window (15 minutes by default); Celery Beat cancels expired unpaid Razorpay orders and releases stock.
-- Use wishlists and the shoe-size finder; submit product reviews and eligible delivered-shop reviews.
-- Choose English or Hindi across the customer storefront, account forms, cart, checkout, saved addresses, order tracking, and size finder; transactional email and opt-in WhatsApp updates use the customer's language preference.
-- View orders and status timelines, download a personal order receipt PDF, and request returns or exchanges.
-- Request cancellation before shop fulfillment starts and follow staff review plus externally recorded refund progress.
-- Manage email and opt-in WhatsApp order-update preferences; review per-channel provider acceptance/failure status in the notification center. WhatsApp requires Meta Cloud API configuration.
-- Open order-linked customer support tickets and exchange messages with staff.
-- Earn Jaunpur loyalty points and use eligible reward coupons.
+- Search, product variants, coupons, wishlists, reviews, loyalty rewards and English/Hindi storefront.
+- Customer address book, Jaunpur coverage validation, COD and configured Razorpay checkout.
+- Shop pages, delivery estimates/fees, fulfillment slots, pickup/local delivery, order timeline, receipt and support.
+- Seller approval/verification, CSV catalog import, stock movement, low-stock alerts, service measures and sales summaries.
+- Rider route grouping, delivery status and proof workflow with offline queue/sync while the route view is open.
+- Staff order/refund review, operations checks, audit records, reports and payout batch review.
+- DRF APIs, Celery jobs, authorized marketplace catalog/order workflows, settlement CSV and ONDC adapter hook.
 
-### Local sellers
+The [feature catalog](docs/Jaunpur_Footwear_Feature_Catalog.docx) lists the 25 grouped capability areas and their maturity.
 
-- Apply to sell; staff review the application and shop details before approval and verification.
-- Maintain a Jaunpur storefront, shop hours/contact details, PIN-code coverage, local delivery fees, and fulfillment slots.
-- Manage products, size/color stock, seller SKUs, inventory movements, low-stock thresholds, and reorder suggestions.
-- Import a catalog from CSV with product photos; map eligible catalog items to marketplace categories/listings.
-- Review shop-specific orders created when checkout contains items from multiple shops.
-- View shop-scoped 7/30/90-day order, delivery, cancellation, return, sales, proceeds, and low-stock summaries.
-- Track fulfillment time, scheduled on-time delivery, cancellations, shop-linked customer support issues, and verified ratings; show recent service samples on Jaunpur shop listings and storefronts.
-- Use pickup or local delivery workflows; staff can group rider routes by PIN cluster. Riders can queue delivery confirmations, failed attempts, notes, and proof photos on the device while the route screen is open offline, then sync when connectivity returns.
-- Review shop commission statements and audited payout batches with sales, commission, processed-return adjustments, transfer references, and staff history. Active return requests hold payout eligibility.
+## Integration boundaries
 
-### Staff and operations
-
-- Django admin and staff dashboards for seller approval, catalog, order status, customers, stock alerts, sales reports, and production operations alerts.
-- Scheduled operations checks for failed jobs and payment webhooks, manual refund review, backup freshness, and recorded database/media restore drills. Configure backup path and alert email recipients in deployment settings.
-- Staff-only sales CSV export, staff action audit records, and visible background job run outcomes.
-- Customer returns/exchanges, support tickets, seller verification, commissions, and payout oversight.
-- Razorpay webhook verification with signature checks and duplicate-event protection; eligible received-return refunds can be queued for staff review.
-- Health endpoint at `/health/` and structured console logging.
-
-### Marketplace and network workflows
-
-- Amazon and Flipkart seller setup requests, authorization flows, encrypted seller-token storage, and channel catalog/order workflows for authorized accounts.
-- Shared inventory reservations and a unified seller order inbox for supported Jaunpur, Amazon, and Flipkart flows.
-- Seller-uploaded marketplace settlement CSV reconciliation with seller-scoped order matching and row review history.
-- ONDC Seller Network Participant onboarding details, catalog snapshot handoff, and a configurable connection-check adapter hook.
-
-**Integration boundaries:** Amazon and Flipkart actions require registered apps, authorized seller accounts, API access, and the configured credentials/roles. The settlement import is seller-uploaded; it does not fetch statements automatically. The ONDC adapter checks a configured participant connection; it does not implement live ONDC catalog, stock, order, or settlement synchronization. WhatsApp sends only for opted-in customers with an approved Meta template. Razorpay online payments need API keys and a configured webhook.
+- Razorpay needs API keys and a verified webhook before live online payment.
+- Amazon and Flipkart need eligible applications, seller authorization and provider access.
+- ONDC includes participant onboarding and an adapter hook, not complete live network sync.
+- Payout batches record settlement work; bank funds are not transferred automatically.
+- WhatsApp needs approved Meta configuration and customer opt-in.
 
 ## Technology
 
-| Area | Technologies used in this repository |
+| Layer | Stack |
 | --- | --- |
-| Application | Python 3.11 in CI, Django 5.2 |
-| Web UI | Django templates, HTML, CSS, JavaScript |
-| Data | Django ORM and migrations; SQLite for local development; PostgreSQL for production |
-| API | Django REST Framework; read-only product/shop endpoints and authenticated customer orders |
-| Background work | Celery with Redis; inline task execution in local development |
-| Files and documents | Pillow image handling, S3-compatible production media storage, ReportLab order receipts |
-| Integrations | Razorpay, Meta WhatsApp Cloud API, Amazon SP-API, Flipkart seller APIs, ONDC participant adapter |
-| Quality | Django tests and GitHub Actions checks for configuration, migration drift, and tests |
+| Backend | Python 3.11 in CI, Django 5.2 |
+| UI | Django templates, HTML, CSS, JavaScript |
+| Data | SQLite locally; PostgreSQL in production settings |
+| API and jobs | Django REST Framework, Celery, Redis |
+| Files | Pillow, S3-compatible media storage, ReportLab receipts |
+| Quality | Django tests, GitHub Actions checks, migrations, health endpoint |
 
-This application is server-rendered Django. React and FastAPI are skills the maintainer is learning; neither is part of this repository's stack.
+This is a server-rendered Django app. React and FastAPI are skills the maintainer is learning, not the stack used here.
 
 ## Local setup
 
-Requirements: Python 3.11 or newer in the supported Django 5.2 range, Git, and PowerShell on Windows (or equivalent shell commands on another OS).
+Requirements: Python 3.11 and Git. In PowerShell:
 
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver
-```
+    py -3.11 -m venv .venv
+    ./.venv/Scripts/Activate.ps1
+    python -m pip install --upgrade pip
+    python -m pip install -r requirements.txt
+    python manage.py migrate
+    python manage.py createsuperuser
+    python manage.py runserver
 
-Open `http://127.0.0.1:8000/`. Local defaults use SQLite and do not require an `.env` loader. `.env.example` lists configuration names for reference; Django does not automatically load that file. Set optional variables in the shell or your deployment's secret/environment settings. For example:
+Open http://127.0.0.1:8000/. Local defaults use SQLite. .env.example is a reference only; Django does not load it automatically. Set environment variables in your shell or deployment platform. Never commit real credentials.
 
-```powershell
-$env:RAZORPAY_KEY_ID = "rzp_test_your_key_id"
-$env:RAZORPAY_KEY_SECRET = "your_test_key_secret"
-python manage.py runserver
-```
+## API routes
 
-The first-party API endpoints are `/api/v1/products/`, `/api/v1/shops/`, and authenticated `/api/v1/my/orders/`. Product search accepts `?q=...`; collection responses are paginated.
+- GET /api/v1/products/ - paginated catalog; supports ?q= search.
+- GET /api/v1/shops/ - paginated Jaunpur shops.
+- /api/v1/my/orders/ - authenticated customer’s own orders.
+- /health/, /sitemap.xml, /robots.txt - service and public metadata routes.
 
 ## Checks and tests
 
-Run Django's configuration and migration checks, then the test suite:
+    python manage.py check
+    python manage.py makemigrations --check --dry-run
+    python manage.py test
 
-```powershell
-python manage.py check
-python manage.py makemigrations --check --dry-run
-python manage.py test
-```
+On 8 October 2026 these checks passed and all 37 tests passed. Tests cover selected checkout, webhook, refund, API, seller, support, settlement, health and audit flows; they do not cover every external-provider or production scenario.
 
-GitHub Actions runs these checks on pushes and pull requests to `main` and `sartaj`. Existing tests cover selected checkout, webhook, refund, API access, seller review, Hindi search, support, settlement import, health, and audit flows. They are a useful base, not proof that every real-provider or production scenario has been verified.
+## End-to-end and stress checks
 
-## Production setup overview
+A focused local rehearsal ran 500 GET requests across storefront/catalog, shop/area, APIs, health, sitemap and robots routes; all returned HTTP 200. With 25 virtual clients on local runserver and SQLite, it measured about 41.2 requests/second, p50 182 ms, p95 1,825 ms and max 2,457 ms.
 
-Production settings activate with `DJANGO_ENV=production` and require a strong `DJANGO_SECRET_KEY`, exact `DJANGO_ALLOWED_HOSTS`, `DJANGO_DATABASE_URL` pointing to PostgreSQL, `CELERY_BROKER_URL`, and an S3-compatible media bucket. Configure trusted HTTPS origins, provider credentials, static-file serving, logging, database/media backups, and a production WSGI/ASGI server. `runserver` is for development only. A production WSGI server is not currently listed in `requirements.txt`; add and pin the server selected for your hosting platform before deployment.
+A separate PostgreSQL checkout rehearsal submitted 12 simultaneous synthetic checkouts for 12 stock units; all 12 completed and their carts cleared. It exposed a lock error caused by selecting nullable joined relations for update; the query now locks cart rows and locks each stock owner explicitly. No real customers or payment provider were involved. These are local regression results, not a production capacity guarantee.
 
-At minimum, validate the production configuration with:
+## Production status
 
-```powershell
-python manage.py check --deploy
-python manage.py showmigrations
-python manage.py migrate
-python manage.py collectstatic --noinput
-```
+Production settings require DJANGO_ENV=production, DJANGO_DEBUG=false, DJANGO_SECRET_KEY, exact DJANGO_ALLOWED_HOSTS, PostgreSQL DJANGO_DATABASE_URL, CELERY_BROKER_URL and S3-compatible media by default. Configure HTTPS, CSRF trusted origins, secrets, static serving, backups, logs and provider credentials.
 
-Run a Celery worker and scheduler as separate managed processes when background jobs are enabled:
+runserver is development-only. A production WSGI server is not pinned in requirements.txt; add the server and host start command before deployment. Run check --deploy, migrate, collectstatic and rehearse restore/payment flows in staging.
 
-```powershell
-celery -A footwear worker -l INFO
-celery -A footwear beat -l INFO
-```
+Read the [deployment guide](docs/Jaunpur_Footwear_Deployment_Setup.docx), [roadmap](docs/Jaunpur_Footwear_Roadmap.docx), [interview guide](docs/Jaunpur_Footwear_Interview_Prep.docx) and [operations notes](docs/production-operations.md).
 
-The scheduler must be running for expired online-payment reservations to be processed automatically. Set `ORDER_STOCK_RESERVATION_MINUTES` to a positive number of minutes to change the default window.
+## Launch and job-search recommendation
 
-See [`docs/production-operations.md`](docs/production-operations.md) for operations and backup notes, and the generated [deployment and setup guide](output/pdf/Jaunpur_Footwear_Deployment_Setup.pdf) for the environment checklist and release sequence.
+The project is sufficient for a strong portfolio/interview story; you do not need every future feature before applying. Close production, backup/restore, concurrency, payment reconciliation, monitoring and seller-support gates before a live pilot. Start the 2-3 month job search now while practicing Python, Django, SQL and the project walkthrough.
 
-## Launch recommendation
-
-The current scope is sufficient for a strong portfolio demo and Django interview discussion. For a public Jaunpur pilot, focus on a small number of verified shops and validate the complete customer-to-delivery path before expanding: production security, PostgreSQL backups and restore, race-safe stock handling, payment/webhook reconciliation, support and return operations, and real-device smoke checks. Do not wait for every roadmap feature before applying for jobs.
-
-The feature catalog, prioritised roadmap, and interview preparation are available in `docs/`:
-
-- [Feature catalog](docs/Jaunpur_Footwear_Feature_Catalog.docx)
-- [Upcoming feature roadmap](docs/Jaunpur_Footwear_Roadmap.docx)
-- [Interview preparation for a 2.3+ year Python/Django profile](docs/Jaunpur_Footwear_Interview_Prep.docx)
-
-## Maintainer
-
-Sartaj — Python and Django developer with 2.3+ years of experience (as provided by the maintainer). Keep personal experience claims, production metrics, and deployment statements aligned with verifiable work.
+When comparing 40+ GitHub projects, score working demo, technical depth, test evidence, README clarity and explainable ownership. Select 3-4 complementary projects; do not list all projects just because they exist.
