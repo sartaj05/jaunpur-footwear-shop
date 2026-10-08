@@ -225,7 +225,7 @@ class ReturnRefundAttempt(models.Model):
         ('submitted', 'Refund submitted to provider'),
         ('review_required', 'Manual review required'),
     ]
-    return_request = models.OneToOneField(ReturnRequest, on_delete=models.PROTECT, related_name='refund_attempt')
+    return_request = models.OneToOneField('ReturnRequest', on_delete=models.PROTECT, related_name='refund_attempt')
     amount_subunits = models.PositiveBigIntegerField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='queued')
     provider_refund_id = models.CharField(max_length=120, blank=True)

@@ -189,7 +189,7 @@ def _sync_item_inventory(item, mapping, old_inventory_status):
     if cancelled:
         if item.consumed_quantity and old_inventory_status != 'sold' and mapping:
             with transaction.atomic():
-                locked_mapping = MarketplaceProductMapping.objects.select_for_update().filter(pk=mapping.pk).first()
+                locked_mapping = MarketplaceProductMapping.objects.select_for_update(of=('self',)).filter(pk=mapping.pk).first()
                 owner = None
                 if locked_mapping:
                     if locked_mapping.variant_id:
@@ -218,7 +218,7 @@ def _sync_item_inventory(item, mapping, old_inventory_status):
         return
     with transaction.atomic():
         locked_item = MarketplaceChannelOrderItem.objects.select_for_update().get(pk=item.pk)
-        locked_mapping = MarketplaceProductMapping.objects.select_for_update().select_related('product', 'variant').get(pk=mapping.pk)
+        locked_mapping = MarketplaceProductMapping.objects.select_for_update(of=('self',)).select_related('product', 'variant').get(pk=mapping.pk)
         owner = ProductVariant.objects.select_for_update().get(pk=locked_mapping.variant_id) if locked_mapping.variant_id else Product.objects.select_for_update().get(pk=locked_mapping.product_id)
         stock_due = max(0, locked_item.quantity - locked_item.consumed_quantity)
         allocation_due = max(0, locked_item.quantity - locked_item.allocation_processed_quantity)

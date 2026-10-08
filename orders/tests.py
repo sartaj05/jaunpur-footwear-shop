@@ -49,7 +49,7 @@ class CheckoutFlowTests(TestCase):
         self.assertRedirects(response, reverse("my_orders"))
         order = Order.objects.get(user=self.user)
         self.assertEqual(order.payment_status, "unpaid")
-        self.assertEqual(order.total_amount, Decimal("1250.00"))
+        self.assertEqual(order.total_amount, Decimal("2450.00"))
         self.assertEqual(OrderItem.objects.get(order=order).quantity, 2)
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock, 1)

@@ -22,7 +22,7 @@ def local_available_stock(stock_owner):
 
 @transaction.atomic
 def update_mapping_allocation(mapping, quantity):
-    mapping = MarketplaceProductMapping.objects.select_for_update().select_related('product', 'variant').get(pk=mapping.pk)
+    mapping = MarketplaceProductMapping.objects.select_for_update(of=('self',)).select_related('product', 'variant').get(pk=mapping.pk)
     if mapping.variant_id:
         stock_owner = ProductVariant.objects.select_for_update().get(pk=mapping.variant_id)
     else:

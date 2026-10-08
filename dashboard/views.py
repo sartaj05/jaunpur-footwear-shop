@@ -303,7 +303,7 @@ def seller_payouts(request):
                 return redirect('seller_payouts')
             with transaction.atomic():
                 selected = list(
-                    eligible_seller_orders().select_for_update().filter(pk__in=selected_ids)
+                    eligible_seller_orders().select_for_update(of=('self',)).filter(pk__in=selected_ids)
                     .select_related('shop', 'order').order_by('created_at')
                 )
                 if len(selected) != len(selected_ids):

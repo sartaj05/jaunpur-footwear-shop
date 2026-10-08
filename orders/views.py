@@ -300,7 +300,7 @@ def checkout(request):
         request.session['delivery_pincode'] = pincode
         with transaction.atomic():
             locked_items = list(
-                CartItem.objects.select_for_update()
+                CartItem.objects.select_for_update(of=('self',))
                 .filter(user=request.user)
                 .select_related('product__shop', 'variant')
             )
